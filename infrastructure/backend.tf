@@ -1,10 +1,9 @@
 terraform {
   backend "s3" {
-    bucket = "amianai-terraform-state"
-    key    = "terraform.tfstate"
-    region = "us-east-1"
-    
-    # Enable state locking
-    dynamodb_table = "amianai-terraform-state-lock"
+    bucket         = "amianai-terraform-state-218141621131"
+    key            = "terraform.tfstate"
+    region         = "us-west-2"
+    dynamodb_table = "amianai-terraform-state-lock-218141621131"
+    encrypt        = true
   }
 } 
