@@ -4,96 +4,170 @@ An interactive space for humans and AIs to converse.
 
 ## Project Structure
 
-- `frontend/` - React TypeScript application
-- `infrastructure/` - Terraform configuration for AWS infrastructure
-  - `bootstrap/` - Initial Terraform state management resources
-  - `main.tf` - Main infrastructure configuration
-  - `variables.tf` - Variable definitions
-  - `outputs.tf` - Output definitions
-  - `backend.tf` - S3 backend configuration
+```
+.
+├── frontend/              # React TypeScript application
+└── infrastructure/        # Terraform configuration
+    ├── bootstrap/        # Initial Terraform state setup
+    │   └── main.tf
+    ├── scripts/         # Infrastructure management scripts
+    │   ├── setup.sh    # Initial setup and deployment
+    │   └── destroy.sh  # Clean teardown of resources
+    ├── main.tf         # Main infrastructure configuration
+    ├── variables.tf    # Variable definitions
+    ├── outputs.tf      # Output definitions
+    └── backend.tf      # S3 backend configuration
+```
 
-## Current Infrastructure
+## Infrastructure
 
-- Terraform state management:
-  - ✅ S3 bucket for state storage
-  - ✅ DynamoDB for state locking
-- Website hosting (in progress):
-  - ⏳ S3 bucket for static website
-  - ⏳ CloudFront distribution
-  - ⏳ SSL/TLS certificate
-  - ⏳ Route53 DNS configuration
+The project uses AWS infrastructure managed by Terraform:
 
-## Next Steps
+### Core Components
 
-1. [ ] Complete infrastructure deployment
+- **S3**: Hosts the static website content
+- **CloudFront**: CDN for global content delivery
+- **Route53**: DNS management
+- **ACM**: SSL certificate management
 
-   - [ ] Wait for ACM certificate validation
-   - [ ] Verify CloudFront distribution
-   - [ ] Test domain configuration
+### State Management
 
-2. [ ] Set up GitHub Actions
+Terraform state is managed locally for simplicity. All resources are in us-east-1 region.
 
-   - [ ] Create AWS IAM user for deployments
-   - [ ] Add repository secrets:
-     - [ ] AWS_ACCESS_KEY_ID
-     - [ ] AWS_SECRET_ACCESS_KEY
-     - [ ] CLOUDFRONT_DISTRIBUTION_ID
+### Variables
 
-3. [ ] Deploy initial React app
+Key variables that can be configured:
 
-   - [ ] Build the application
-   - [ ] Upload to S3 bucket
-   - [ ] Verify deployment
+- `domain_name`: Website domain (default: amianai.com)
+- `environment`: Deployment environment (default: prod)
+- `tags`: Resource tags for tracking and management
 
-4. [ ] Add more features to the React app
+### Outputs
 
-   - [ ] Chat interface
-   - [ ] User authentication
-   - [ ] AI integration
+Important infrastructure information:
 
-5. [ ] Set up monitoring and logging
-
-   - [ ] CloudWatch metrics
-   - [ ] Error tracking
-   - [ ] Performance monitoring
-
-6. [ ] Security enhancements
-
-   - [ ] WAF configuration
-   - [ ] Security headers
-   - [ ] Rate limiting
-
-7. [ ] Environment management
-   - [ ] Set up development environment
-   - [ ] Configure staging environment
-   - [ ] Production environment controls
+- `website_url`: The website's URL
+- `cloudfront_distribution_id`: CloudFront distribution identifier
+- `s3_bucket_name`: Name of the S3 bucket
+- `certificate_arn`: SSL certificate ARN
 
 ## Getting Started
 
-1. Install dependencies:
+### Prerequisites
 
-   ```bash
-   cd frontend
-   npm install
-   ```
+- AWS CLI configured with appropriate permissions
+- Terraform >= 1.0.0
+- Node.js and npm for frontend development
+- Domain name configured in Route53 (with NS and SOA records)
 
-2. Run the development server:
+### Initial Setup
 
-   ```bash
-   npm start
-   ```
+1. Configure AWS credentials:
 
-3. Deploy infrastructure:
+```bash
+aws configure
+```
 
-   ```bash
-   cd infrastructure/bootstrap
-   terraform init
-   terraform apply
+2. Deploy infrastructure:
 
-   cd ..
-   terraform init
-   terraform apply
-   ```
+```bash
+cd infrastructure
+./scripts/setup.sh
+```
+
+The setup script will:
+
+- Initialize Terraform
+- Deploy all AWS resources
+- Wait for SSL certificate validation
+- Configure CloudFront distribution
+- Deploy initial website content
+
+Note: The setup process takes approximately 15-30 minutes due to:
+
+- SSL certificate validation (5-15 minutes)
+- CloudFront distribution creation (10-15 minutes)
+
+### Development Workflow
+
+1. Make changes to the React app in `frontend/`
+2. Test locally with `npm start`
+3. Build and deploy:
+
+```bash
+cd frontend
+npm run build
+aws s3 sync build/ s3://amianai.com
+aws cloudfront create-invalidation --distribution-id $(cd ../infrastructure && terraform output -raw cloudfront_distribution_id) --paths "/*"
+```
+
+### Infrastructure Management
+
+#### Setup Script (`setup.sh`)
+
+The setup script handles the complete infrastructure deployment:
+
+```bash
+cd infrastructure
+./scripts/setup.sh
+```
+
+Expected duration: 15-30 minutes
+
+#### Teardown Script (`destroy.sh`)
+
+The destroy script handles complete cleanup:
+
+```bash
+cd infrastructure
+./scripts/destroy.sh
+```
+
+Important: Wait for CloudFront to fully disable before running destroy script again.
+
+### Resource Tags
+
+All resources are tagged with:
+
+- Project = "amianai"
+- Environment = "prod"
+- Terraform = "true"
+
+## Progress Log
+
+### Infrastructure Setup
+
+- ✅ Local Terraform state configuration
+- ✅ S3 bucket for website hosting
+- ✅ CloudFront distribution
+- ✅ SSL certificate and validation
+- ✅ DNS configuration
+- ✅ Infrastructure management scripts
+
+### Next Steps
+
+- [ ] Set up GitHub Actions for automated deployments
+- [ ] Add React app features
+- [ ] Configure monitoring and logging
+- [ ] Set up development and staging environments
+
+## Troubleshooting
+
+Common issues and solutions:
+
+1. CloudFront taking long to disable
+
+   - Wait 10-15 minutes for the distribution to fully disable
+   - Check status in AWS Console or using AWS CLI
+
+2. Certificate validation issues
+
+   - Ensure Route53 NS records are correct
+   - Wait up to 15 minutes for DNS propagation
+
+3. S3 bucket issues
+   - Check bucket name matches domain name
+   - Verify bucket region is us-east-1
 
 ## Contributing
 
@@ -102,39 +176,3 @@ An interactive space for humans and AIs to converse.
 ## License
 
 [To be added]
-
-## Progress Log
-
-### Day 1: Infrastructure Setup
-
-We've established the foundational infrastructure using Terraform and AWS:
-
-1. **State Management**
-
-   - Created an S3 bucket for Terraform state storage with versioning enabled
-   - Set up DynamoDB table for state locking
-   - Configured remote backend for collaborative development
-
-2. **Project Structure**
-
-   - Initialized React TypeScript application
-   - Created Terraform configurations for infrastructure
-   - Set up GitHub Actions workflow for automated deployments
-   - Established project documentation
-
-3. **Initial AWS Infrastructure**
-
-   - Configured provider settings for multiple AWS regions
-   - Started deployment of core services:
-     - S3 bucket for website hosting
-     - CloudFront distribution for content delivery
-     - ACM certificate for HTTPS
-     - Route53 DNS configuration
-
-4. **Security Foundations**
-   - Implemented S3 bucket policies
-   - Configured CloudFront security settings
-   - Set up SSL/TLS certificate
-   - Established IAM roles and policies
-
-Next session will focus on completing the infrastructure deployment and setting up the deployment pipeline through GitHub Actions.
