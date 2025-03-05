@@ -24,4 +24,9 @@ variable "tags" {
     Environment = "prod"
     Terraform   = "true"
   }
+}
+
+variable "github_username" {
+  type        = string
+  description = "GitHub username for the repository"
 } 
