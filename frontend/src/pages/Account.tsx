@@ -125,7 +125,7 @@ const Account: React.FC = () => {
 
           <div className="mt-4 text-right">
             <a
-              href="#"
+              href="/account/history"
               className="text-neon-blue hover:text-white transition-colors font-mono"
             >
               VIEW COMPLETE OPERATION LOG

@@ -96,21 +96,21 @@ function App() {
               </div>
               <div className="mt-4 flex justify-center md:mt-0 space-x-6">
                 <a
-                  href="#"
+                  href="/privacy"
                   className="text-gray-400 hover:text-neon-blue transition-colors"
                 >
                   <span className="sr-only">Privacy Policy</span>
                   Privacy
                 </a>
                 <a
-                  href="#"
+                  href="/terms"
                   className="text-gray-400 hover:text-neon-blue transition-colors"
                 >
                   <span className="sr-only">Terms</span>
                   Terms
                 </a>
                 <a
-                  href="#"
+                  href="/contact"
                   className="text-gray-400 hover:text-neon-blue transition-colors"
                 >
                   <span className="sr-only">Contact</span>
