@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { colors, spacing, retro80sIcons, componentStyles, shadows } from '../designSystem';
+import { colors, retro80sIcons, componentStyles, shadows } from '../designSystem';
 import AppIcon from '../assets/AppIcon';
 
 interface SidebarProps {
