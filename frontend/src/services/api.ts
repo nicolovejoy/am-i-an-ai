@@ -2,7 +2,7 @@
 // Later we can connect to a real AI detection API
 
 export type AnalysisResult = {
-  result: "human" | "ai" | "unknown";
+  result: 'human' | 'ai' | 'unknown';
   confidence: number;
 };
 
@@ -16,7 +16,7 @@ export const analyzeText = async (text: string): Promise<AnalysisResult> => {
       const confidence = Math.floor(Math.random() * 40) + 60; // 60-99% confidence
 
       resolve({
-        result: isAI ? "ai" : "human",
+        result: isAI ? 'ai' : 'human',
         confidence,
       });
     }, 2000); // Simulate 2 second API call

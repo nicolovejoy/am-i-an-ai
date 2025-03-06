@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import TextInput from "../components/TextInput";
-import Results from "../components/Results";
-import { analyzeText, AnalysisResult } from "../services/api";
+import React, { useState } from 'react';
+import TextInput from '../components/TextInput';
+import Results from '../components/Results';
+import { analyzeText, AnalysisResult } from '../services/api';
 
 const Home: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -15,7 +15,7 @@ const Home: React.FC = () => {
       const analysisResult = await analyzeText(text);
       setResult(analysisResult);
     } catch (error) {
-      console.error("Error analyzing text:", error);
+      console.error('Error analyzing text:', error);
       // Handle error state
     } finally {
       setIsAnalyzing(false);
@@ -38,9 +38,9 @@ const Home: React.FC = () => {
           </div>
 
           <p className="text-gray-300 mb-6 font-mono">
-            <span className="text-neon-blue">&gt;</span> Submit text to
-            determine origin: <span className="text-terminal-green">human</span>{" "}
-            or <span className="text-neon-purple">artificial intelligence</span>
+            <span className="text-neon-blue">&gt;</span> Submit text to determine origin:{' '}
+            <span className="text-terminal-green">human</span> or{' '}
+            <span className="text-neon-purple">artificial intelligence</span>
           </p>
 
           <TextInput onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
@@ -56,9 +56,8 @@ const Home: React.FC = () => {
 
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-400 font-mono">
-            <span className="text-neon-blue">i</span> This system uses advanced
-            pattern recognition to analyze text. Results are for educational
-            purposes only.
+            <span className="text-neon-blue">i</span> This system uses advanced pattern recognition
+            to analyze text. Results are for educational purposes only.
           </p>
         </div>
       </div>

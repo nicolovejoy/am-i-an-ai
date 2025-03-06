@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 const About: React.FC = () => {
   return (
@@ -17,9 +17,8 @@ const About: React.FC = () => {
 
         <div className="text-gray-300">
           <p className="text-xl mb-6 font-mono">
-            <span className="text-neon-blue">&gt;</span> Project "Am I an AI?"
-            is a text classification system designed to identify the origin of
-            written content.
+            <span className="text-neon-blue">&gt;</span> Project "Am I an AI?" is a text
+            classification system designed to identify the origin of written content.
           </p>
 
           <div className="mb-8">
@@ -27,11 +26,10 @@ const About: React.FC = () => {
               Mission Parameters
             </h2>
             <p className="mb-4">
-              As artificial intelligence rapidly evolves, distinguishing between
-              AI and human-generated content becomes increasingly challenging.
-              Our mission is to provide a reliable identification system that
-              helps individuals, educators, and professionals detect
-              AI-generated text.
+              As artificial intelligence rapidly evolves, distinguishing between AI and
+              human-generated content becomes increasingly challenging. Our mission is to provide a
+              reliable identification system that helps individuals, educators, and professionals
+              detect AI-generated text.
             </p>
           </div>
 
@@ -40,24 +38,18 @@ const About: React.FC = () => {
               System Protocols
             </h2>
             <p className="mb-4">
-              Our detection engine analyzes multiple linguistic patterns that
-              differentiate human writing from AI-generated content, including:
+              Our detection engine analyzes multiple linguistic patterns that differentiate human
+              writing from AI-generated content, including:
             </p>
             <ul className="list-disc pl-5 mb-4 space-y-2">
-              <li className="text-neon-blue">
-                Neural pattern recognition algorithms
-              </li>
-              <li className="text-neon-purple">
-                Statistical anomaly detection
-              </li>
+              <li className="text-neon-blue">Neural pattern recognition algorithms</li>
+              <li className="text-neon-purple">Statistical anomaly detection</li>
               <li className="text-neon-blue">Semantic coherence assessment</li>
-              <li className="text-neon-purple">
-                Linguistic structure analysis
-              </li>
+              <li className="text-neon-purple">Linguistic structure analysis</li>
             </ul>
             <p>
-              While no detection system achieves 100% accuracy, our algorithms
-              continuously improve through machine learning techniques.
+              While no detection system achieves 100% accuracy, our algorithms continuously improve
+              through machine learning techniques.
             </p>
           </div>
 
@@ -66,20 +58,13 @@ const About: React.FC = () => {
               Security Protocols
             </h2>
             <p className="mb-4">
-              Text submitted for analysis remains confidential. Our security
-              measures include:
+              Text submitted for analysis remains confidential. Our security measures include:
             </p>
             <div className="bg-dark-blue bg-opacity-70 border border-gray-700 rounded p-3 mb-4 font-mono text-sm">
               <p className="text-terminal-green">✓ Transient data processing</p>
-              <p className="text-terminal-green">
-                ✓ No permanent storage of submitted text
-              </p>
-              <p className="text-terminal-green">
-                ✓ Encrypted analysis pipeline
-              </p>
-              <p className="text-terminal-green">
-                ✓ No third-party data sharing
-              </p>
+              <p className="text-terminal-green">✓ No permanent storage of submitted text</p>
+              <p className="text-terminal-green">✓ Encrypted analysis pipeline</p>
+              <p className="text-terminal-green">✓ No third-party data sharing</p>
             </div>
           </div>
 
@@ -87,12 +72,8 @@ const About: React.FC = () => {
             <h2 className="text-xl font-semibold text-terminal-green mb-4 font-mono uppercase tracking-wide">
               Communication Channel
             </h2>
-            <p className="mb-4">
-              For inquiries, system feedback, or technical support:
-            </p>
-            <div className="font-mono text-neon-blue">
-              &gt; contact@amianai.com
-            </div>
+            <p className="mb-4">For inquiries, system feedback, or technical support:</p>
+            <div className="font-mono text-neon-blue">&gt; contact@amianai.com</div>
           </div>
         </div>
       </div>

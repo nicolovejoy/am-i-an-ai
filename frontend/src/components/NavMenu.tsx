@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 interface NavMenuProps {
   isLoggedIn: boolean;
@@ -33,9 +33,7 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
               <Link
                 to="/"
                 className={`nav-link inline-flex items-center px-1 pt-1 border-b-2 ${
-                  isActive("/")
-                    ? "active border-neon-blue"
-                    : "border-transparent"
+                  isActive('/') ? 'active border-neon-blue' : 'border-transparent'
                 }`}
               >
                 Home
@@ -43,9 +41,7 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
               <Link
                 to="/about"
                 className={`nav-link inline-flex items-center px-1 pt-1 border-b-2 ${
-                  isActive("/about")
-                    ? "active border-neon-blue"
-                    : "border-transparent"
+                  isActive('/about') ? 'active border-neon-blue' : 'border-transparent'
                 }`}
               >
                 About
@@ -53,9 +49,7 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
               <Link
                 to="/donate"
                 className={`nav-link inline-flex items-center px-1 pt-1 border-b-2 ${
-                  isActive("/donate")
-                    ? "active border-neon-blue"
-                    : "border-transparent"
+                  isActive('/donate') ? 'active border-neon-blue' : 'border-transparent'
                 }`}
               >
                 Donate
@@ -69,9 +63,7 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
                 <Link
                   to="/account"
                   className={`nav-link inline-flex items-center px-3 py-1 border rounded-md ${
-                    isActive("/account")
-                      ? "border-neon-blue"
-                      : "border-transparent"
+                    isActive('/account') ? 'border-neon-blue' : 'border-transparent'
                   }`}
                 >
                   Terminal Access
@@ -142,9 +134,9 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
             <Link
               to="/"
               className={`nav-link block pl-3 pr-4 py-2 border-l-4 ${
-                isActive("/")
-                  ? "border-neon-blue bg-opacity-30 bg-blue-900"
-                  : "border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900"
+                isActive('/')
+                  ? 'border-neon-blue bg-opacity-30 bg-blue-900'
+                  : 'border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900'
               }`}
               onClick={() => setIsMobileMenuOpen(false)}
             >
@@ -153,9 +145,9 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
             <Link
               to="/about"
               className={`nav-link block pl-3 pr-4 py-2 border-l-4 ${
-                isActive("/about")
-                  ? "border-neon-blue bg-opacity-30 bg-blue-900"
-                  : "border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900"
+                isActive('/about')
+                  ? 'border-neon-blue bg-opacity-30 bg-blue-900'
+                  : 'border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900'
               }`}
               onClick={() => setIsMobileMenuOpen(false)}
             >
@@ -164,9 +156,9 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
             <Link
               to="/donate"
               className={`nav-link block pl-3 pr-4 py-2 border-l-4 ${
-                isActive("/donate")
-                  ? "border-neon-blue bg-opacity-30 bg-blue-900"
-                  : "border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900"
+                isActive('/donate')
+                  ? 'border-neon-blue bg-opacity-30 bg-blue-900'
+                  : 'border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900'
               }`}
               onClick={() => setIsMobileMenuOpen(false)}
             >
@@ -176,9 +168,9 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
               <Link
                 to="/account"
                 className={`nav-link block pl-3 pr-4 py-2 border-l-4 ${
-                  isActive("/account")
-                    ? "border-neon-blue bg-opacity-30 bg-blue-900"
-                    : "border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900"
+                  isActive('/account')
+                    ? 'border-neon-blue bg-opacity-30 bg-blue-900'
+                    : 'border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900'
                 }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >

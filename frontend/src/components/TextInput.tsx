@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef } from 'react';
 
 interface TextInputProps {
   onAnalyze: (text: string) => void;
@@ -6,7 +6,7 @@ interface TextInputProps {
 }
 
 const TextInput: React.FC<TextInputProps> = ({ onAnalyze, isAnalyzing }) => {
-  const [text, setText] = useState<string>("");
+  const [text, setText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -18,9 +18,7 @@ const TextInput: React.FC<TextInputProps> = ({ onAnalyze, isAnalyzing }) => {
     setText(newText);
 
     if (newText.length < MIN_LENGTH && newText.length > 0) {
-      setError(
-        `Please enter at least ${MIN_LENGTH} characters (currently ${newText.length})`
-      );
+      setError(`Please enter at least ${MIN_LENGTH} characters (currently ${newText.length})`);
     } else if (newText.length > MAX_LENGTH) {
       setError(`Please enter no more than ${MAX_LENGTH} characters`);
     } else {
@@ -36,10 +34,7 @@ const TextInput: React.FC<TextInputProps> = ({ onAnalyze, isAnalyzing }) => {
           const start = textareaRef.current.selectionStart || 0;
           const end = textareaRef.current.selectionEnd || 0;
           const currentText = text;
-          const newText =
-            currentText.substring(0, start) +
-            clipText +
-            currentText.substring(end);
+          const newText = currentText.substring(0, start) + clipText + currentText.substring(end);
           setText(newText);
 
           // Update validation after paste
@@ -55,14 +50,12 @@ const TextInput: React.FC<TextInputProps> = ({ onAnalyze, isAnalyzing }) => {
         }
       })
       .catch(() => {
-        setError(
-          "Failed to paste from clipboard. Please ensure you have permission."
-        );
+        setError('Failed to paste from clipboard. Please ensure you have permission.');
       });
   };
 
   const handleClear = () => {
-    setText("");
+    setText('');
     setError(null);
     if (textareaRef.current) {
       textareaRef.current.focus();
@@ -71,9 +64,7 @@ const TextInput: React.FC<TextInputProps> = ({ onAnalyze, isAnalyzing }) => {
 
   const handleSubmit = () => {
     if (text.length < MIN_LENGTH) {
-      setError(
-        `Please enter at least ${MIN_LENGTH} characters (currently ${text.length})`
-      );
+      setError(`Please enter at least ${MIN_LENGTH} characters (currently ${text.length})`);
       return;
     }
 
@@ -96,10 +87,9 @@ const TextInput: React.FC<TextInputProps> = ({ onAnalyze, isAnalyzing }) => {
         </label>
         <span
           className={`text-sm ${
-            text.length > MAX_LENGTH ||
-            (text.length < MIN_LENGTH && text.length > 0)
-              ? "text-neon-pink"
-              : "text-neon-blue"
+            text.length > MAX_LENGTH || (text.length < MIN_LENGTH && text.length > 0)
+              ? 'text-neon-pink'
+              : 'text-neon-blue'
           }`}
         >
           {text.length} / {MAX_LENGTH}
@@ -111,7 +101,7 @@ const TextInput: React.FC<TextInputProps> = ({ onAnalyze, isAnalyzing }) => {
         id="text-input"
         rows={8}
         className={`sci-fi-input w-full px-3 py-2 text-white font-mono rounded-md ${
-          error ? "border-neon-pink" : "border-neon-blue"
+          error ? 'border-neon-pink' : 'border-neon-blue'
         }`}
         placeholder="Paste or type text here to check if it was written by AI or a human..."
         value={text}
@@ -132,20 +122,14 @@ const TextInput: React.FC<TextInputProps> = ({ onAnalyze, isAnalyzing }) => {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={
-            isAnalyzing || text.length < MIN_LENGTH || text.length > MAX_LENGTH
-          }
-          className={`ml-auto sci-fi-button ${
-            isAnalyzing ? "opacity-50" : ""
-          } ${
-            text.length >= MIN_LENGTH &&
-            text.length <= MAX_LENGTH &&
-            !isAnalyzing
-              ? "border-terminal-green text-terminal-green"
-              : ""
+          disabled={isAnalyzing || text.length < MIN_LENGTH || text.length > MAX_LENGTH}
+          className={`ml-auto sci-fi-button ${isAnalyzing ? 'opacity-50' : ''} ${
+            text.length >= MIN_LENGTH && text.length <= MAX_LENGTH && !isAnalyzing
+              ? 'border-terminal-green text-terminal-green'
+              : ''
           }`}
         >
-          {isAnalyzing ? "Analyzing..." : "Analyze Text"}
+          {isAnalyzing ? 'Analyzing...' : 'Analyze Text'}
         </button>
       </div>
     </div>

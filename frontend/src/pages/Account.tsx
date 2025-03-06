@@ -1,11 +1,11 @@
-import React from "react";
+import React from 'react';
 
 const Account: React.FC = () => {
   // This would come from your authentication system in a real app
   const user = {
-    name: "Operator.347",
-    email: "user@example.com",
-    joined: "Cycle 27.3.1",
+    name: 'Operator.347',
+    email: 'user@example.com',
+    joined: 'Cycle 27.3.1',
     usageCount: 42,
   };
 
@@ -52,25 +52,19 @@ const Account: React.FC = () => {
               <label className="block text-sm font-medium text-gray-400 mb-1 font-mono">
                 SYSTEM ACCESS SINCE
               </label>
-              <p className="text-base text-neon-blue font-mono">
-                {user.joined}
-              </p>
+              <p className="text-base text-neon-blue font-mono">{user.joined}</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-1 font-mono">
                 ANALYSIS OPERATIONS
               </label>
-              <p className="text-base text-neon-blue font-mono">
-                {user.usageCount} completed
-              </p>
+              <p className="text-base text-neon-blue font-mono">{user.usageCount} completed</p>
             </div>
           </div>
 
           <div className="mt-6">
-            <button className="sci-fi-button">
-              Modify Profile Configuration
-            </button>
+            <button className="sci-fi-button">Modify Profile Configuration</button>
           </div>
         </div>
 
@@ -82,12 +76,8 @@ const Account: React.FC = () => {
           <div className="space-y-4">
             <div className="border-b border-gray-700 pb-3">
               <div className="flex justify-between">
-                <p className="text-sm text-gray-400 font-mono">
-                  TIMESTAMP: 2025.03.05.1422
-                </p>
-                <p className="text-sm text-neon-purple font-mono">
-                  AI DETECTED [89%]
-                </p>
+                <p className="text-sm text-gray-400 font-mono">TIMESTAMP: 2025.03.05.1422</p>
+                <p className="text-sm text-neon-purple font-mono">AI DETECTED [89%]</p>
               </div>
               <p className="text-base text-gray-300 font-mono">
                 Analysis: "Project Proposal" - 1247 tokens
@@ -96,12 +86,8 @@ const Account: React.FC = () => {
 
             <div className="border-b border-gray-700 pb-3">
               <div className="flex justify-between">
-                <p className="text-sm text-gray-400 font-mono">
-                  TIMESTAMP: 2025.03.03.0917
-                </p>
-                <p className="text-sm text-terminal-green font-mono">
-                  HUMAN DETECTED [92%]
-                </p>
+                <p className="text-sm text-gray-400 font-mono">TIMESTAMP: 2025.03.03.0917</p>
+                <p className="text-sm text-terminal-green font-mono">HUMAN DETECTED [92%]</p>
               </div>
               <p className="text-base text-gray-300 font-mono">
                 Analysis: "Research Paper" - 3842 tokens
@@ -110,12 +96,8 @@ const Account: React.FC = () => {
 
             <div className="border-b border-gray-700 pb-3">
               <div className="flex justify-between">
-                <p className="text-sm text-gray-400 font-mono">
-                  TIMESTAMP: 2025.02.28.1655
-                </p>
-                <p className="text-sm text-neon-purple font-mono">
-                  AI DETECTED [76%]
-                </p>
+                <p className="text-sm text-gray-400 font-mono">TIMESTAMP: 2025.02.28.1655</p>
+                <p className="text-sm text-neon-purple font-mono">AI DETECTED [76%]</p>
               </div>
               <p className="text-base text-gray-300 font-mono">
                 Analysis: "Marketing Email" - 651 tokens
@@ -141,9 +123,7 @@ const Account: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 border border-gray-700 rounded bg-dark-blue bg-opacity-50">
               <div>
-                <h3 className="text-base font-medium text-neon-blue font-mono">
-                  NOTIFICATIONS
-                </h3>
+                <h3 className="text-base font-medium text-neon-blue font-mono">NOTIFICATIONS</h3>
                 <p className="text-sm text-gray-400">
                   Receive system updates and operational alerts
                 </p>
