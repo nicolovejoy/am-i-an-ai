@@ -1,36 +1,4 @@
-import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
 import { analyzeText } from './api';
-
-// Set up mock server
-const server = setupServer(
-  http.post('*/analyze', async ({ request }) => {
-    const body = (await request.json()) as { text: string };
-    const text = body.text;
-
-    // Mock different responses based on the input
-    if (text.includes('human')) {
-      return HttpResponse.json({
-        result: 'human',
-        confidence: 85,
-      });
-    } else if (text.includes('ai')) {
-      return HttpResponse.json({
-        result: 'ai',
-        confidence: 92,
-      });
-    } else {
-      return HttpResponse.json({
-        result: 'unknown',
-        confidence: 50,
-      });
-    }
-  })
-);
-
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
 
 describe('API Service', () => {
   // For the demo implementation using setTimeout, let's just make sure it returns expected format
