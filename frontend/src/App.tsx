@@ -14,10 +14,10 @@ function App() {
             <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 p-4 flex items-center justify-center">
               <div className="text-center">
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                  Test Your Text
+                  Here is where all the magic will happen someday
                 </h2>
                 <p className="text-gray-600">
-                  Enter your text to analyze whether it was written by a human
+                  Enter your mind to analyze whether it was written by a human
                   or AI.
                 </p>
               </div>
