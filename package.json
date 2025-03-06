@@ -1,0 +1,23 @@
+{
+  "devDependencies": {
+    "@testing-library/react-hooks": "8.0.1",
+    "husky": "9.1.7",
+    "lint-staged": "15.4.3",
+    "msw": "2.7.3"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  }
+}
