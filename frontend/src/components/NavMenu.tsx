@@ -5,9 +5,17 @@ interface NavMenuProps {
   isLoggedIn: boolean;
   onLogin: () => void;
   onLogout: () => void;
+  onToggleSidebar: () => void;
+  sidebarVisible: boolean;
 }
 
-const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
+const NavMenu: React.FC<NavMenuProps> = ({
+  isLoggedIn,
+  onLogin,
+  onLogout,
+  onToggleSidebar,
+  sidebarVisible,
+}) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -24,6 +32,39 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
+            {/* Sidebar toggle button */}
+            <button
+              onClick={onToggleSidebar}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-neon-blue focus:outline-none mr-2"
+              aria-expanded="false"
+            >
+              <span className="sr-only">{sidebarVisible ? 'Hide sidebar' : 'Show sidebar'}</span>
+              <svg
+                className="block h-6 w-6"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                {sidebarVisible ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
+            </button>
+
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="text-xl font-bold neon-text">
                 Am I an AI?
@@ -198,6 +239,17 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
                 Login
               </button>
             )}
+
+            {/* Mobile sidebar toggle */}
+            <button
+              onClick={() => {
+                onToggleSidebar();
+                setIsMobileMenuOpen(false);
+              }}
+              className="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent nav-link hover:border-neon-purple"
+            >
+              {sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}
+            </button>
           </div>
         </div>
       )}

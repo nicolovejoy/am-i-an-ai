@@ -13,7 +13,7 @@ An interactive experimental application developed rapidly with Cursor as an expl
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
-- [Infrastructure](#-infrastructure)
+- [Documentation](#-documentation)
 - [Getting Started](#-getting-started)
 - [Development Workflow](#-development-workflow)
 - [Testing](#-testing)
@@ -66,6 +66,9 @@ An interactive experimental application developed rapidly with Cursor as an expl
 │   │   ├── services/     # API and service layer
 │   │   └── ...
 │   └── ...
+├── docs/                  # Project documentation
+│   ├── design-system.md  # Design system documentation
+│   └── infrastructure.md # Infrastructure documentation
 └── infrastructure/        # Terraform configuration
     ├── bootstrap/        # Initial Terraform state setup
     │   └── main.tf
@@ -78,41 +81,12 @@ An interactive experimental application developed rapidly with Cursor as an expl
     └── backend.tf        # S3 backend configuration
 ```
 
-## 🌐 Infrastructure
+## 📚 Documentation
 
-The project uses AWS infrastructure managed by Terraform:
+Detailed documentation for specific aspects of the project:
 
-### Core Components
-
-- **S3**: Hosts the static website content
-- **CloudFront**: CDN for global content delivery
-- **Route53**: DNS management
-- **ACM**: SSL certificate management
-
-### State Management
-
-Terraform state is managed locally for simplicity. All resources are in `us-east-1` region.
-
-### Variables
-
-Key variables that can be configured:
-
-| Variable      | Description            | Default                         |
-| ------------- | ---------------------- | ------------------------------- |
-| `domain_name` | Website domain         | amianai.com                     |
-| `environment` | Deployment environment | prod                            |
-| `tags`        | Resource tags          | Project, Environment, Terraform |
-
-### Outputs
-
-Important infrastructure information:
-
-| Output                       | Description                        |
-| ---------------------------- | ---------------------------------- |
-| `website_url`                | The website's URL                  |
-| `cloudfront_distribution_id` | CloudFront distribution identifier |
-| `s3_bucket_name`             | Name of the S3 bucket              |
-| `certificate_arn`            | SSL certificate ARN                |
+- [Design System & UI Components](docs/design-system.md): Details about the 80's retro-futuristic design system, components, and styling
+- [Infrastructure & Architecture](docs/infrastructure.md): Information about the AWS infrastructure, architecture, and deployment
 
 ## 🚀 Getting Started
 
