@@ -1,21 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { retroIcons } from '../designSystem';
 
 interface NavMenuProps {
   isLoggedIn: boolean;
   onLogin: () => void;
   onLogout: () => void;
-  onToggleSidebar: () => void;
-  sidebarVisible: boolean;
 }
 
-const NavMenu: React.FC<NavMenuProps> = ({
-  isLoggedIn,
-  onLogin,
-  onLogout,
-  onToggleSidebar,
-  sidebarVisible,
-}) => {
+const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -31,139 +24,125 @@ const NavMenu: React.FC<NavMenuProps> = ({
     <nav className="bg-opacity-90 bg-medium-blue shadow-md border-b border-neon-blue">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="flex">
-            {/* Sidebar toggle button */}
-            <button
-              onClick={onToggleSidebar}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-neon-blue focus:outline-none mr-2"
-              aria-expanded="false"
-            >
-              <span className="sr-only">{sidebarVisible ? 'Hide sidebar' : 'Show sidebar'}</span>
-              <svg
-                className="block h-6 w-6"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden="true"
-              >
-                {sidebarVisible ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                )}
-              </svg>
-            </button>
+          <div className="flex items-center">
+            {/* Logo/Brand */}
+            <Link to="/" className="flex-shrink-0 flex items-center">
+              <h1 className="text-xl font-bold neon-text">Am I an AI?</h1>
+            </Link>
 
-            <div className="flex-shrink-0 flex items-center">
-              <Link to="/" className="text-xl font-bold neon-text">
-                Am I an AI?
-              </Link>
-            </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+            {/* Desktop Navigation Links */}
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-4">
               <Link
                 to="/"
-                className={`nav-link inline-flex items-center px-1 pt-1 border-b-2 ${
-                  isActive('/') ? 'active border-neon-blue' : 'border-transparent'
+                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                  isActive('/')
+                    ? 'text-neon-blue border-b-2 border-neon-blue'
+                    : 'text-gray-300 hover:text-neon-blue hover:border-b-2 hover:border-neon-blue'
                 }`}
               >
-                Home
+                <span className="mr-1">{retroIcons.homeIcon}</span> Home
+              </Link>
+              <Link
+                to="/analysis"
+                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                  isActive('/analysis')
+                    ? 'text-neon-purple border-b-2 border-neon-purple'
+                    : 'text-gray-300 hover:text-neon-purple hover:border-b-2 hover:border-neon-purple'
+                }`}
+              >
+                <span className="mr-1">{retroIcons.analysisIcon}</span> Text Analysis
               </Link>
               <Link
                 to="/about"
-                className={`nav-link inline-flex items-center px-1 pt-1 border-b-2 ${
-                  isActive('/about') ? 'active border-neon-blue' : 'border-transparent'
+                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                  isActive('/about')
+                    ? 'text-neon-green border-b-2 border-neon-green'
+                    : 'text-gray-300 hover:text-neon-green hover:border-b-2 hover:border-neon-green'
                 }`}
               >
-                About
+                <span className="mr-1">{retroIcons.aboutIcon}</span> About
               </Link>
               <Link
                 to="/donate"
-                className={`nav-link inline-flex items-center px-1 pt-1 border-b-2 ${
-                  isActive('/donate') ? 'active border-neon-blue' : 'border-transparent'
+                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                  isActive('/donate')
+                    ? 'text-neon-pink border-b-2 border-neon-pink'
+                    : 'text-gray-300 hover:text-neon-pink hover:border-b-2 hover:border-neon-pink'
                 }`}
               >
-                Donate
+                <span className="mr-1">{retroIcons.donateIcon}</span> Donate
+              </Link>
+              <Link
+                to="/account"
+                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                  isActive('/account')
+                    ? 'text-neon-yellow border-b-2 border-neon-yellow'
+                    : 'text-gray-300 hover:text-neon-yellow hover:border-b-2 hover:border-neon-yellow'
+                }`}
+              >
+                <span className="mr-1">{retroIcons.accountIcon}</span> Account
               </Link>
             </div>
           </div>
 
-          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+          {/* Login/Logout buttons */}
+          <div className="flex items-center">
             {isLoggedIn ? (
-              <div className="flex items-center space-x-4">
-                <Link
-                  to="/account"
-                  className={`nav-link inline-flex items-center px-3 py-1 border rounded-md ${
-                    isActive('/account') ? 'border-neon-blue' : 'border-transparent'
-                  }`}
-                >
-                  Terminal Access
-                </Link>
-                <button
-                  onClick={onLogout}
-                  className="sci-fi-button border-neon-pink text-neon-pink hover:text-neon-pink"
-                >
-                  Logout
-                </button>
-              </div>
+              <button
+                onClick={onLogout}
+                className="sci-fi-button border-neon-pink text-neon-pink hover:text-neon-pink"
+              >
+                Logout
+              </button>
             ) : (
               <button onClick={onLogin} className="sci-fi-button">
                 Login
               </button>
             )}
-          </div>
 
-          <div className="-mr-2 flex items-center sm:hidden">
-            <button
-              onClick={toggleMobileMenu}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-neon-blue focus:outline-none"
-              aria-expanded="false"
-            >
-              <span className="sr-only">Open main menu</span>
-              {isMobileMenuOpen ? (
-                <svg
-                  className="block h-6 w-6"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="block h-6 w-6"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              )}
-            </button>
+            {/* Mobile menu button */}
+            <div className="ml-2 sm:hidden">
+              <button
+                onClick={toggleMobileMenu}
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-neon-blue focus:outline-none"
+                aria-expanded="false"
+              >
+                <span className="sr-only">Open main menu</span>
+                {isMobileMenuOpen ? (
+                  <svg
+                    className="block h-6 w-6"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="block h-6 w-6"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -174,57 +153,68 @@ const NavMenu: React.FC<NavMenuProps> = ({
           <div className="pt-2 pb-3 space-y-1">
             <Link
               to="/"
-              className={`nav-link block pl-3 pr-4 py-2 border-l-4 ${
-                isActive('/')
-                  ? 'border-neon-blue bg-opacity-30 bg-blue-900'
-                  : 'border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900'
-              }`}
               onClick={() => setIsMobileMenuOpen(false)}
+              className={`block px-3 py-2 text-base font-medium flex items-center ${
+                isActive('/')
+                  ? 'text-neon-blue border-l-4 border-neon-blue'
+                  : 'text-gray-300 hover:text-neon-blue hover:border-l-4 hover:border-neon-blue'
+              }`}
             >
-              Home
+              <span className="mr-2">{retroIcons.homeIcon}</span> Home
+            </Link>
+            <Link
+              to="/analysis"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block px-3 py-2 text-base font-medium flex items-center ${
+                isActive('/analysis')
+                  ? 'text-neon-purple border-l-4 border-neon-purple'
+                  : 'text-gray-300 hover:text-neon-purple hover:border-l-4 hover:border-neon-purple'
+              }`}
+            >
+              <span className="mr-2">{retroIcons.analysisIcon}</span> Text Analysis
             </Link>
             <Link
               to="/about"
-              className={`nav-link block pl-3 pr-4 py-2 border-l-4 ${
-                isActive('/about')
-                  ? 'border-neon-blue bg-opacity-30 bg-blue-900'
-                  : 'border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900'
-              }`}
               onClick={() => setIsMobileMenuOpen(false)}
+              className={`block px-3 py-2 text-base font-medium flex items-center ${
+                isActive('/about')
+                  ? 'text-neon-green border-l-4 border-neon-green'
+                  : 'text-gray-300 hover:text-neon-green hover:border-l-4 hover:border-neon-green'
+              }`}
             >
-              About
+              <span className="mr-2">{retroIcons.aboutIcon}</span> About
             </Link>
             <Link
               to="/donate"
-              className={`nav-link block pl-3 pr-4 py-2 border-l-4 ${
-                isActive('/donate')
-                  ? 'border-neon-blue bg-opacity-30 bg-blue-900'
-                  : 'border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900'
-              }`}
               onClick={() => setIsMobileMenuOpen(false)}
+              className={`block px-3 py-2 text-base font-medium flex items-center ${
+                isActive('/donate')
+                  ? 'text-neon-pink border-l-4 border-neon-pink'
+                  : 'text-gray-300 hover:text-neon-pink hover:border-l-4 hover:border-neon-pink'
+              }`}
             >
-              Donate
+              <span className="mr-2">{retroIcons.donateIcon}</span> Donate
             </Link>
-            {isLoggedIn && (
-              <Link
-                to="/account"
-                className={`nav-link block pl-3 pr-4 py-2 border-l-4 ${
-                  isActive('/account')
-                    ? 'border-neon-blue bg-opacity-30 bg-blue-900'
-                    : 'border-transparent hover:border-neon-blue hover:bg-opacity-10 hover:bg-blue-900'
-                }`}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Terminal Access
-              </Link>
-            )}
+            <Link
+              to="/account"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block px-3 py-2 text-base font-medium flex items-center ${
+                isActive('/account')
+                  ? 'text-neon-yellow border-l-4 border-neon-yellow'
+                  : 'text-gray-300 hover:text-neon-yellow hover:border-l-4 hover:border-neon-yellow'
+              }`}
+            >
+              <span className="mr-2">{retroIcons.accountIcon}</span> Account
+            </Link>
+
+            {/* Login/Logout in mobile menu */}
             {isLoggedIn ? (
               <button
                 onClick={() => {
                   onLogout();
                   setIsMobileMenuOpen(false);
                 }}
-                className="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent nav-link text-neon-pink hover:border-neon-pink"
+                className="block w-full text-left px-3 py-2 text-base font-medium text-neon-pink hover:text-neon-pink hover:border-l-4 hover:border-neon-pink"
               >
                 Logout
               </button>
@@ -234,22 +224,11 @@ const NavMenu: React.FC<NavMenuProps> = ({
                   onLogin();
                   setIsMobileMenuOpen(false);
                 }}
-                className="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent nav-link text-neon-blue hover:border-neon-blue"
+                className="block w-full text-left px-3 py-2 text-base font-medium text-neon-blue hover:text-neon-blue hover:border-l-4 hover:border-neon-blue"
               >
                 Login
               </button>
             )}
-
-            {/* Mobile sidebar toggle */}
-            <button
-              onClick={() => {
-                onToggleSidebar();
-                setIsMobileMenuOpen(false);
-              }}
-              className="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent nav-link hover:border-neon-purple"
-            >
-              {sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}
-            </button>
           </div>
         </div>
       )}

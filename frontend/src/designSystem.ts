@@ -69,9 +69,10 @@ export const shadows = {
   glow: (color: string) => `0 0 10px ${color}, 0 0 20px ${color}`,
 };
 
-// 80's themed icons - references to use in the sidebar
-export const retro80sIcons = {
+// 80's themed icons for the application
+export const retroIcons = {
   homeIcon: '🕹️', // Game controller
+  analysisIcon: '🔍', // Magnifying glass
   aboutIcon: '📼', // VHS tape
   donateIcon: '💾', // Floppy disk
   accountIcon: '🖥️', // Old computer
@@ -83,6 +84,9 @@ export const retro80sIcons = {
   rubiksCubeIcon: '🎮',
   walkmanIcon: '🎧',
   ghettoblasterIcon: '📻',
+  // Animal icons
+  dogIcon: '🐶',
+  catIcon: '🐱',
 };
 
 // Animation timings
@@ -96,6 +100,7 @@ export const animation = {
 export const zIndex = {
   base: 0,
   above: 10,
+  nav: 40,
   modal: 100,
   tooltip: 200,
 };
@@ -109,14 +114,22 @@ export const breakpoints = {
   '2xl': '1536px',
 };
 
+// Media queries for responsive design
+export const mediaQueries = {
+  sm: `@media (min-width: ${breakpoints.sm})`,
+  md: `@media (min-width: ${breakpoints.md})`,
+  lg: `@media (min-width: ${breakpoints.lg})`,
+  xl: `@media (min-width: ${breakpoints.xl})`,
+  '2xl': `@media (min-width: ${breakpoints['2xl']})`,
+  // Special queries
+  belowMd: `@media (max-width: ${breakpoints.md})`,
+  dark: '@media (prefers-color-scheme: dark)',
+  landscape: '@media (orientation: landscape)',
+  portrait: '@media (orientation: portrait)',
+};
+
 // Common component styling
 export const componentStyles = {
-  sidebar: {
-    background: colors.mediumBlue,
-    borderRight: `1px solid ${colors.neonBlue}`,
-    width: '240px',
-    padding: spacing.md,
-  },
   card: {
     background: colors.mediumBlue,
     border: `1px solid ${colors.neonBlue}`,
@@ -142,5 +155,9 @@ export const componentStyles = {
       transition: `all ${animation.medium}`,
       hoverBackground: 'rgba(255, 67, 178, 0.15)',
     },
+  },
+  mainContent: {
+    paddingMobile: `${spacing.sm} ${spacing.md}`,
+    paddingDesktop: `${spacing.md} ${spacing.lg}`,
   },
 };

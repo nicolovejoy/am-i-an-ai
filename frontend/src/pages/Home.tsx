@@ -1,64 +1,39 @@
-import React, { useState } from 'react';
-import TextInput from '../components/TextInput';
-import Results from '../components/Results';
-import { analyzeText, AnalysisResult } from '../services/api';
+import React from 'react';
 
 const Home: React.FC = () => {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-
-  const handleAnalyze = async (text: string) => {
-    setIsAnalyzing(true);
-    setResult(null);
-
-    try {
-      const analysisResult = await analyzeText(text);
-      setResult(analysisResult);
-    } catch (error) {
-      console.error('Error analyzing text:', error);
-      // Handle error state
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
   return (
-    <div className="py-6 sm:px-6 lg:px-8">
-      <div className="px-4 py-6 sm:px-0">
-        <div className="terminal">
-          <div className="border-b border-neon-blue pb-4 mb-6 flex justify-between items-center">
-            <h2 className="text-2xl font-bold neon-text font-mono tracking-wide">
-              TEXT ANALYSIS SYSTEM v2.5
-            </h2>
-            <div className="flex space-x-2">
-              <div className="w-3 h-3 rounded-full bg-neon-pink"></div>
-              <div className="w-3 h-3 rounded-full bg-neon-purple"></div>
-              <div className="w-3 h-3 rounded-full bg-neon-blue"></div>
-            </div>
-          </div>
-
-          <p className="text-gray-300 mb-6 font-mono">
-            <span className="text-neon-blue">&gt;</span> Submit text to determine origin:{' '}
-            <span className="text-terminal-green">human</span> or{' '}
-            <span className="text-neon-purple">artificial intelligence</span>
-          </p>
-
-          <TextInput onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
+    <div className="py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto text-center">
+        {/* Dog photo container */}
+        <div className="mb-6 bg-medium-blue p-4 border border-neon-blue rounded-lg flex flex-col items-center justify-center">
+          {/* Replace the div below with an img tag when you have your dog photo */}
+          {/* Example: }
+          <img 
+            src="/images/your-dog-photo.jpg" 
+            alt="A dog looking confused" 
+            className="w-full max-w-md rounded-md"
+          />
+          */}
+          <img
+            src="/dog-or-cat.jpg"
+            alt="A dog looking confused"
+            className="w-full max-w-md rounded-md"
+          />
+          {/* <p className="text-sm text-gray-400 mt-2 font-mono">
+            <span className="text-neon-blue">&gt;</span> Dog photo loaded from public root
+          </p> */}
         </div>
 
-        {(isAnalyzing || result) && (
-          <Results
-            result={result?.result || null}
-            confidence={result?.confidence}
-            isLoading={isAnalyzing}
-          />
-        )}
-
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-400 font-mono">
-            <span className="text-neon-blue">i</span> This system uses advanced pattern recognition
-            to analyze text. Results are for educational purposes only.
-          </p>
+        {/* Quote */}
+        <div className="terminal p-6">
+          <blockquote className="text-xl sm:text-2xl font-mono leading-relaxed mb-4">
+            <span className="text-neon-blue">"</span>
+            <span className="text-neon-pink">Am I a Dog? Or a Cat?</span>{' '}
+            <span className="text-white">on the internet, nobody</span>{' '}
+            <span className="text-neon-purple">nose.</span>
+            <span className="text-neon-blue">"</span>
+          </blockquote>
+          <cite className="text-neon-green block text-right font-mono">— Fritzy Kitty</cite>
         </div>
       </div>
     </div>
