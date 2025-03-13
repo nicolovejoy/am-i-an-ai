@@ -15,9 +15,9 @@ export default function About() {
 
         <div className="text-gray-300">
           <p className="text-xl mb-6 font-mono">
-            <span className="text-neon-blue">&gt;</span> Project "Am I an AI?"
-            is a text classification system designed to identify the origin of
-            written content.
+            <span className="text-neon-blue">&gt;</span> Submit text to
+            determine origin: <span className="text-terminal-green">human</span>{" "}
+            or <span className="text-neon-purple">artificial intelligence</span>
           </p>
 
           <div className="mb-8">

@@ -10,6 +10,7 @@ export type AnalysisResult = {
 
 export const analyzeText = async (text: string): Promise<AnalysisResult> => {
   // This is a simulation - we'll replace with real API call later
+  console.log(text); // This line is just to use the 'text' parameter
   return new Promise((resolve) => {
     // Simulate API call delay
     setTimeout(() => {

@@ -24,11 +24,11 @@ export default function Home() {
         {/* Quote */}
         <div className="terminal p-6">
           <blockquote className="text-xl sm:text-2xl font-mono leading-relaxed mb-4">
-            <span className="text-neon-blue">"</span>
+            <span className="text-neon-blue">&quot;</span>
             <span className="text-neon-pink">Am I a Dog? Or a Cat?</span>{" "}
             <span className="text-white">on the internet, nobody</span>{" "}
             <span className="text-neon-purple">nose.</span>
-            <span className="text-neon-blue">"</span>
+            <span className="text-neon-blue">&quot;</span>
           </blockquote>
           <cite className="text-neon-green block text-right font-mono">
             — Fritzy Kitty

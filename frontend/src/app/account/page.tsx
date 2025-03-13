@@ -90,7 +90,7 @@ export default function Account() {
                 </p>
               </div>
               <p className="text-base text-gray-300 font-mono">
-                Analysis: "Project Proposal" - 1247 tokens
+                Analysis: &quot;Project Proposal&quot; - 1247 tokens
               </p>
             </div>
 
@@ -104,7 +104,7 @@ export default function Account() {
                 </p>
               </div>
               <p className="text-base text-gray-300 font-mono">
-                Analysis: "Research Paper" - 3842 tokens
+                Analysis: &quot;Research Paper&quot; - 3842 tokens
               </p>
             </div>
 
@@ -118,7 +118,7 @@ export default function Account() {
                 </p>
               </div>
               <p className="text-base text-gray-300 font-mono">
-                Analysis: "Marketing Email" - 651 tokens
+                Analysis: &quot;Marketing Email&quot; - 651 tokens
               </p>
             </div>
           </div>
