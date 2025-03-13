@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 export default function Account() {
   // This would come from your authentication system in a real app
   const user = {

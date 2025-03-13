@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import TextInput from "../../components/TextInput";
 import Results from "../../components/Results";
 import { analyzeText, AnalysisResult } from "../../services/api";
