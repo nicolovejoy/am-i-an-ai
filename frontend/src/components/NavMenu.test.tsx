@@ -1,6 +1,6 @@
 // frontend/src/components/NavMenu.test.tsx
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import NavMenu from "./NavMenu";
 import "@testing-library/jest-dom";
 import { describe, expect, jest, test } from "@jest/globals";
