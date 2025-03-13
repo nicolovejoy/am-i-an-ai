@@ -1,0 +1,200 @@
+/* 1980's Sci-Fi Theme */
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Roboto+Mono:wght@300;400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Color palette */
+  --neon-blue: #00f3ff;
+  --neon-purple: #9d00ff;
+  --neon-pink: #ff00c8;
+  --dark-blue: #060c21;
+  --medium-blue: #0c1e3e;
+  --light-blue: #2a4a7f;
+  --grid-color: rgba(0, 243, 255, 0.2);
+  --terminal-green: #0cff6f;
+  --neon-green: #0cff6f;
+  --neon-yellow: #ffee00;
+  --text-color: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --success-color: #0cff6f;
+  --warning-color: #ffee00;
+  --error-color: #ff3860;
+  --main-font: "Roboto Mono", monospace;
+  --monospace-font: "Roboto Mono", monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-dark-blue text-white;
+    font-family: "Roboto Mono", monospace;
+  }
+}
+
+@layer components {
+  /* Grid background */
+  .grid-background {
+    @apply fixed top-0 left-0 w-full h-full z-[-1] opacity-70;
+    background-image: linear-gradient(var(--grid-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .grid-background::after {
+    content: "";
+    @apply absolute top-0 left-0 w-full h-full;
+    background: radial-gradient(
+      circle at center,
+      transparent 0%,
+      var(--dark-blue) 80%
+    );
+  }
+
+  /* Neon elements */
+  .neon-text {
+    font-family: "Orbitron", sans-serif;
+    @apply text-white;
+    text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+  }
+
+  .neon-border {
+    @apply relative border border-neon-blue;
+    box-shadow: 0 0 5px var(--neon-blue), inset 0 0 5px var(--neon-blue);
+  }
+
+  /* Terminal-like elements */
+  .terminal {
+    @apply bg-opacity-95 border border-neon-blue p-6 rounded-md relative overflow-hidden;
+    background-color: rgba(10, 20, 40, 0.95);
+  }
+
+  .terminal::before {
+    content: "";
+    @apply absolute top-0 left-0 w-full h-1;
+    background: linear-gradient(
+      90deg,
+      var(--neon-blue),
+      var(--neon-purple),
+      var(--neon-pink)
+    );
+  }
+
+  /* Buttons and interactive elements */
+  .sci-fi-button {
+    @apply bg-transparent text-neon-blue border border-neon-blue py-2 px-4 uppercase transition-all duration-300 relative overflow-hidden;
+    font-family: "Orbitron", sans-serif;
+    font-weight: 500;
+    letter-spacing: 1px;
+    box-shadow: 0 0 5px var(--neon-blue);
+  }
+
+  .sci-fi-button:hover {
+    @apply bg-opacity-20;
+    background-color: rgba(0, 243, 255, 0.2);
+    box-shadow: 0 0 10px var(--neon-blue);
+  }
+
+  .sci-fi-button:active {
+    background-color: rgba(0, 243, 255, 0.3);
+  }
+
+  .sci-fi-button::after {
+    content: "";
+    @apply absolute top-[-50%] left-[-50%] w-[200%] h-[200%] transition-all duration-300 opacity-0;
+    background: linear-gradient(
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0)
+    );
+    transform: rotate(30deg);
+  }
+
+  .sci-fi-button:hover::after {
+    @apply opacity-20;
+  }
+
+  /* Form elements */
+  .sci-fi-input {
+    @apply bg-opacity-80 border border-neon-blue text-white py-3 px-3 outline-none transition-all duration-300;
+    background-color: rgba(10, 20, 40, 0.8);
+    box-shadow: 0 0 5px rgba(0, 243, 255, 0.3);
+  }
+
+  .sci-fi-input:focus {
+    box-shadow: 0 0 10px var(--neon-blue);
+  }
+
+  .sci-fi-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  /* Results display */
+  .result-human {
+    @apply border-l-[3px] border-terminal-green bg-opacity-10;
+    background-color: rgba(12, 255, 111, 0.1);
+  }
+
+  .result-ai {
+    @apply border-l-[3px] border-neon-purple bg-opacity-10;
+    background-color: rgba(157, 0, 255, 0.1);
+  }
+
+  .result-unknown {
+    @apply border-l-[3px] border-neon-pink bg-opacity-10;
+    background-color: rgba(255, 0, 200, 0.1);
+  }
+
+  /* Loading animation */
+  .sci-fi-loading {
+    @apply w-[50px] h-[50px] rounded-full animate-spin;
+    border: 3px solid rgba(0, 243, 255, 0.3);
+    border-top: 3px solid var(--neon-blue);
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Navigation elements */
+  .nav-link {
+    @apply uppercase transition-all duration-300;
+    font-family: "Orbitron", sans-serif;
+    letter-spacing: 1px;
+  }
+
+  .nav-link:hover {
+    @apply text-neon-blue;
+    text-shadow: 0 0 5px var(--neon-blue);
+  }
+
+  .nav-link.active {
+    @apply text-neon-blue border-neon-blue;
+    text-shadow: 0 0 5px var(--neon-blue);
+  }
+
+  /* Typing animation for text areas */
+  @keyframes blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .typing-cursor::after {
+    content: "|";
+    @apply animate-blink text-neon-blue;
+  }
+
+  .animate-blink {
+    animation: blink 1s infinite;
+  }
+}
