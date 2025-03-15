@@ -30,7 +30,26 @@ echo "Distribution ID: ${DIST_ID}"
 
 if [ -n "$DIST_ID" ]; then
     echo "Disabling CloudFront distribution..."
-    aws cloudfront update-distribution --id "$DIST_ID" --enabled false --region us-east-1
+    # Get the current config
+    CONFIG_FILE=$(mktemp)
+    ETAG_FILE=$(mktemp)
+    DIST_CONFIG_FILE=$(mktemp)
+    
+    # Get distribution config and extract ETag
+    aws cloudfront get-distribution-config --id "$DIST_ID" > "$CONFIG_FILE"
+    ETAG=$(jq -r '.ETag' "$CONFIG_FILE")
+    
+    # Extract just the DistributionConfig portion
+    jq '.DistributionConfig' "$CONFIG_FILE" > "$DIST_CONFIG_FILE"
+    
+    # Set Enabled to false
+    jq '.Enabled = false' "$DIST_CONFIG_FILE" > "${DIST_CONFIG_FILE}.tmp" && mv "${DIST_CONFIG_FILE}.tmp" "$DIST_CONFIG_FILE"
+    
+    # Update the distribution with the new config
+    aws cloudfront update-distribution --id "$DIST_ID" --if-match "$ETAG" --distribution-config "$(cat "$DIST_CONFIG_FILE")"
+    
+    # Cleanup temp files
+    rm "$CONFIG_FILE" "$ETAG_FILE" "$DIST_CONFIG_FILE"
 
     echo "Waiting for CloudFront to disable..."
     aws cloudfront wait distribution-deployed --id "$DIST_ID" --region us-east-1

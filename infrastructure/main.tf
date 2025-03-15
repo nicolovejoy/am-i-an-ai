@@ -20,6 +20,25 @@ resource "aws_s3_bucket" "website" {
   tags          = var.tags
 }
 
+# S3 bucket ownership controls
+resource "aws_s3_bucket_ownership_controls" "website" {
+  bucket = aws_s3_bucket.website.id
+  
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+# S3 bucket public access block configuration
+resource "aws_s3_bucket_public_access_block" "website" {
+  bucket = aws_s3_bucket.website.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
 # S3 bucket configuration
 resource "aws_s3_bucket_website_configuration" "website" {
   bucket = aws_s3_bucket.website.id
@@ -69,6 +88,21 @@ resource "aws_cloudfront_distribution" "website" {
     acm_certificate_arn      = aws_acm_certificate.website.arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  # Custom error response to handle client-side routing in Next.js
+  custom_error_response {
+    error_code            = 403
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
+  }
+
+  custom_error_response {
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
   }
 
   tags = var.tags

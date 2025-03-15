@@ -42,9 +42,10 @@ jobs:
         working-directory: frontend
         run: npm test -- --watchAll=false --coverage
 
-      - name: Build website
-        working-directory: frontend
-        run: npm run build
+      - name: Build Next.js site
+        run: |
+          cd frontend
+          npm run build
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -52,10 +53,9 @@ jobs:
           role-to-assume: arn:aws:iam::218141621131:role/github-actions
           aws-region: us-east-1
 
-      - name: Deploy to S3
-        working-directory: frontend
+      - name: Sync to S3
         run: |
-          aws s3 sync .next/ s3://amianai.com --delete
+          aws s3 sync frontend/out/ s3://amianai.com --delete --acl public-read --cache-control "max-age=86400"
 
       - name: Invalidate CloudFront
         run: |

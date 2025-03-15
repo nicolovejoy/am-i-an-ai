@@ -23,4 +23,13 @@ echo "Deploying initial content..."
 cd ../frontend
 npm install
 npm run build
-aws s3 sync build/ s3://amianai.com 
+aws s3 sync out/ s3://amianai.com --delete --cache-control "max-age=86400"
+
+# Invalidate CloudFront if needed
+DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, 'amianai.com')]].Id" --output text)
+if [ -n "$DISTRIBUTION_ID" ]; then
+  echo "Invalidating CloudFront cache..."
+  aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
+fi
+
+echo "Setup complete!" 
