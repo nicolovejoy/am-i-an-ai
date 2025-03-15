@@ -10,6 +10,7 @@ This is the Next.js version of the "Am I an AI?" application, migrated from Crea
 - 📱 Fully responsive for all device sizes
 - ⚡ Server-side rendering for improved performance
 - 🔒 Account management functionality
+- 🔄 Advanced state management with Zustand and React Query
 
 ## Getting Started
 
@@ -56,8 +57,15 @@ src/
 │   ├── donate/        # Donation page
 │   └── account/       # User account page
 ├── components/        # Reusable components
-├── lib/               # Utility functions
+├── hooks/             # Custom React hooks
+│   └── useQueries.ts  # React Query hooks
+├── providers/         # Context providers
+│   ├── QueryProvider.tsx    # React Query provider
+│   └── AuthProvider.tsx     # Authentication provider
+├── store/             # Zustand stores
+│   └── useAuthStore.ts      # Auth state management
 ├── services/          # API services
+│   └── api.ts         # API service functions
 └── public/            # Static assets
     └── images/        # Image files
 ```
@@ -67,15 +75,36 @@ src/
 - **Framework**: Next.js 14
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
-- **State Management**: React Context API
+- **State Management**:
+  - **Zustand**: For global UI state and authentication
+  - **React Query**: For server state, data fetching, and caching
 - **Testing**: Jest and React Testing Library
+
+## State Management Architecture
+
+The application uses a hybrid state management approach:
+
+### Client State (Zustand)
+
+- Authentication state (login status, user info)
+- UI state (theme preferences, modal visibility)
+- Persisted with localStorage for session continuity
+
+### Server State (React Query)
+
+- Remote data fetching with automatic caching
+- Optimistic updates for mutations
+- Automatic refetching and background updates
+- Loading and error states
+
+This separation provides cleaner code organization and better performance.
 
 ## Future Enhancements
 
 - Enhanced text analysis capabilities
-- User authentication
 - More extensive account features
 - Additional retro-themed UI elements
+- Advanced data visualization
 
 ## License
 
