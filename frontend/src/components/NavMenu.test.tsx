@@ -3,7 +3,7 @@ import React from "react";
 import { render } from "@testing-library/react";
 import NavMenu from "./NavMenu";
 import "@testing-library/jest-dom";
-import { describe, expect, jest, test, beforeEach } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 
 // Mock the auth store
 jest.mock("@/store/useAuthStore", () => ({
