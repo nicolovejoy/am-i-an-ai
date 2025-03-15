@@ -7,7 +7,7 @@ import {
   getUserProfile,
   deleteAnalysis,
 } from "@/services/api";
-import type { AnalysisResult, PastAnalysis, UserProfile } from "@/services/api";
+import type { PastAnalysis, UserProfile } from "@/services/api";
 
 // Hook for analyzing text
 export function useAnalyzeText() {

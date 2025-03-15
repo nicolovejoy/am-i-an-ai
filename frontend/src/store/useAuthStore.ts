@@ -16,14 +16,19 @@ export interface AuthState {
   initialize: (isLoggedIn: boolean, user: User | null) => void;
 }
 
+interface StorageData {
+  isLoggedIn: boolean;
+  user: User | null;
+}
+
 // Safely access localStorage
-const saveToStorage = (key: string, value: any) => {
+const saveToStorage = (key: string, value: StorageData): void => {
   if (typeof window !== "undefined") {
     localStorage.setItem(key, JSON.stringify(value));
   }
 };
 
-const removeFromStorage = (key: string) => {
+const removeFromStorage = (key: string): void => {
   if (typeof window !== "undefined") {
     localStorage.removeItem(key);
   }
