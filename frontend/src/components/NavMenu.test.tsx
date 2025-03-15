@@ -5,7 +5,7 @@ import NavMenu from "./NavMenu";
 import "@testing-library/jest-dom";
 import { describe, expect, jest, test } from "@jest/globals";
 
-// Mock Next.js hooks
+// Mock Next.js hooks for testing purposes
 jest.mock("next/navigation", () => ({
   usePathname: () => "/test",
   useRouter: () => ({
