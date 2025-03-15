@@ -3,7 +3,17 @@ import React from "react";
 import { render } from "@testing-library/react";
 import NavMenu from "./NavMenu";
 import "@testing-library/jest-dom";
-import { describe, expect, jest, test } from "@jest/globals";
+import { describe, expect, jest, test, beforeEach } from "@jest/globals";
+
+// Mock the auth store
+jest.mock("@/store/useAuthStore", () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    isLoggedIn: false,
+    login: jest.fn(),
+    logout: jest.fn(),
+  })),
+}));
 
 // Mock Next.js hooks for testing purposes
 jest.mock("next/navigation", () => ({
@@ -19,13 +29,9 @@ describe("NavMenu component", () => {
     expect(true).toBe(true);
   });
 
-  // Test rendering NavMenu
-  test("renders NavMenu component", () => {
-    render(
-      <NavMenu isLoggedIn={false} onLogin={() => {}} onLogout={() => {}} />
-    );
-    // Basic verification - this will depend on what's in your NavMenu component
-    // For example, if there's a "Log In" button when not logged in:
-    // expect(screen.getByRole('button', { name: /log in/i })).toBeInTheDocument();
+  // Test rendering NavMenu with minimal validation
+  // This just ensures the component renders without errors
+  test("renders NavMenu component without crashing", () => {
+    render(<NavMenu />);
   });
 });
