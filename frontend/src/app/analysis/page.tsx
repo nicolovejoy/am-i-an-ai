@@ -1,27 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import TextInput from "../../components/TextInput";
 import Results from "../../components/Results";
-import { analyzeText, AnalysisResult } from "../../services/api";
+import { useAnalyzeText } from "@/hooks/useQueries";
 
 export default function TextAnalysis() {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  // Use React Query mutation for analyzing text
+  const analyzeMutation = useAnalyzeText();
 
   const handleAnalyze = async (text: string) => {
-    setIsAnalyzing(true);
-    setResult(null);
-
-    try {
-      const analysisResult = await analyzeText(text);
-      setResult(analysisResult);
-    } catch (error) {
-      console.error("Error analyzing text:", error);
-      // Handle error state
-    } finally {
-      setIsAnalyzing(false);
-    }
+    // Reset any previous results
+    analyzeMutation.reset();
+    // Trigger the mutation
+    analyzeMutation.mutate(text);
   };
 
   return (
@@ -45,15 +37,24 @@ export default function TextAnalysis() {
             or <span className="text-neon-purple">artificial intelligence</span>
           </p>
 
-          <TextInput onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
+          <TextInput
+            onAnalyze={handleAnalyze}
+            isAnalyzing={analyzeMutation.isPending}
+          />
         </div>
 
-        {(isAnalyzing || result) && (
+        {(analyzeMutation.isPending || analyzeMutation.data) && (
           <Results
-            result={result?.result || null}
-            confidence={result?.confidence || 0}
-            isLoading={isAnalyzing}
+            result={analyzeMutation.data?.result || null}
+            confidence={analyzeMutation.data?.confidence || 0}
+            isLoading={analyzeMutation.isPending}
           />
+        )}
+
+        {analyzeMutation.isError && (
+          <div className="mt-4 p-4 border border-red-500 text-red-500 rounded">
+            An error occurred while analyzing the text. Please try again.
+          </div>
         )}
 
         <div className="mt-8 text-center">

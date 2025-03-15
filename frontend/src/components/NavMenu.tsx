@@ -4,16 +4,16 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { retroIcons } from "@/lib/designSystem";
+import useAuthStore from "@/store/useAuthStore";
 
-interface NavMenuProps {
-  isLoggedIn: boolean;
-  onLogin: () => void;
-  onLogout: () => void;
-}
-
-const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
+const NavMenu: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+
+  // Use the auth store instead of props
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const login = useAuthStore((state) => state.login);
+  const logout = useAuthStore((state) => state.logout);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -21,6 +21,15 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
 
   const isActive = (path: string) => {
     return pathname === path;
+  };
+
+  // Mock user for demo purposes
+  const handleLogin = () => {
+    login({
+      id: "user123",
+      name: "Operator.347",
+      email: "user@example.com",
+    });
   };
 
   return (
@@ -93,13 +102,13 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
           <div className="flex items-center">
             {isLoggedIn ? (
               <button
-                onClick={onLogout}
+                onClick={logout}
                 className="sci-fi-button border-neon-pink text-neon-pink hover:text-neon-pink"
               >
                 Logout
               </button>
             ) : (
-              <button onClick={onLogin} className="sci-fi-button">
+              <button onClick={handleLogin} className="sci-fi-button">
                 Login
               </button>
             )}
@@ -215,20 +224,14 @@ const NavMenu: React.FC<NavMenuProps> = ({ isLoggedIn, onLogin, onLogout }) => {
             {/* Login/Logout in mobile menu */}
             {isLoggedIn ? (
               <button
-                onClick={() => {
-                  onLogout();
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={logout}
                 className="block w-full text-left px-3 py-2 text-base font-medium text-neon-pink hover:text-neon-pink hover:border-l-4 hover:border-neon-pink"
               >
                 Logout
               </button>
             ) : (
               <button
-                onClick={() => {
-                  onLogin();
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={handleLogin}
                 className="block w-full text-left px-3 py-2 text-base font-medium text-neon-blue hover:text-neon-blue hover:border-l-4 hover:border-neon-blue"
               >
                 Login

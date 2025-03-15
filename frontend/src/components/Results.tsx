@@ -54,10 +54,7 @@ const Results: React.FC<ResultsProps> = ({
 
   const getConfidenceText = () => {
     if (!result) return "";
-
-    const percentage = Math.round(confidence * 100);
-
-    return `Confidence: ${percentage}%`;
+    return `Confidence: ${confidence}%`;
   };
 
   if (isLoading) {
@@ -85,7 +82,7 @@ const Results: React.FC<ResultsProps> = ({
           <div
             className="h-4 rounded-full"
             style={{
-              width: `${Math.round(confidence * 100)}%`,
+              width: `${confidence}%`,
               backgroundColor:
                 result === "human"
                   ? "var(--terminal-green)"
