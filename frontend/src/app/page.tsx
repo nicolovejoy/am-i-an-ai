@@ -15,10 +15,6 @@ export default function Home() {
             className="w-full max-w-md rounded-md"
             priority
           />
-          <p className="text-sm text-gray-400 mt-2 font-mono">
-            <span className="text-neon-blue">&gt;</span> Dog photo loaded with
-            next/image
-          </p>
         </div>
 
         {/* Quote */}
