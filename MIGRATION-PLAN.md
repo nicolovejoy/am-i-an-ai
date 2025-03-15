@@ -71,6 +71,8 @@ We'll follow these key principles during our migration:
 - [x] Update API service calls
 - [x] Migrate state management approaches where needed
 - [x] Implement hybrid state management with Zustand and React Query
+- [x] Migrate state management approaches where needed
+- [x] Implement hybrid state management with Zustand and React Query
 
 ### Phase 6: Testing & Optimization
 
@@ -106,6 +108,39 @@ Components will largely remain the same, with updates to imports and Next.js-spe
 - Update image tags to use `next/image`
 - Replace React Router's `Link` with Next.js `Link`
 - Convert client-side navigation logic to use Next.js patterns
+
+### State Management
+
+We've implemented a hybrid state management approach that combines:
+
+#### Zustand for Client State
+
+- Used for UI state and authentication state
+- Lightweight and simple API with hooks-based access
+- Persists authentication state in localStorage
+- Provides global state without prop drilling or complex context setup
+
+#### React Query for Server State
+
+- Used for data fetching, caching, and synchronization with the server
+- Provides built-in loading and error states
+- Handles caching and background refetching
+- Offers mutations with optimistic updates
+
+This separation allows us to:
+
+- Keep UI state changes snappy and responsive
+- Decouple server state concerns from UI logic
+- Implement proper loading and error handling
+- Maintain a clean and maintainable codebase
+
+#### Implementation Details
+
+- **`useAuthStore.ts`**: Zustand store for authentication state
+- **`AuthProvider.tsx`**: Provider that initializes auth state from localStorage
+- **`QueryProvider.tsx`**: Wraps the app with React Query's provider
+- **`useQueries.ts`**: Custom React Query hooks for data fetching and mutations
+- **`api.ts`**: API service functions for data fetching and mutations
 
 ### State Management
 
@@ -195,6 +230,23 @@ npm start
 3. **End-to-End Testing**: We'll use Cypress for E2E tests to simulate real user journeys through the application.
 
 ## Common Issues and Troubleshooting
+
+### State Management Issues
+
+1. **Server-Side Rendering with Client Libraries**: When using Zustand or React Query with Next.js, ensure:
+
+   - All components using these libraries are marked with `"use client"`
+   - Code accessing browser APIs like `localStorage` is protected with `typeof window !== 'undefined'` checks
+   - Providers are properly set up in the component tree
+
+2. **React Query Errors**:
+
+   - If you see "React Query provider is missing" errors, check that `QueryProvider` is wrapping your application
+   - For hydration mismatches, ensure your key structure is consistent between server and client
+
+3. **Zustand Persistence Issues**:
+   - If auth state isn't persisting between refreshes, check localStorage access and parsing logic
+   - Clear localStorage if schema changes during development
 
 ### State Management Issues
 
@@ -343,6 +395,8 @@ This is an important distinction as `npm start` serves the production build in N
 - [Next.js Migration Guide](https://nextjs.org/docs/migrating/from-create-react-app)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Next.js Examples](https://github.com/vercel/next.js/tree/canary/examples)
+- [Zustand Documentation](https://docs.pmnd.rs/zustand/getting-started/introduction)
+- [TanStack Query Documentation](https://tanstack.com/query/latest/docs/framework/react/overview)
 - [Zustand Documentation](https://docs.pmnd.rs/zustand/getting-started/introduction)
 - [TanStack Query Documentation](https://tanstack.com/query/latest/docs/framework/react/overview)
 
