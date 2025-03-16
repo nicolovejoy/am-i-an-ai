@@ -6,7 +6,7 @@
 [![AWS](https://img.shields.io/badge/AWS-Powered-orange)](https://aws.amazon.com/)
 [![Terraform](https://img.shields.io/badge/Terraform-1.0+-purple)](https://www.terraform.io/)
 
-An interactive experimental application developed rapidly with Cursor as an exploration of what Cursor can do. The intention of the app is will be a place for users and AI agents to interact and get to know each other better. Built with modern web technologies and deployed on AWS infrastructure.
+A modern web application that helps users determine if text was written by a human or AI.
 
 ## 📑 Table of Contents
 
@@ -25,61 +25,26 @@ An interactive experimental application developed rapidly with Cursor as an expl
 
 ## ✨ Features (many to be built yet)
 
+- Portal -- a graphic and aluring enterance, visual, starwars themed, that invites visitors to join the ecosystem by creating an account and interacting with our community greeting agent. login and create accounts here.
+- Change-log a list of all the commit message with time and date listed, reverse chronological order
 - Text analysis to determine AI vs. human authorship
-- Modern, responsive UI with 1980's sci-fi aesthetic
-- User accounts and history tracking
-- Detailed confidence metrics for analysis results
-- Cross-platform compatibility
 
 ## 🛠️ Tech Stack
 
 ### Frontend
 
-- React 19 with TypeScript
-- React Router for navigation
-- Jest and React Testing Library for testing
-- MSW (Mock Service Worker) for API mocking
+- Next.js 15 with TypeScript 5
+- React 19 for UI components
+- TanStack Query (React Query) for data fetching
+- Jest 29 and React Testing Library 16 for testing
+- Zustand 5 for state management
+- Tailwind CSS for styling
 
 ### Infrastructure
 
-- AWS S3 for static hosting
-- AWS CloudFront for CDN
-- AWS Route53 for DNS management
-- AWS ACM for SSL certificates
-- Terraform for infrastructure as code
-
-### DevOps
-
-- Husky for Git hooks
-- ESLint and Prettier for code quality
+- AWS (S3, CloudFront, Lambda)
+- Terraform for IaC
 - GitHub Actions for CI/CD
-
-## 📂 Project Structure
-
-```
-.
-├── frontend/              # React TypeScript application
-│   ├── public/           # Static assets
-│   ├── src/              # Application source code
-│   │   ├── components/   # Reusable UI components
-│   │   ├── pages/        # Page components
-│   │   ├── services/     # API and service layer
-│   │   └── ...
-│   └── ...
-├── docs/                  # Project documentation
-│   ├── design-system.md  # Design system documentation
-│   └── infrastructure.md # Infrastructure documentation
-└── infrastructure/        # Terraform configuration
-    ├── bootstrap/        # Initial Terraform state setup
-    │   └── main.tf
-    ├── scripts/          # Infrastructure management scripts
-    │   ├── setup.sh      # Initial setup and deployment
-    │   └── destroy.sh    # Clean teardown of resources
-    ├── main.tf           # Main infrastructure configuration
-    ├── variables.tf      # Variable definitions
-    ├── outputs.tf        # Output definitions
-    └── backend.tf        # S3 backend configuration
-```
 
 ## 📚 Documentation
 
@@ -134,8 +99,10 @@ npm install
 2. Start the development server:
 
 ```bash
-npm start
+npm run dev
 ```
+
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## 💻 Development Workflow
 

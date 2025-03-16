@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { retroIcons } from "@/lib/designSystem";
 import useAuthStore from "@/store/useAuthStore";
+import Badges from "./Badges";
 
 const NavMenu: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

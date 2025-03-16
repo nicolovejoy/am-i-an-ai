@@ -1,22 +1,28 @@
-module.exports = {
+/** @type {import('jest').Config} */
+const config = {
   testEnvironment: "jsdom",
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+  },
   transform: {
-    "^.+\\.(ts|tsx)$": [
+    "^.+\\.(js|jsx|ts|tsx)$": [
       "babel-jest",
       {
         presets: [
-          "@babel/preset-env",
+          ["@babel/preset-env", { targets: { node: "current" } }],
           "@babel/preset-react",
           "@babel/preset-typescript",
         ],
       },
     ],
   },
-  moduleNameMapper: {
-    "^@/(.*)$": "<rootDir>/src/$1",
-    "\\.(css|less|scss|sass)$": "identity-obj-proxy",
-  },
-  setupFilesAfterEnv: ["@testing-library/jest-dom", "<rootDir>/jest.setup.js"],
-  testRegex: "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+  collectCoverageFrom: [
+    "src/**/*.{js,jsx,ts,tsx}",
+    "!src/**/*.d.ts",
+    "!src/**/*.stories.{js,jsx,ts,tsx}",
+  ],
 };
+
+module.exports = config;
