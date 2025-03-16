@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { retroIcons } from "@/lib/designSystem";
 import useAuthStore from "@/store/useAuthStore";
@@ -39,7 +40,14 @@ const NavMenu: React.FC = () => {
           <div className="flex items-center">
             {/* Logo/Brand */}
             <Link href="/" className="flex-shrink-0 flex items-center">
-              <h1 className="text-xl font-bold neon-text">Am I an AI?</h1>
+              <Image
+                src="/logo.svg"
+                alt="Am I an AI?"
+                width={120}
+                height={40}
+                className="h-10 w-auto"
+                priority
+              />
             </Link>
 
             {/* Desktop Navigation Links */}

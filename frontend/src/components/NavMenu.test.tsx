@@ -62,6 +62,19 @@ describe("NavMenu", () => {
     ).toBeInTheDocument();
   });
 
+  it("displays the logo image", () => {
+    render(<NavMenu />);
+
+    // Check that the logo image is present
+    const logoImage = screen.getByAltText("Am I an AI?");
+    expect(logoImage).toBeInTheDocument();
+    expect(logoImage.tagName).toBe("IMG");
+    expect(logoImage).toHaveAttribute(
+      "src",
+      expect.stringContaining("logo.svg")
+    );
+  });
+
   it("shows login button when not logged in", () => {
     // Mock the store to return not logged in
     jest.spyOn(authStore, "default").mockImplementation((selector) => {
