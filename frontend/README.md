@@ -4,12 +4,13 @@ This is the Next.js version of the "Am I an AI?" application, migrated from Crea
 
 ## Features
 
-- 🚀 Built with Next.js 14
+- 🚀 Built with Next.js 15
+- ⚛️ Using React 19
 - 🔍 AI-powered text analysis
 - 💻 80's retro-futuristic design
 - 📱 Fully responsive for all device sizes
 - ⚡ Server-side rendering for improved performance
-- 🔒 Account management functionality
+- 🔒 Authentication and account management
 - 🔄 Advanced state management with Zustand and React Query
 
 ## Getting Started
@@ -72,7 +73,8 @@ src/
 
 ## Key Technologies
 
-- **Framework**: Next.js 14
+- **Framework**: Next.js 15
+- **UI Library**: React 19
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **State Management**:

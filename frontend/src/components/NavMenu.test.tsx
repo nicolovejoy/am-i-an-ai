@@ -2,11 +2,40 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import NavMenu from "./NavMenu";
+import useAuthStore from "@/store/useAuthStore";
 
 // Mock next navigation
 jest.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
+
+// Mock the auth store
+jest.mock("@/store/useAuthStore");
+const mockLogout = jest.fn();
+
+// Setup the mock implementation with proper type casting
+const mockedUseAuthStore = useAuthStore as unknown as jest.Mock;
+mockedUseAuthStore.mockImplementation((selector) => {
+  if (typeof selector === "function") {
+    return selector({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: mockLogout,
+      clearError: jest.fn(),
+    });
+  }
+  return {
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    logout: mockLogout,
+  };
+});
 
 // Mock next/image
 jest.mock("next/image", () => ({

@@ -1,4 +1,4 @@
-import { User } from "@/store/useAuthStore";
+import { User } from "@/services/api";
 
 export type { User };
 

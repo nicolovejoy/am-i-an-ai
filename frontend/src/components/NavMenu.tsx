@@ -13,7 +13,8 @@ const NavMenu: React.FC = () => {
 
   // Use the auth store
   const user = useAuthStore((state) => state.user);
-  const login = useAuthStore((state) => state.login);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
   const logout = useAuthStore((state) => state.logout);
 
   const toggleMobileMenu = () => {
@@ -24,12 +25,8 @@ const NavMenu: React.FC = () => {
     return pathname === path;
   };
 
-  const handleLogin = () => {
-    login({
-      id: "user123",
-      name: "Operator.347",
-      email: "user@example.com",
-    });
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
@@ -96,7 +93,7 @@ const NavMenu: React.FC = () => {
 
           {/* Login/Logout buttons */}
           <div className="flex items-center">
-            {user ? (
+            {isAuthenticated && user ? (
               <>
                 <Link
                   href="/account"
@@ -109,16 +106,17 @@ const NavMenu: React.FC = () => {
                   Account
                 </Link>
                 <button
-                  onClick={() => logout()}
+                  onClick={handleLogout}
+                  disabled={isLoading}
                   className="sci-fi-button border-neon-pink text-neon-pink hover:text-white ml-4"
                 >
-                  Logout
+                  {isLoading ? "..." : "Logout"}
                 </button>
               </>
             ) : (
-              <button onClick={handleLogin} className="sci-fi-button ml-4">
+              <Link href="/login" className="sci-fi-button ml-4">
                 Login
-              </button>
+              </Link>
             )}
 
             {/* Mobile menu button */}
@@ -187,7 +185,7 @@ const NavMenu: React.FC = () => {
             >
               Donate
             </Link>
-            {user ? (
+            {isAuthenticated && user ? (
               <>
                 <Link
                   href="/account"
@@ -202,7 +200,7 @@ const NavMenu: React.FC = () => {
                 </Link>
                 <button
                   onClick={() => {
-                    logout();
+                    handleLogout();
                     setIsMobileMenuOpen(false);
                   }}
                   className="block w-full text-left px-3 py-2 text-base font-medium text-neon-pink hover:text-pink-400 hover:border-l-4 hover:border-neon-pink"
@@ -211,15 +209,15 @@ const NavMenu: React.FC = () => {
                 </button>
               </>
             ) : (
-              <button
+              <Link
+                href="/login"
                 onClick={() => {
-                  handleLogin();
                   setIsMobileMenuOpen(false);
                 }}
                 className="block w-full text-left px-3 py-2 text-base font-medium text-neon-blue hover:text-blue-300 hover:border-l-4 hover:border-neon-blue"
               >
                 Login
-              </button>
+              </Link>
             )}
           </div>
         </div>

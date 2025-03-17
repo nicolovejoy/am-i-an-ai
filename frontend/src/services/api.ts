@@ -24,6 +24,32 @@ export type UserProfile = {
   usageCount: number;
 };
 
+// Auth types
+export type LoginCredentials = {
+  email?: string;
+  password?: string;
+  user?: User;
+  token?: string;
+  skipApi?: boolean;
+};
+
+export type RegisterCredentials = {
+  name: string;
+  email: string;
+  password: string;
+};
+
+export type AuthResponse = {
+  user: User;
+  token: string;
+};
+
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 export const analyzeText = async (text: string): Promise<AnalysisResult> => {
   console.log(text); // This line is just to use the 'text' parameter
   // This is a simulation - we'll replace with real API call later
@@ -79,19 +105,81 @@ export const getPastAnalyses = async (): Promise<PastAnalysis[]> => {
   });
 };
 
-// Get user profile
+// Auth API endpoints
+export const loginUser = async (
+  credentials: LoginCredentials
+): Promise<AuthResponse> => {
+  // For demo purposes, we'll simulate a successful login with a fake user and token
+  // In a real app, this would be an API call to your authentication endpoint
+
+  // Fake login delay
+  await new Promise((resolve) => setTimeout(resolve, 800));
+
+  // Simple validation to simulate API behavior
+  if (!credentials.email || !credentials.password) {
+    throw new Error("Email and password are required");
+  }
+
+  // Just for demo - check for a test user
+  if (
+    credentials.email === "demo@example.com" &&
+    credentials.password === "password"
+  ) {
+    return {
+      user: {
+        id: "user-123",
+        name: "Demo User",
+        email: "demo@example.com",
+      },
+      token: "fake-jwt-token-xyz",
+    };
+  }
+
+  // Simulate failed login
+  throw new Error("Invalid credentials");
+};
+
+export const registerUser = async (
+  credentials: RegisterCredentials
+): Promise<AuthResponse> => {
+  // Fake registration delay
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  // Simple validation to simulate API behavior
+  if (!credentials.name || !credentials.email || !credentials.password) {
+    throw new Error("Name, email, and password are required");
+  }
+
+  // In a real app, this would create a new user in your backend
+  // For demo, we'll just return a successful registration with the user info
+  return {
+    user: {
+      id: `user-${Date.now()}`,
+      name: credentials.name,
+      email: credentials.email,
+    },
+    token: "fake-jwt-token-new-user",
+  };
+};
+
+export const logoutUser = async (): Promise<void> => {
+  // In a real app, this might notify the backend about the logout
+  // For demo, we'll just simulate a short delay
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return;
+};
+
 export const getUserProfile = async (): Promise<UserProfile> => {
-  // Simulate API call to get user profile
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        name: "Operator.347",
-        email: "user@example.com",
-        joined: "Cycle 27.3.1",
-        usageCount: 42,
-      });
-    }, 800);
-  });
+  // Fake API call delay
+  await new Promise((resolve) => setTimeout(resolve, 700));
+
+  // Return mock profile data
+  return {
+    name: "Demo User",
+    email: "demo@example.com",
+    joined: new Date().toISOString(),
+    usageCount: Math.floor(Math.random() * 50),
+  };
 };
 
 // Delete analysis

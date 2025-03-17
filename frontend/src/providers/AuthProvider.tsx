@@ -1,28 +1,30 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import React, { useEffect } from "react";
 import useAuthStore from "@/store/useAuthStore";
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
-  const { login } = useAuthStore();
-
-  // Initialize auth state from localStorage on component mount
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    // Check if there's auth data in localStorage
+    const token = localStorage.getItem("token");
+    const userJson = localStorage.getItem("user");
+
+    // Only attempt to restore session if both exist
+    if (token && userJson) {
       try {
-        const userData = JSON.parse(storedUser);
-        login(userData);
+        const user = JSON.parse(userJson);
+
+        if (user && token) {
+          // Restore the session
+          const { login } = useAuthStore.getState();
+          login({ user, token, skipApi: true });
+        }
       } catch (error) {
-        console.error("Failed to parse stored user data", error);
-        localStorage.removeItem("user");
+        // Handle invalid JSON in localStorage
+        console.error("Failed to parse user data from localStorage:", error);
       }
     }
-  }, [login]);
+  }, []);
 
   return <>{children}</>;
 }

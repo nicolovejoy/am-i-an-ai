@@ -3,22 +3,17 @@
 
 import "@testing-library/jest-dom";
 
-// Mock the auth store
-jest.mock("@/store/useAuthStore", () => ({
-  __esModule: true,
-  default: () => ({
-    isLoggedIn: false,
-    login: jest.fn(),
-    logout: jest.fn(),
-    initialize: jest.fn(),
-    user: null,
-  }),
-}));
+// Setup mock for localStorage
+Object.defineProperty(window, "localStorage", {
+  value: {
+    getItem: jest.fn(() => null),
+    setItem: jest.fn(() => null),
+    removeItem: jest.fn(() => null),
+    clear: jest.fn(() => null),
+  },
+  writable: true,
+});
 
-// Mock next/navigation
-jest.mock("next/navigation", () => ({
-  usePathname: () => "/test",
-  useRouter: () => ({
-    push: jest.fn(),
-  }),
-}));
+// Don't mock these globally - let individual tests handle their own mocking
+// jest.mock("@/store/useAuthStore", () => ({...}));
+// jest.mock("next/navigation", () => ({...}));
