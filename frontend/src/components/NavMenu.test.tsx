@@ -1,13 +1,14 @@
 import React from "react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import NavMenu from "./NavMenu";
 
+// Mock next navigation
 jest.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 
-// Mock next/image to use a div instead of img to avoid lint warnings
+// Mock next/image
 jest.mock("next/image", () => ({
   __esModule: true,
   default: (props: {
@@ -26,17 +27,20 @@ jest.mock("next/image", () => ({
   ),
 }));
 
-jest.mock("@/store/useAuthStore", () => ({
-  __esModule: true,
-  default: () => ({
-    user: { id: "123", name: "Test", email: "test@example.com" },
-    login: jest.fn(),
-    logout: jest.fn(),
-  }),
-}));
+// No need to mock the auth store as we're not testing that functionality
 
-describe("NavMenu", () => {
+describe("NavMenu Component", () => {
   it("renders without crashing", () => {
     expect(() => render(<NavMenu />)).not.toThrow();
+  });
+
+  it("displays all main navigation links", () => {
+    render(<NavMenu />);
+
+    // Check for main navigation links
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getByText("Text Analysis")).toBeInTheDocument();
+    expect(screen.getByText("About")).toBeInTheDocument();
+    expect(screen.getByText("Donate")).toBeInTheDocument();
   });
 });
