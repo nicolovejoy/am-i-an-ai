@@ -42,29 +42,6 @@ export const analyzeText = async (text: string): Promise<AnalysisResult> => {
   });
 };
 
-// For future implementation with Next.js API routes
-// export const analyzeText = async (text: string): Promise<AnalysisResult> => {
-//   try {
-//     const response = await fetch('/api/analyze', {
-//       method: 'POST',
-//       headers: {
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify({ text }),
-//     });
-//
-//     if (!response.ok) {
-//       throw new Error('Failed to analyze text');
-//     }
-//
-//     const data = await response.json();
-//     return data;
-//   } catch (error) {
-//     console.error('Error analyzing text:', error);
-//     return { result: 'unknown', confidence: 0 };
-//   }
-// };
-
 // New functions for React Query
 
 // Get past analyses

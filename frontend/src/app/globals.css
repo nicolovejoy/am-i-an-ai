@@ -6,17 +6,20 @@
 @tailwind utilities;
 
 :root {
-  /* Color palette */
-  --neon-blue: #00f3ff;
-  --neon-purple: #9d00ff;
-  --neon-pink: #ff00c8;
-  --dark-blue: #060c21;
-  --medium-blue: #0c1e3e;
-  --light-blue: #2a4a7f;
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 0, 0, 0;
+  --background-end-rgb: 0, 0, 0;
+
+  /* Cyberpunk color palette */
+  --neon-blue: #00ffff;
+  --neon-pink: #ff00ff;
+  --neon-green: #00ff00;
+  --neon-purple: #9900ff;
+  --neon-yellow: #ffff00;
+  --dark-blue: #050a30;
+  --medium-blue: #0a1852;
+  --terminal-green: #00ff9d;
   --grid-color: rgba(0, 243, 255, 0.2);
-  --terminal-green: #0cff6f;
-  --neon-green: #0cff6f;
-  --neon-yellow: #ffee00;
   --text-color: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.7);
   --success-color: #0cff6f;
@@ -24,6 +27,18 @@
   --error-color: #ff3860;
   --main-font: "Roboto Mono", monospace;
   --monospace-font: "Roboto Mono", monospace;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+  @apply bg-dark-blue text-white;
+  font-family: "Roboto Mono", monospace;
 }
 
 @layer base {
@@ -54,64 +69,41 @@
 
   /* Neon elements */
   .neon-text {
-    font-family: "Orbitron", sans-serif;
-    @apply text-white;
-    text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+    color: var(--neon-blue);
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5), 0 0 10px rgba(0, 255, 255, 0.3);
   }
 
   .neon-border {
-    @apply relative border border-neon-blue;
-    box-shadow: 0 0 5px var(--neon-blue), inset 0 0 5px var(--neon-blue);
+    border: 1px solid var(--neon-blue);
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.5), 0 0 10px rgba(0, 255, 255, 0.3);
   }
 
   /* Terminal-like elements */
   .terminal {
-    @apply bg-opacity-95 border border-neon-blue p-6 rounded-md relative overflow-hidden;
-    background-color: rgba(10, 20, 40, 0.95);
-  }
-
-  .terminal::before {
-    content: "";
-    @apply absolute top-0 left-0 w-full h-1;
-    background: linear-gradient(
-      90deg,
-      var(--neon-blue),
-      var(--neon-purple),
-      var(--neon-pink)
-    );
+    background-color: rgba(10, 24, 82, 0.7);
+    border: 1px solid var(--neon-blue);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    font-family: monospace;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
   }
 
   /* Buttons and interactive elements */
   .sci-fi-button {
-    @apply bg-transparent text-neon-blue border border-neon-blue py-2 px-4 uppercase transition-all duration-300 relative overflow-hidden;
-    font-family: "Orbitron", sans-serif;
-    font-weight: 500;
-    letter-spacing: 1px;
-    box-shadow: 0 0 5px var(--neon-blue);
+    background-color: transparent;
+    border: 1px solid var(--neon-blue);
+    color: var(--neon-blue);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
   }
 
   .sci-fi-button:hover {
-    @apply bg-opacity-20;
-    background-color: rgba(0, 243, 255, 0.2);
-    box-shadow: 0 0 10px var(--neon-blue);
-  }
-
-  .sci-fi-button:active {
-    background-color: rgba(0, 243, 255, 0.3);
-  }
-
-  .sci-fi-button::after {
-    content: "";
-    @apply absolute top-[-50%] left-[-50%] w-[200%] h-[200%] transition-all duration-300 opacity-0;
-    background: linear-gradient(
-      rgba(255, 255, 255, 0.1),
-      rgba(255, 255, 255, 0)
-    );
-    transform: rotate(30deg);
-  }
-
-  .sci-fi-button:hover::after {
-    @apply opacity-20;
+    background-color: var(--neon-blue);
+    color: var(--dark-blue);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
   }
 
   /* Form elements */
@@ -197,4 +189,22 @@
   .animate-blink {
     animation: blink 1s infinite;
   }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dark-blue);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neon-blue);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-pink);
 }

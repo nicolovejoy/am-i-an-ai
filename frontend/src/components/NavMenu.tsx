@@ -2,17 +2,17 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { retroIcons } from "@/lib/designSystem";
 import useAuthStore from "@/store/useAuthStore";
+import { FaBars, FaTimes } from "react-icons/fa";
+import Image from "next/image";
 
 const NavMenu: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // Use the auth store instead of props
-  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  // Use the auth store
+  const user = useAuthStore((state) => state.user);
   const login = useAuthStore((state) => state.login);
   const logout = useAuthStore((state) => state.logout);
 
@@ -24,7 +24,6 @@ const NavMenu: React.FC = () => {
     return pathname === path;
   };
 
-  // Mock user for demo purposes
   const handleLogin = () => {
     login({
       id: "user123",
@@ -34,7 +33,7 @@ const NavMenu: React.FC = () => {
   };
 
   return (
-    <nav className="bg-opacity-90 bg-medium-blue shadow-md border-b border-neon-blue">
+    <nav className="bg-opacity-90 bg-dark-blue shadow-md border-b border-neon-blue">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
@@ -43,11 +42,11 @@ const NavMenu: React.FC = () => {
               <Image
                 src="/logo.svg"
                 alt="Am I an AI?"
-                width={120}
+                width={40}
                 height={40}
-                className="h-10 w-auto"
-                priority
+                className="w-10 h-10 mr-2"
               />
+              <h1 className="text-xl font-bold neon-text">Am I an AI?</h1>
             </Link>
 
             {/* Desktop Navigation Links */}
@@ -60,7 +59,7 @@ const NavMenu: React.FC = () => {
                     : "text-gray-300 hover:text-neon-blue hover:border-b-2 hover:border-neon-blue"
                 }`}
               >
-                <span className="mr-1">{retroIcons.homeIcon}</span> Home
+                Home
               </Link>
               <Link
                 href="/analysis"
@@ -70,8 +69,7 @@ const NavMenu: React.FC = () => {
                     : "text-gray-300 hover:text-neon-purple hover:border-b-2 hover:border-neon-purple"
                 }`}
               >
-                <span className="mr-1">{retroIcons.analysisIcon}</span> Text
-                Analysis
+                Text Analysis
               </Link>
               <Link
                 href="/about"
@@ -81,7 +79,7 @@ const NavMenu: React.FC = () => {
                     : "text-gray-300 hover:text-neon-green hover:border-b-2 hover:border-neon-green"
                 }`}
               >
-                <span className="mr-1">{retroIcons.aboutIcon}</span> About
+                About
               </Link>
               <Link
                 href="/donate"
@@ -91,32 +89,34 @@ const NavMenu: React.FC = () => {
                     : "text-gray-300 hover:text-neon-pink hover:border-b-2 hover:border-neon-pink"
                 }`}
               >
-                <span className="mr-1">{retroIcons.donateIcon}</span> Donate
-              </Link>
-              <Link
-                href="/account"
-                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
-                  isActive("/account")
-                    ? "text-neon-yellow border-b-2 border-neon-yellow"
-                    : "text-gray-300 hover:text-neon-yellow hover:border-b-2 hover:border-neon-yellow"
-                }`}
-              >
-                <span className="mr-1">{retroIcons.accountIcon}</span> Account
+                Donate
               </Link>
             </div>
           </div>
 
           {/* Login/Logout buttons */}
           <div className="flex items-center">
-            {isLoggedIn ? (
-              <button
-                onClick={logout}
-                className="sci-fi-button border-neon-pink text-neon-pink hover:text-neon-pink"
-              >
-                Logout
-              </button>
+            {user ? (
+              <>
+                <Link
+                  href="/account"
+                  className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                    isActive("/account")
+                      ? "text-neon-yellow border-b-2 border-neon-yellow"
+                      : "text-gray-300 hover:text-neon-yellow hover:border-b-2 hover:border-neon-yellow"
+                  }`}
+                >
+                  Account
+                </Link>
+                <button
+                  onClick={() => logout()}
+                  className="sci-fi-button border-neon-pink text-neon-pink hover:text-white ml-4"
+                >
+                  Logout
+                </button>
+              </>
             ) : (
-              <button onClick={handleLogin} className="sci-fi-button">
+              <button onClick={handleLogin} className="sci-fi-button ml-4">
                 Login
               </button>
             )}
@@ -126,41 +126,12 @@ const NavMenu: React.FC = () => {
               <button
                 onClick={toggleMobileMenu}
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-neon-blue focus:outline-none"
-                aria-expanded="false"
+                aria-label="Toggle mobile menu"
               >
-                <span className="sr-only">Open main menu</span>
                 {isMobileMenuOpen ? (
-                  <svg
-                    className="block h-6 w-6"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <FaTimes className="h-6 w-6" />
                 ) : (
-                  <svg
-                    className="block h-6 w-6"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
+                  <FaBars className="h-6 w-6" />
                 )}
               </button>
             </div>
@@ -170,7 +141,7 @@ const NavMenu: React.FC = () => {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="sm:hidden bg-medium-blue bg-opacity-95 border-t border-neon-blue">
+        <div className="sm:hidden bg-dark-blue bg-opacity-95 border-t border-neon-blue">
           <div className="pt-2 pb-3 space-y-1">
             <Link
               href="/"
@@ -181,7 +152,7 @@ const NavMenu: React.FC = () => {
                   : "text-gray-300 hover:text-neon-blue hover:border-l-4 hover:border-neon-blue"
               }`}
             >
-              <span className="mr-2">{retroIcons.homeIcon}</span> Home
+              Home
             </Link>
             <Link
               href="/analysis"
@@ -192,8 +163,7 @@ const NavMenu: React.FC = () => {
                   : "text-gray-300 hover:text-neon-purple hover:border-l-4 hover:border-neon-purple"
               }`}
             >
-              <span className="mr-2">{retroIcons.analysisIcon}</span> Text
-              Analysis
+              Text Analysis
             </Link>
             <Link
               href="/about"
@@ -204,7 +174,7 @@ const NavMenu: React.FC = () => {
                   : "text-gray-300 hover:text-neon-green hover:border-l-4 hover:border-neon-green"
               }`}
             >
-              <span className="mr-2">{retroIcons.aboutIcon}</span> About
+              About
             </Link>
             <Link
               href="/donate"
@@ -215,32 +185,38 @@ const NavMenu: React.FC = () => {
                   : "text-gray-300 hover:text-neon-pink hover:border-l-4 hover:border-neon-pink"
               }`}
             >
-              <span className="mr-2">{retroIcons.donateIcon}</span> Donate
+              Donate
             </Link>
-            <Link
-              href="/account"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`block px-3 py-2 text-base font-medium flex items-center ${
-                isActive("/account")
-                  ? "text-neon-yellow border-l-4 border-neon-yellow"
-                  : "text-gray-300 hover:text-neon-yellow hover:border-l-4 hover:border-neon-yellow"
-              }`}
-            >
-              <span className="mr-2">{retroIcons.accountIcon}</span> Account
-            </Link>
-
-            {/* Login/Logout in mobile menu */}
-            {isLoggedIn ? (
-              <button
-                onClick={logout}
-                className="block w-full text-left px-3 py-2 text-base font-medium text-neon-pink hover:text-neon-pink hover:border-l-4 hover:border-neon-pink"
-              >
-                Logout
-              </button>
+            {user ? (
+              <>
+                <Link
+                  href="/account"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`block px-3 py-2 text-base font-medium flex items-center ${
+                    isActive("/account")
+                      ? "text-neon-yellow border-l-4 border-neon-yellow"
+                      : "text-gray-300 hover:text-neon-yellow hover:border-l-4 hover:border-neon-yellow"
+                  }`}
+                >
+                  Account
+                </Link>
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-3 py-2 text-base font-medium text-neon-pink hover:text-pink-400 hover:border-l-4 hover:border-neon-pink"
+                >
+                  Logout
+                </button>
+              </>
             ) : (
               <button
-                onClick={handleLogin}
-                className="block w-full text-left px-3 py-2 text-base font-medium text-neon-blue hover:text-neon-blue hover:border-l-4 hover:border-neon-blue"
+                onClick={() => {
+                  handleLogin();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="block w-full text-left px-3 py-2 text-base font-medium text-neon-blue hover:text-blue-300 hover:border-l-4 hover:border-neon-blue"
               >
                 Login
               </button>

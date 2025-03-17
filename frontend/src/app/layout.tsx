@@ -1,12 +1,17 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import ClientLayout from "@/components/ClientLayout";
+import { Inter } from "next/font/google";
+import QueryProvider from "@/providers/QueryProvider";
+import { AuthProvider } from "@/providers/AuthProvider";
+import NavMenu from "@/components/NavMenu";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Am I an AI?",
-  description: "Discover if text was written by a human or AI",
+  description: "Detect whether text was written by a human or AI",
   icons: {
-    icon: "/favicon.svg",
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },
 };
 
@@ -20,8 +25,13 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
-      <body className="font-sans">
-        <ClientLayout>{children}</ClientLayout>
+      <body className={inter.className}>
+        <QueryProvider>
+          <AuthProvider>
+            <NavMenu />
+            {children}
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

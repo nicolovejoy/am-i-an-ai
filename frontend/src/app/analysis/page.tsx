@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import TextInput from "../../components/TextInput";
-import Results from "../../components/Results";
+import TextInput from "@/components/TextInput";
+import Results from "@/components/Results";
 import { useAnalyzeText } from "@/hooks/useQueries";
 
 export default function TextAnalysis() {

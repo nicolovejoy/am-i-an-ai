@@ -10,11 +10,11 @@ import useAuthStore from "@/store/useAuthStore";
 
 export default function Account() {
   // Get authentication state from Zustand
-  const { isLoggedIn } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
 
   // Use React Query to fetch user profile
   const {
-    data: user,
+    data: profile,
     isLoading: isLoadingProfile,
     error: profileError,
   } = useUserProfile();
@@ -34,7 +34,7 @@ export default function Account() {
     deleteAnalysisMutation.mutate(id);
   };
 
-  if (!isLoggedIn) {
+  if (!user) {
     return (
       <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="terminal p-6 text-center">
@@ -82,14 +82,14 @@ export default function Account() {
             <div className="p-4 text-center font-mono text-neon-pink">
               Error loading profile. Please refresh.
             </div>
-          ) : user ? (
+          ) : profile ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1 font-mono">
                   IDENTIFIER
                 </label>
                 <p className="text-base text-neon-blue font-mono">
-                  {user.name}
+                  {profile.name}
                 </p>
               </div>
 
@@ -98,7 +98,7 @@ export default function Account() {
                   COMM CHANNEL
                 </label>
                 <p className="text-base text-neon-blue font-mono">
-                  {user.email}
+                  {profile.email}
                 </p>
               </div>
 
@@ -107,7 +107,7 @@ export default function Account() {
                   SYSTEM ACCESS SINCE
                 </label>
                 <p className="text-base text-neon-blue font-mono">
-                  {user.joined}
+                  {profile.joined}
                 </p>
               </div>
 
@@ -116,7 +116,7 @@ export default function Account() {
                   ANALYSIS OPERATIONS
                 </label>
                 <p className="text-base text-neon-blue font-mono">
-                  {user.usageCount} completed
+                  {profile.usageCount} completed
                 </p>
               </div>
             </div>

@@ -3,11 +3,12 @@
 
 // Mock the auth store
 export const mockAuthStore = {
+  __esModule: true,
   default: () => ({
     isLoggedIn: false,
-    login: () => {},
-    logout: () => {},
-    initialize: () => {},
+    login: jest.fn(),
+    logout: jest.fn(),
+    initialize: jest.fn(),
     user: null,
   }),
 };
@@ -16,6 +17,6 @@ export const mockAuthStore = {
 export const mockNavigation = {
   usePathname: () => "/test",
   useRouter: () => ({
-    push: () => {},
+    push: jest.fn(),
   }),
 };
