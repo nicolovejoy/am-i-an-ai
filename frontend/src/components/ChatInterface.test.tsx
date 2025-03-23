@@ -1,7 +1,11 @@
+import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ChatInterface from "./ChatInterface";
 
 jest.useFakeTimers();
+
+// Mock scrollIntoView since it's not available in the test environment
+window.HTMLElement.prototype.scrollIntoView = jest.fn();
 
 describe("ChatInterface", () => {
   it("renders the component and shows initial greeting", async () => {

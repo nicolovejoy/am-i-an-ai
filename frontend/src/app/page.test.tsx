@@ -14,11 +14,13 @@ describe("Home Page", () => {
   it("renders the main title", () => {
     render(<Home />);
 
-    // Check main title elements
+    // Check main title as a whole instead of individual parts
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent(/am i an ai\?/i);
+
+    // Check for styled spans
     expect(screen.getByText("Am I")).toBeInTheDocument();
-    expect(screen.getByText("an")).toBeInTheDocument();
     expect(screen.getByText("AI")).toBeInTheDocument();
-    expect(screen.getByText("?")).toBeInTheDocument();
   });
 
   it("renders the chat interface", () => {

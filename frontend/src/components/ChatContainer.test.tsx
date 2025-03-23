@@ -4,13 +4,12 @@ import "@testing-library/jest-dom";
 import ChatContainer from "./ChatContainer";
 
 // Mock the dynamic import of ChatInterface
-jest.mock("next/dynamic", () => () => {
-  const MockedChatInterface = () => (
-    <div data-testid="chat-interface-dynamic-mock" />
-  );
-  return {
-    __esModule: true,
-    default: MockedChatInterface,
+jest.mock("next/dynamic", () => {
+  return function mockDynamic() {
+    const MockedChatInterface = () => (
+      <div data-testid="chat-interface-dynamic-mock" />
+    );
+    return MockedChatInterface;
   };
 });
 
