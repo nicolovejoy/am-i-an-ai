@@ -1,19 +1,11 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from "uuid";
-import { AnalysisTable } from "../../src/config/dynamodb";
-import { IInteraction, Interaction } from "../../src/models/Interaction";
 
-// Create a mock DynamoDB client
-const mockDynamoClient = {
-  send: jest.fn(),
-} as unknown as DynamoDBClient;
-
-const mockDocumentClient = DynamoDBDocumentClient.from(mockDynamoClient);
-
-// Mock the DynamoDB client
+// Mock the dependencies before importing any modules
 jest.mock("@aws-sdk/client-dynamodb", () => ({
-  DynamoDBClient: jest.fn().mockImplementation(() => mockDynamoClient),
+  DynamoDBClient: jest.fn().mockImplementation(() => ({
+    send: jest.fn(),
+  })),
 }));
 
 jest.mock("@aws-sdk/lib-dynamodb", () => ({
@@ -29,34 +21,55 @@ jest.mock("@aws-sdk/lib-dynamodb", () => ({
   UpdateCommand: jest.fn(),
 }));
 
-// Mock the Entity method calls
-jest.mock("../../src/models/Interaction", () => ({
-  IInteraction: jest.requireActual("../../src/models/Interaction").IInteraction,
-  Interaction: {
+// Mock dynamodb-toolbox entirely
+jest.mock("dynamodb-toolbox", () => ({
+  Table: jest.fn().mockImplementation(() => ({})),
+  Entity: jest.fn().mockImplementation(() => ({
     put: jest.fn(),
     get: jest.fn(),
     query: jest.fn(),
-    delete: jest.fn(),
     update: jest.fn(),
-  },
+    delete: jest.fn(),
+  })),
 }));
 
-// Import the repository after mocks are set up
-import { InteractionRepository } from "../../src/repositories/interactionRepository";
+// Mock uuid
+jest.mock("uuid", () => ({
+  v4: jest.fn(() => "mocked-uuid"),
+}));
+
+// Import the IInteraction interface
+import { IInteraction } from "../../src/models/Interaction";
+
+// Mock the Entity object
+const mockInteractionEntity = {
+  put: jest.fn(),
+  get: jest.fn(),
+  query: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+};
+
+// Mock the specific model
+jest.mock("../../src/models/Interaction", () => ({
+  IInteraction: jest.requireActual("../../src/models/Interaction").IInteraction,
+  Interaction: mockInteractionEntity,
+}));
+
+// Import the repository after setting up all mocks
+import * as interactionRepository from "../../src/repositories/interactionRepository";
 
 describe("InteractionRepository", () => {
-  let repository: InteractionRepository;
   let mockInteraction: IInteraction;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    repository = new InteractionRepository();
 
     // Create a mock interaction for testing
     mockInteraction = {
-      id: uuidv4(),
-      userId: uuidv4(),
-      agentId: uuidv4(),
+      id: "mocked-uuid",
+      userId: "user-123",
+      agentId: "agent-456",
       agentType: "ai",
       title: "Test Interaction",
       messages: [
@@ -84,15 +97,17 @@ describe("InteractionRepository", () => {
     it("should create a new interaction", async () => {
       // Setup
       const { id, createdAt, updatedAt, ...interactionData } = mockInteraction;
-      (Interaction.put as jest.Mock).mockResolvedValueOnce({
+      mockInteractionEntity.put.mockResolvedValueOnce({
         Item: mockInteraction,
       });
 
       // Execute
-      const result = await repository.createInteraction(interactionData);
+      const result = await interactionRepository.createInteraction(
+        interactionData
+      );
 
       // Verify
-      expect(Interaction.put).toHaveBeenCalled();
+      expect(mockInteractionEntity.put).toHaveBeenCalled();
       expect(result).toHaveProperty("id");
       expect(result).toHaveProperty("createdAt");
       expect(result).toHaveProperty("updatedAt");
@@ -105,13 +120,11 @@ describe("InteractionRepository", () => {
       // Setup
       const { id, createdAt, updatedAt, ...interactionData } = mockInteraction;
       const errorMessage = "Failed to create interaction";
-      (Interaction.put as jest.Mock).mockRejectedValueOnce(
-        new Error(errorMessage)
-      );
+      mockInteractionEntity.put.mockRejectedValueOnce(new Error(errorMessage));
 
       // Execute & Verify
       await expect(
-        repository.createInteraction(interactionData)
+        interactionRepository.createInteraction(interactionData)
       ).rejects.toThrow();
     });
   });
@@ -119,18 +132,18 @@ describe("InteractionRepository", () => {
   describe("findById", () => {
     it("should retrieve an interaction by id and userId", async () => {
       // Setup
-      (Interaction.get as jest.Mock).mockResolvedValueOnce({
+      mockInteractionEntity.get.mockResolvedValueOnce({
         Item: mockInteraction,
       });
 
       // Execute
-      const result = await repository.findById(
+      const result = await interactionRepository.findById(
         mockInteraction.id,
         mockInteraction.userId
       );
 
       // Verify
-      expect(Interaction.get).toHaveBeenCalledWith({
+      expect(mockInteractionEntity.get).toHaveBeenCalledWith({
         pk: `USER#${mockInteraction.userId}`,
         sk: `INTERACTION#${mockInteraction.id}`,
       });
@@ -139,10 +152,12 @@ describe("InteractionRepository", () => {
 
     it("should return null if interaction is not found", async () => {
       // Setup
-      (Interaction.get as jest.Mock).mockResolvedValueOnce({ Item: null });
+      mockInteractionEntity.get.mockResolvedValueOnce({
+        Item: null,
+      });
 
       // Execute
-      const result = await repository.findById(
+      const result = await interactionRepository.findById(
         "non-existent-id",
         mockInteraction.userId
       );
