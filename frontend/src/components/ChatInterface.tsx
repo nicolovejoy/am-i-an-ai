@@ -17,9 +17,9 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const initialMessageSent = useRef<boolean>(false);
 
   // Function to generate a unique ID for messages
   const generateId = () => {
@@ -94,16 +94,16 @@ export default function ChatInterface() {
     inputRef.current?.focus();
 
     // Only add the initial greeting if it hasn't been sent yet
-    if (!initialMessageSent.current) {
+    if (!hasInitialized) {
       const timer = setTimeout(() => {
         addSystemMessage("Hello, how are you?", 800);
-        initialMessageSent.current = true;
+        setHasInitialized(true);
       }, 500);
 
       // Cleanup function to clear timer if component unmounts
       return () => clearTimeout(timer);
     }
-  }, [addSystemMessage]);
+  }, [addSystemMessage, hasInitialized]);
 
   return (
     <div className="flex flex-col h-[80vh] max-w-3xl mx-auto rounded-lg border border-neon-blue bg-dark-blue">
