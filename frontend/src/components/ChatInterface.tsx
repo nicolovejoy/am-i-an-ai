@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { FiSend } from "react-icons/fi";
 
 // Define types for our chat data
@@ -19,6 +19,7 @@ export default function ChatInterface() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const initialMessageSent = useRef<boolean>(false);
 
   // Function to generate a unique ID for messages
   const generateId = () => {
@@ -26,7 +27,7 @@ export default function ChatInterface() {
   };
 
   // Add a system message with typing animation
-  const addSystemMessage = (content: string, delay = 1000) => {
+  const addSystemMessage = useCallback((content: string, delay = 1000) => {
     setIsTyping(true);
 
     setTimeout(() => {
@@ -41,7 +42,7 @@ export default function ChatInterface() {
       ]);
       setIsTyping(false);
     }, delay);
-  };
+  }, []);
 
   // Add a user message
   const addUserMessage = (content: string) => {
@@ -67,11 +68,11 @@ export default function ChatInterface() {
     setInputValue("");
 
     // Simple response logic - can be expanded later
-    handleResponse(inputValue);
+    handleResponse();
   };
 
   // Simple response handler - this can be replaced with API calls later
-  const handleResponse = (userInput: string) => {
+  const handleResponse = () => {
     // Wait a moment before showing the typing indicator
     setTimeout(() => {
       // For now, just respond with a follow-up question
@@ -92,11 +93,17 @@ export default function ChatInterface() {
     // Focus the input
     inputRef.current?.focus();
 
-    // Add the initial greeting with a slight delay
-    setTimeout(() => {
-      addSystemMessage("Hello, how are you?", 800);
-    }, 500);
-  }, []);
+    // Only add the initial greeting if it hasn't been sent yet
+    if (!initialMessageSent.current) {
+      const timer = setTimeout(() => {
+        addSystemMessage("Hello, how are you?", 800);
+        initialMessageSent.current = true;
+      }, 500);
+
+      // Cleanup function to clear timer if component unmounts
+      return () => clearTimeout(timer);
+    }
+  }, [addSystemMessage]);
 
   return (
     <div className="flex flex-col h-[80vh] max-w-3xl mx-auto rounded-lg border border-neon-blue bg-dark-blue">

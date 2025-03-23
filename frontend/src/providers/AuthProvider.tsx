@@ -21,7 +21,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         // Handle invalid JSON in localStorage
-        console.error("Failed to parse user data from localStorage:", error);
+        // Clear the invalid data
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       }
     }
   }, []);
