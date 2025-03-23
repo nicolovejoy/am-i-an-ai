@@ -16,4 +16,9 @@ output "s3_bucket_name" {
 output "certificate_arn" {
   description = "ARN of the SSL certificate"
   value       = aws_acm_certificate.website.arn
+}
+
+output "api_gateway_url" {
+  description = "API Gateway URL for the backend API"
+  value       = "${aws_api_gateway_deployment.api.invoke_url}"
 } 

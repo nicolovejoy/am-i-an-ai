@@ -62,6 +62,18 @@ resource "aws_cloudfront_distribution" "website" {
       origin_access_identity = aws_cloudfront_origin_access_identity.website.cloudfront_access_identity_path
     }
   }
+  
+  origin {
+    domain_name = replace(aws_api_gateway_deployment.api.invoke_url, "/^https?://([^/]*).*/", "$1")
+    origin_id   = "ApiGateway"
+    
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
 
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
@@ -78,6 +90,24 @@ resource "aws_cloudfront_distribution" "website" {
     min_ttl     = 0
     default_ttl = 3600
     max_ttl     = 86400
+  }
+  
+  ordered_cache_behavior {
+    path_pattern           = "/api/*"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "ApiGateway"
+    viewer_protocol_policy = "redirect-to-https"
+    
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Origin", "Referer"]
+      cookies { forward = "all" }
+    }
+    
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
   }
 
   restrictions {
@@ -255,4 +285,272 @@ resource "aws_iam_role_policy" "github_actions" {
 output "github_actions_role_arn" {
   value       = aws_iam_role.github_actions.arn
   description = "ARN of the GitHub Actions role"
+}
+
+############################
+# DynamoDB Tables
+############################
+
+resource "aws_dynamodb_table" "users_table" {
+  name         = "${var.environment}-users"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "pk"
+  range_key    = "sk"
+
+  attribute {
+    name = "pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "sk"
+    type = "S"
+  }
+
+  attribute {
+    name = "email"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "EmailIndex"
+    hash_key        = "email"
+    range_key       = "sk"
+    projection_type = "ALL"
+  }
+
+  tags = var.tags
+}
+
+resource "aws_dynamodb_table" "conversations_table" {
+  name         = "${var.environment}-conversations"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "pk"
+  range_key    = "sk"
+
+  attribute {
+    name = "pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "sk"
+    type = "S"
+  }
+
+  attribute {
+    name = "lastMessageTimestamp"
+    type = "N"
+  }
+
+  global_secondary_index {
+    name            = "LastMessageIndex"
+    hash_key        = "pk"
+    range_key       = "lastMessageTimestamp"
+    projection_type = "ALL"
+  }
+
+  tags = var.tags
+}
+
+resource "aws_dynamodb_table" "interactions_table" {
+  name         = "${var.environment}-interactions"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "pk"
+  range_key    = "sk"
+
+  attribute {
+    name = "pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "sk"
+    type = "S"
+  }
+
+  attribute {
+    name = "userId"
+    type = "S"
+  }
+
+  attribute {
+    name = "agentId"
+    type = "S"
+  }
+
+  attribute {
+    name = "createdAt"
+    type = "N"
+  }
+
+  attribute {
+    name = "lastMessageTimestamp"
+    type = "N"
+  }
+
+  global_secondary_index {
+    name            = "UserIdIndex"
+    hash_key        = "userId"
+    range_key       = "createdAt"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "AgentIdIndex"
+    hash_key        = "agentId"
+    range_key       = "lastMessageTimestamp"
+    projection_type = "ALL"
+  }
+
+  tags = var.tags
+}
+
+# API Gateway for backend API
+resource "aws_api_gateway_rest_api" "api" {
+  name        = "${var.environment}-api"
+  description = "Interactive Agent Portal API"
+  
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+  
+  tags = var.tags
+}
+
+# Lambda function for backend API
+resource "aws_lambda_function" "api" {
+  function_name = "${var.environment}-api"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "dist/lambda.handler"
+  runtime       = "nodejs20.x"
+  
+  filename         = "backend_lambda.zip"
+  source_code_hash = filebase64sha256("backend_lambda.zip")
+  
+  memory_size = 256
+  timeout     = 30
+  
+  environment {
+    variables = {
+      NODE_ENV                 = var.environment
+      DYNAMODB_USERS_TABLE     = aws_dynamodb_table.users_table.name
+      DYNAMODB_CONVERSATIONS_TABLE = aws_dynamodb_table.conversations_table.name
+      DYNAMODB_INTERACTIONS_TABLE  = aws_dynamodb_table.interactions_table.name
+    }
+  }
+  
+  tags = var.tags
+}
+
+# IAM role for Lambda
+resource "aws_iam_role" "lambda_role" {
+  name = "${var.environment}-lambda-role"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+  
+  tags = var.tags
+}
+
+# IAM policy for Lambda to access DynamoDB
+resource "aws_iam_policy" "lambda_dynamodb_policy" {
+  name        = "${var.environment}-lambda-dynamodb-policy"
+  description = "Allow Lambda to access DynamoDB tables"
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Effect = "Allow"
+        Resource = [
+          aws_dynamodb_table.users_table.arn,
+          aws_dynamodb_table.conversations_table.arn,
+          aws_dynamodb_table.interactions_table.arn,
+          "${aws_dynamodb_table.users_table.arn}/index/*",
+          "${aws_dynamodb_table.conversations_table.arn}/index/*",
+          "${aws_dynamodb_table.interactions_table.arn}/index/*"
+        ]
+      }
+    ]
+  })
+}
+
+# Attach IAM policy to Lambda role
+resource "aws_iam_role_policy_attachment" "lambda_dynamodb_attachment" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
+}
+
+# Attach basic Lambda execution policy to the role
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# API Gateway deployment
+resource "aws_api_gateway_deployment" "api" {
+  depends_on = [aws_api_gateway_integration.lambda_integration]
+  
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  stage_name  = var.environment
+  
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# API Gateway Lambda proxy resource (root resource)
+resource "aws_api_gateway_resource" "proxy" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  path_part   = "{proxy+}"
+}
+
+# API Gateway method for the proxy resource
+resource "aws_api_gateway_method" "proxy" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.proxy.id
+  http_method   = "ANY"
+  authorization_type = "NONE"
+}
+
+# API Gateway integration with Lambda
+resource "aws_api_gateway_integration" "lambda_integration" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  resource_id = aws_api_gateway_resource.proxy.id
+  http_method = aws_api_gateway_method.proxy.http_method
+  
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.api.invoke_arn
+}
+
+# Permission for API Gateway to invoke Lambda
+resource "aws_lambda_permission" "api_gateway" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api.function_name
+  principal     = "apigateway.amazonaws.com"
+  
+  # Allow invocation from any stage, method, and resource path
+  source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
 } 

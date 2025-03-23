@@ -108,7 +108,7 @@ Currently, the application uses a simulated authentication system with mock data
 ### Phase 1: Backend Setup
 
 - [ ] Set up a backend service (Node.js/Express, Python/FastAPI, or serverless functions)
-- [ ] Implement a database solution (MongoDB, PostgreSQL, Supabase, or Firebase)
+- [ ] Implement a database solution (DynamoDB, PostgreSQL, Supabase, or Firebase)
 - [ ] Create user account schema with necessary fields (name, email, password hash, etc.)
 - [ ] Implement secure password hashing and storage
 

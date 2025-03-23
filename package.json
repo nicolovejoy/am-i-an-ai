@@ -16,7 +16,8 @@
   },
   "scripts": {
     "prepare": "husky",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "cd backend && npm run lint && cd ../frontend && npm run lint"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -28,5 +29,10 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "3.772.0",
+    "@aws-sdk/lib-dynamodb": "3.772.0",
+    "dynamodb-toolbox": "2.0.0"
   }
 }

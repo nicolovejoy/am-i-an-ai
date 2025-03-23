@@ -29,4 +29,10 @@ variable "tags" {
 variable "github_username" {
   type        = string
   description = "GitHub username for the repository"
+}
+
+variable "project_name" {
+  description = "The name of the project, used for resource naming"
+  type        = string
+  default     = "amianai"
 } 

@@ -16,7 +16,7 @@ Currently, the application uses simulated API responses for authentication:
 We recommend implementing the backend using the following technologies:
 
 1. **Node.js + Express.js**: Fast, JavaScript-based backend that matches our frontend stack
-2. **MongoDB**: Flexible NoSQL database for storing user accounts and analysis history
+2. **DynamoDB**: AWS's NoSQL database for storing user accounts and conversation history
 3. **JWT (JSON Web Tokens)**: For secure authentication
 4. **bcrypt**: For password hashing
 5. **Nodemailer**: For sending verification emails
@@ -162,7 +162,7 @@ DELETE /api/analysis/:id
 ### Phase 1: Core Authentication (2-3 weeks)
 
 1. Set up Express.js server with basic middleware
-2. Configure MongoDB connection with Mongoose
+2. Configure DynamoDB connection with AWS SDK
 3. Implement user schema
 4. Create registration and login endpoints
 5. Set up password hashing
@@ -189,7 +189,7 @@ DELETE /api/analysis/:id
 
 1. **Development Environment**:
 
-   - Local development with MongoDB Atlas
+   - Local development with DynamoDB Local
    - Environment variables for configuration
 
 2. **Staging Environment**:
@@ -200,7 +200,7 @@ DELETE /api/analysis/:id
 3. **Production Environment**:
    - Vercel/Netlify for frontend
    - AWS/DigitalOcean/Heroku for backend API
-   - MongoDB Atlas (production cluster)
+   - DynamoDB Atlas (production cluster)
    - Real email delivery service
    - Monitoring and logging
 
@@ -220,3 +220,24 @@ We will use Swagger/OpenAPI for documenting the API endpoints, which will provid
 3. Create repository structure
 4. Implement core authentication endpoints
 5. Update frontend API service to connect to real backend
+
+## Implementation Steps
+
+1. Set up Express server with basic routes
+2. Configure DynamoDB connection with AWS SDK
+3. Implement user schema
+4. Create registration and login endpoints
+5. Set up password hashing
+6. Implement JWT token generation and validation
+7. Connect frontend API service to new backend
+
+### 4. Dev Environment Setup
+
+- Use environment variables for configuration
+- Local development with DynamoDB Local
+
+## Resources
+
+### Tools
+
+- AWS DynamoDB (main database)

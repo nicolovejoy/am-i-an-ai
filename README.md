@@ -1,4 +1,4 @@
-# Am I an AI? 🤖
+# Interactive Agent Portal 🤖💬
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![React](https://img.shields.io/badge/React-19-blue)](https://reactjs.org/)
@@ -6,7 +6,21 @@
 [![AWS](https://img.shields.io/badge/AWS-Powered-orange)](https://aws.amazon.com/)
 [![Terraform](https://img.shields.io/badge/Terraform-1.0+-purple)](https://www.terraform.io/)
 
-A modern web application that helps users determine if text was written by a human or AI.
+An interactive portal that engages visitors in conversations with both AI and human agents. The platform tracks interactions, builds trust profiles, and creates a dynamic engagement environment.
+
+## 🎯 Project Purpose
+
+This project is an interactive portal that:
+
+- Invites visitors to engage in conversation immediately
+- Supports multiple types of interactions (pre-defined, AI-generated, human-to-human)
+- Tracks visitors and creates user records as they navigate
+- Stores all conversations for analysis
+- Implements authentication and trust levels for agents
+- Distinguishes between human and AI agents
+- Creates an engaging experience that evolves over time
+
+The architecture involves incremental development, starting with simplified functionality while working toward the complete vision.
 
 ## 📑 Table of Contents
 
@@ -23,11 +37,15 @@ A modern web application that helps users determine if text was written by a hum
 - [Contributing](#-contributing)
 - [License](#-license)
 
-## ✨ Features (many to be built yet)
+## ✨ Features
 
-- Portal -- a graphic and aluring enterance, visual, starwars themed, that invites visitors to join the ecosystem by creating an account and interacting with our community greeting agent. login and create accounts here.
-- Change-log a list of all the commit message with time and date listed, reverse chronological order
-- Text analysis to determine AI vs. human authorship
+- **Interactive Conversations**: Engage with AI and human agents in natural conversation
+- **Multi-Agent Support**: System can route conversations to appropriate agents (AI or trusted humans)
+- **User Tracking**: Anonymous sessions are converted to registered users as trust builds
+- **Trust System**: Progressive trust levels unlock additional features and capabilities
+- **Conversation Analysis**: All interactions are analyzed to improve system intelligence
+- **Authentication**: Secure login system with different permission levels
+- **Responsive Design**: Works seamlessly across desktop and mobile devices
 
 ## 🛠️ Tech Stack
 
@@ -141,63 +159,107 @@ aws cloudfront create-invalidation --distribution-id $(cd ../infrastructure && t
 
 ## 🧪 Testing
 
-The project uses Jest and React Testing Library for testing components and services.
+The project uses a comprehensive testing strategy to ensure reliability and maintainability.
+
+### Current Test Coverage
+
+#### Frontend Tests
+
+The frontend has several test categories already implemented:
+
+1. **State Management Tests**
+
+   - `useAuthStore.test.ts`: Tests authentication state management including login, logout, and error handling
+   - Proper mocking of localStorage and API services
+
+2. **Component Tests**
+
+   - `LoginForm.test.tsx`, `RegisterForm.test.tsx`: Authentication form validation and submission
+   - `ProtectedRoute.test.tsx`: Route protection based on authentication status
+   - `NavMenu.test.tsx`: Navigation component behavior
+   - Page tests for layout, login, register, and account pages
+
+3. **Test Infrastructure**
+   - Jest with React Testing Library
+   - Mock implementations for auth store and browser APIs
+   - Test setup in `jest.setup.js` and configuration in `jest.config.js`
+
+### Testing Approach Moving Forward
+
+#### Backend Tests
+
+1. **DynamoDB Repository Tests**
+
+   - CRUD operations for User repository
+   - CRUD operations for Interaction repository
+   - Query performance for common access patterns
+   - Proper error handling tests
+
+2. **API Endpoint Tests**
+
+   - Authentication endpoints (login, register, logout)
+   - User profile management endpoints
+   - Conversation and interaction endpoints
+   - Error handling and validation
+
+3. **Middleware Tests**
+
+   - Authentication middleware
+   - Error handling middleware
+   - Request validation
+
+4. **Utility Function Tests**
+   - Password hashing and verification
+   - Token generation and validation
+   - Date/time handling and formatting
+
+#### Frontend Expansion
+
+1. **Component Tests**
+
+   - Conversation interface components
+   - Agent interaction UI
+   - Profile and settings components
+   - Trust indicators and feedback UI
+
+2. **Integration Tests**
+
+   - Complete user flows (register → login → conversation)
+   - Error recovery paths
+   - Progressive feature unlocking based on trust levels
+
+3. **End-to-End Tests**
+   - User registration and onboarding
+   - Conversation with different agent types
+   - Account management features
+
+### Testing Tools
+
+- **Unit & Integration Tests**: Jest for both frontend and backend
+- **Component Testing**: React Testing Library
+- **API Testing**: SuperTest for HTTP endpoint testing
+- **Database Testing**: DynamoDB local for isolated database testing
+- **Mocking**: MSW (Mock Service Worker) for API mocking
+- **E2E Testing**: Cypress for full end-to-end testing
 
 ### Running Tests
 
 ```bash
+# Frontend tests
 cd frontend
+npm test
+
+# With coverage
+npm test -- --coverage
+
+# Backend tests (once implemented)
+cd backend
 npm test
 ```
 
-To run tests with coverage:
+### CI/CD Integration
 
-```bash
-npm test -- --coverage
-```
-
-### Test Structure
-
-- Component tests located alongside component files
-- Service tests in their respective directories
-- Mock Service Worker (MSW) for API mocking
-
-### Git Hooks with Husky
-
-The project uses Husky to run pre-commit hooks:
-
-- ESLint for code quality
-- Prettier for code formatting
-- Tests are run before commits
-
-## 🚀 CI/CD with GitHub Actions
-
-The project uses GitHub Actions for continuous integration and deployment, automating the build, test, and deployment process.
-
-### Workflow Overview
-
-The GitHub Actions workflow is triggered automatically when:
-
-- Code is pushed to the main branch
-- Pull requests are created or updated
-
-### Key Features
-
-- **Automated Testing**: Runs the entire test suite to catch issues early
-- **Build Verification**: Ensures the application builds successfully
-- **Automated Deployment**: Deploys frontend to S3 and invalidates CloudFront cache
-- **Security**: Uses AWS OIDC for secure cloud authentication without storing credentials
-- **Failure Notifications**: Alerts developers of build or deployment failures
-
-### Workflow File
-
-The workflow configuration is located in `.github/workflows/` directory. It defines:
-
-- Triggers (push, pull request)
-- Required permissions
-- Build environment
-- Deployment steps
-- Post-deployment validations
+Tests are automatically run as part of the CI/CD pipeline using GitHub Actions, ensuring that all code changes are verified before deployment.
 
 ## 🔧 Infrastructure Management
 
@@ -294,6 +356,69 @@ All resources are tagged with:
   - [ ] Fix the App component test to properly mock react-router-dom
   - [ ] Add more comprehensive tests for components and services
   - [ ] Set up end-to-end testing with Cypress
+
+## 🗺️ Implementation Roadmap
+
+1. **Implement Backend API**
+
+   - Set up the Node.js/Express backend as outlined in BACKEND_SETUP.md
+   - Set up DynamoDB tables for Users, Conversations, and Agent interactions
+   - Implement authentication endpoints (register, login, logout)
+   - Replace the mock API functions in `api.ts` with real API calls
+
+2. **Enhance User Profiles**
+
+   - Implement the "Modify Profile Configuration" functionality on the account page
+   - Add user avatar/image upload capability
+   - Add email verification process
+   - Implement password reset functionality
+
+3. **Conversation Storage**
+
+   - Create database schema for storing conversations
+   - Add API endpoints for retrieving and storing conversation history
+   - Implement frontend components to display conversation history
+
+4. **Admin Dashboard**
+   - Create admin-specific routes and components
+   - Implement user management features
+   - Add basic analytics for conversation monitoring
+
+### Phase 3 Transition Tasks
+
+1. **AI Integration Foundation**
+
+   - Select AI conversation model (OpenAI, Anthropic, etc.)
+   - Implement API integration for AI conversations
+   - Create conversation context management system
+   - Replace mock analysis results with actual AI detection
+
+2. **Conversation UI Enhancement**
+
+   - Redesign landing page with interactive greeting
+   - Create robust chat interface for human-AI conversations
+   - Implement typing indicators and loading states
+   - Add support for different message types (text, images)
+
+3. **Context Awareness**
+
+   - Develop system to track and store conversation context
+   - Implement backend storage for conversation history
+   - Create algorithms to reference past interactions
+
+4. **Basic Trust System**
+   - Design initial trust scoring algorithm
+   - Track user interaction patterns
+   - Implement basic sentiment analysis of conversations
+
+### Implementation Priority
+
+1. First, complete the backend implementation and replace mock APIs with real endpoints
+2. Then enhance user profiles and implement conversation storage
+3. Build the admin dashboard for monitoring
+4. Begin integrating AI conversation capabilities
+5. Enhance the conversation UI and implement context awareness
+6. Finally, develop the initial trust scoring system
 
 ## 🔍 Troubleshooting
 

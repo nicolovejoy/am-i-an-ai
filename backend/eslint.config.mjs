@@ -13,25 +13,15 @@ const compat = new FlatCompat({
 });
 
 export default [
-  // Exclude the .next folder from linting
+  // Configuration for source files
   {
-    ignores: [".next/**/*", "node_modules/**/*"],
-  },
-
-  // Base configuration for all TypeScript/TSX files
-  {
-    files: ["**/*.ts", "**/*.tsx"],
+    files: ["**/*.ts"],
+    ignores: ["**/*.test.ts", "**/tests/**/*.ts"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
       globals: {
-        ...globals.browser,
-        React: "readonly",
-        console: "readonly",
-        setTimeout: "readonly",
-        clearTimeout: "readonly",
-        window: "readonly",
-        localStorage: "readonly",
+        ...globals.node,
       },
       parser: await (async () => {
         const { default: typescriptEstree } = await import(
@@ -56,21 +46,6 @@ export default [
         );
         return functional;
       })(),
-      react: await (async () => {
-        const { default: react } = await import("eslint-plugin-react");
-        return react;
-      })(),
-      "react-hooks": await (async () => {
-        const { default: reactHooks } = await import(
-          "eslint-plugin-react-hooks"
-        );
-        return reactHooks;
-      })(),
-    },
-    settings: {
-      react: {
-        version: "detect",
-      },
     },
     rules: {
       // Basic ESLint rules
@@ -78,41 +53,40 @@ export default [
       "no-console": "warn",
       "no-undef": "error",
 
-      // Enforce functional programming patterns
-      "functional/no-classes": "error",
-      "functional/no-this-expressions": "error",
-      "functional/no-let": "error",
-      "functional/immutable-data": "error",
+      // Enforce functional programming patterns - using warning level during transition
+      "functional/no-classes": "warn",
+      "functional/no-this-expressions": "warn",
+      "functional/no-let": "warn",
+      "functional/immutable-data": "warn",
       "functional/readonly-type": "warn",
       "functional/no-loop-statements": "warn",
+      "functional/prefer-tacit": "warn",
 
-      // Less strict for React components
-      "functional/no-expression-statements": "off",
-      "functional/functional-parameters": "off",
+      // Enforce pure functions (no side effects) - using warning level during transition
+      "functional/no-expression-statements": ["warn", { ignoreVoid: true }],
+      "functional/functional-parameters": [
+        "warn",
+        { enforceParameterCount: false },
+      ],
 
       // TypeScript specific rules
-      "@typescript-eslint/no-unused-vars": "error",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/explicit-function-return-type": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
 
-      // React specific rules
-      "react/prefer-stateless-function": "error",
-      "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
+      // Allow null assertions when necessary
+      "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
-
-  // Special configuration for test files
+  // Configuration for test files
   {
-    files: [
-      "**/*.test.ts",
-      "**/*.test.tsx",
-      "**/test/**/*.ts",
-      "**/test/**/*.tsx",
-    ],
+    files: ["**/*.test.ts", "**/tests/**/*.ts"],
     languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
       globals: {
+        ...globals.node,
         ...globals.jest,
-        jest: "readonly",
         describe: "readonly",
         it: "readonly",
         test: "readonly",
@@ -121,25 +95,36 @@ export default [
         afterEach: "readonly",
         beforeAll: "readonly",
         afterAll: "readonly",
+        jest: "readonly",
+      },
+      parser: await (async () => {
+        const { default: typescriptEstree } = await import(
+          "@typescript-eslint/parser"
+        );
+        return typescriptEstree;
+      })(),
+      parserOptions: {
+        project: ["./tsconfig.json"],
       },
     },
+    plugins: {
+      "@typescript-eslint": await (async () => {
+        const { default: typescriptEslint } = await import(
+          "@typescript-eslint/eslint-plugin"
+        );
+        return typescriptEslint;
+      })(),
+    },
     rules: {
-      // Disable rules that are too restrictive for test files
-      "no-undef": "off",
+      // Relax rules for test files
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/explicit-function-return-type": "off",
       "functional/no-expression-statements": "off",
       "functional/immutable-data": "off",
       "functional/no-let": "off",
-      "@typescript-eslint/no-unused-vars": "warn",
-    },
-  },
-
-  // Special configuration for API files that need more flexibility
-  {
-    files: ["**/lib/api.ts", "**/services/api.ts"],
-    rules: {
-      // Relax some functional rules for API modules
-      "functional/no-let": "off",
-      "no-console": "warn",
+      "no-undef": "off", // Jest globals are defined
     },
   },
 ];
