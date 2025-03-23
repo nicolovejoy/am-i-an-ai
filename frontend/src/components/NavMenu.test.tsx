@@ -68,8 +68,6 @@ describe("NavMenu Component", () => {
 
     // Check for main navigation links
     expect(screen.getByText("Home")).toBeInTheDocument();
-    expect(screen.getByText("Text Analysis")).toBeInTheDocument();
     expect(screen.getByText("About")).toBeInTheDocument();
-    expect(screen.getByText("Donate")).toBeInTheDocument();
   });
 });

@@ -3,20 +3,6 @@
 // For now we'll simulate an API response
 // Later we can connect to a real AI detection API
 
-export type AnalysisResult = {
-  result: "human" | "ai" | "unknown";
-  confidence: number;
-};
-
-export type PastAnalysis = {
-  id: string;
-  result: "human" | "ai" | "unknown";
-  confidence: number;
-  timestamp: string;
-  title: string;
-  tokenCount: number;
-};
-
 export type UserProfile = {
   name: string;
   email: string;
@@ -48,61 +34,6 @@ export type User = {
   id: string;
   name: string;
   email: string;
-};
-
-export const analyzeText = async (text: string): Promise<AnalysisResult> => {
-  console.log(text); // This line is just to use the 'text' parameter
-  // This is a simulation - we'll replace with real API call later
-  return new Promise((resolve) => {
-    // Simulate API call delay
-    setTimeout(() => {
-      // For demo purposes, randomly determine if text is AI or human
-      const isAI = Math.random() > 0.5;
-      const confidence = Math.floor(Math.random() * 40) + 60; // 60-99% confidence
-
-      resolve({
-        result: isAI ? "ai" : "human",
-        confidence: confidence,
-      });
-    }, 2000); // Simulate 2 second API call
-  });
-};
-
-// New functions for React Query
-
-// Get past analyses
-export const getPastAnalyses = async (): Promise<PastAnalysis[]> => {
-  // Simulate API call to get past analyses
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        {
-          id: "anal1",
-          result: "ai",
-          confidence: 89,
-          timestamp: "2025.03.05.1422",
-          title: "Project Proposal",
-          tokenCount: 1247,
-        },
-        {
-          id: "anal2",
-          result: "human",
-          confidence: 92,
-          timestamp: "2025.03.03.0917",
-          title: "Research Paper",
-          tokenCount: 3842,
-        },
-        {
-          id: "anal3",
-          result: "ai",
-          confidence: 76,
-          timestamp: "2025.02.28.1655",
-          title: "Marketing Email",
-          tokenCount: 651,
-        },
-      ]);
-    }, 1000);
-  });
 };
 
 // Auth API endpoints
@@ -180,15 +111,4 @@ export const getUserProfile = async (): Promise<UserProfile> => {
     joined: new Date().toISOString(),
     usageCount: Math.floor(Math.random() * 50),
   };
-};
-
-// Delete analysis
-export const deleteAnalysis = async (id: string): Promise<void> => {
-  console.log(`Deleting analysis ${id}`);
-  // Simulate API call to delete an analysis
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, 500);
-  });
 };

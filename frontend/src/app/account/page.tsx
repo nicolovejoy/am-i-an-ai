@@ -1,11 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  useUserProfile,
-  usePastAnalyses,
-  useDeleteAnalysis,
-} from "@/hooks/useQueries";
+import { useUserProfile } from "@/hooks/useQueries";
 import useAuthStore from "@/store/useAuthStore";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -20,21 +16,6 @@ export default function Account() {
     isLoading: isLoadingProfile,
     error: profileError,
   } = useUserProfile();
-
-  // Use React Query to fetch past analyses
-  const {
-    data: pastAnalyses,
-    isLoading: isLoadingAnalyses,
-    error: analysesError,
-  } = usePastAnalyses();
-
-  // Mutation for deleting analyses
-  const deleteAnalysisMutation = useDeleteAnalysis();
-
-  // Handle analysis deletion
-  const handleDeleteAnalysis = (id: string) => {
-    deleteAnalysisMutation.mutate(id);
-  };
 
   return (
     <ProtectedRoute>
@@ -98,15 +79,6 @@ export default function Account() {
                     {profile.joined}
                   </p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1 font-mono">
-                    ANALYSIS OPERATIONS
-                  </label>
-                  <p className="text-base text-neon-blue font-mono">
-                    {profile.usageCount} completed
-                  </p>
-                </div>
               </div>
             ) : null}
 
@@ -114,76 +86,6 @@ export default function Account() {
               <button className="sci-fi-button">
                 Modify Profile Configuration
               </button>
-            </div>
-          </div>
-
-          {/* OPERATION LOG SECTION */}
-          <div className="mb-8 neon-border rounded-md p-6 bg-opacity-30 bg-medium-blue">
-            <h2 className="text-xl font-semibold text-terminal-green font-mono uppercase tracking-wide mb-4">
-              Operation Log
-            </h2>
-
-            {isLoadingAnalyses ? (
-              <div className="p-4 text-center font-mono text-gray-400">
-                <span className="text-neon-blue">
-                  Loading analysis history...
-                </span>
-              </div>
-            ) : analysesError ? (
-              <div className="p-4 text-center font-mono text-neon-pink">
-                Error loading analysis history. Please refresh.
-              </div>
-            ) : pastAnalyses && pastAnalyses.length > 0 ? (
-              <div className="space-y-4">
-                {pastAnalyses.map((analysis) => (
-                  <div
-                    key={analysis.id}
-                    className="border-b border-gray-700 pb-3"
-                  >
-                    <div className="flex justify-between">
-                      <p className="text-sm text-gray-400 font-mono">
-                        TIMESTAMP: {analysis.timestamp}
-                      </p>
-                      <p
-                        className={`text-sm font-mono ${
-                          analysis.result === "ai"
-                            ? "text-neon-purple"
-                            : "text-terminal-green"
-                        }`}
-                      >
-                        {analysis.result === "ai" ? "AI" : "HUMAN"} DETECTED [
-                        {analysis.confidence}%]
-                      </p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-base text-gray-300 font-mono">
-                        Analysis: &quot;{analysis.title}&quot; -{" "}
-                        {analysis.tokenCount} tokens
-                      </p>
-                      <button
-                        onClick={() => handleDeleteAnalysis(analysis.id)}
-                        className="text-xs text-neon-pink hover:text-white transition-colors"
-                        disabled={deleteAnalysisMutation.isPending}
-                      >
-                        DELETE
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-4 text-center font-mono text-gray-400">
-                No analysis operations found.
-              </div>
-            )}
-
-            <div className="mt-4 text-right">
-              <a
-                href="/analysis"
-                className="text-neon-blue hover:text-white transition-colors font-mono"
-              >
-                NEW ANALYSIS OPERATION
-              </a>
             </div>
           </div>
 

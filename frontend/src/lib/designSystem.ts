@@ -75,9 +75,7 @@ export const shadows = {
 // 80's themed icons for the application
 export const retroIcons = {
   homeIcon: "🕹️", // Game controller
-  analysisIcon: "🔍", // Magnifying glass
   aboutIcon: "📼", // VHS tape
-  donateIcon: "💾", // Floppy disk
   accountIcon: "🖥️", // Old computer
   // Atari game references
   pacManIcon: "👾",

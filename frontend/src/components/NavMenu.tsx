@@ -59,16 +59,6 @@ const NavMenu: React.FC = () => {
                 Home
               </Link>
               <Link
-                href="/analysis"
-                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
-                  isActive("/analysis")
-                    ? "text-neon-purple border-b-2 border-neon-purple"
-                    : "text-gray-300 hover:text-neon-purple hover:border-b-2 hover:border-neon-purple"
-                }`}
-              >
-                Text Analysis
-              </Link>
-              <Link
                 href="/about"
                 className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
                   isActive("/about")
@@ -77,16 +67,6 @@ const NavMenu: React.FC = () => {
                 }`}
               >
                 About
-              </Link>
-              <Link
-                href="/donate"
-                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
-                  isActive("/donate")
-                    ? "text-neon-pink border-b-2 border-neon-pink"
-                    : "text-gray-300 hover:text-neon-pink hover:border-b-2 hover:border-neon-pink"
-                }`}
-              >
-                Donate
               </Link>
             </div>
           </div>
@@ -153,17 +133,6 @@ const NavMenu: React.FC = () => {
               Home
             </Link>
             <Link
-              href="/analysis"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`block px-3 py-2 text-base font-medium flex items-center ${
-                isActive("/analysis")
-                  ? "text-neon-purple border-l-4 border-neon-purple"
-                  : "text-gray-300 hover:text-neon-purple hover:border-l-4 hover:border-neon-purple"
-              }`}
-            >
-              Text Analysis
-            </Link>
-            <Link
               href="/about"
               onClick={() => setIsMobileMenuOpen(false)}
               className={`block px-3 py-2 text-base font-medium flex items-center ${
@@ -173,17 +142,6 @@ const NavMenu: React.FC = () => {
               }`}
             >
               About
-            </Link>
-            <Link
-              href="/donate"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`block px-3 py-2 text-base font-medium flex items-center ${
-                isActive("/donate")
-                  ? "text-neon-pink border-l-4 border-neon-pink"
-                  : "text-gray-300 hover:text-neon-pink hover:border-l-4 hover:border-neon-pink"
-              }`}
-            >
-              Donate
             </Link>
             {isAuthenticated && user ? (
               <>

@@ -30,15 +30,6 @@ jest.mock("@/hooks/useQueries", () => ({
     isLoading: false,
     error: null,
   }),
-  usePastAnalyses: () => ({
-    data: [],
-    isLoading: false,
-    error: null,
-  }),
-  useDeleteAnalysis: () => ({
-    mutate: jest.fn(),
-    isLoading: false,
-  }),
 }));
 
 // Setup mocks with proper type casting

@@ -22,7 +22,35 @@ module.exports = {
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
+      animation: {
+        pulse: "pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+      },
+      keyframes: {
+        pulse: {
+          "0%, 100%": { opacity: 1 },
+          "50%": { opacity: 0.3 },
+        },
+      },
+      animationDelay: {
+        100: "100ms",
+        200: "200ms",
+        300: "300ms",
+        400: "400ms",
+        500: "500ms",
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    function ({ addUtilities, theme }) {
+      const animationDelays = theme("animationDelay", {});
+      const utilities = Object.entries(animationDelays).map(([key, value]) => {
+        return {
+          [`.animation-delay-${key}`]: {
+            "animation-delay": value,
+          },
+        };
+      });
+      addUtilities(utilities);
+    },
+  ],
 };

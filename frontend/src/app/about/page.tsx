@@ -13,49 +13,45 @@ export default function About() {
           </h1>
           <div className="prose prose-invert max-w-none">
             <p className="text-lg mb-4">
-              Am I an AI? is a cutting-edge tool designed to analyze text and
-              determine whether it was written by a human or an artificial
-              intelligence. In an era where AI-generated content is becoming
-              increasingly prevalent and sophisticated, our mission is to
-              provide transparency and insight into the nature of digital
-              content.
+              Am I an AI? is an interactive portal that invites visitors to
+              engage in conversations from the moment they arrive. Our platform
+              is designed to create meaningful interactions through dynamic,
+              evolving conversations with both AI systems and human agents.
             </p>
             <p className="text-lg mb-4">
-              Our advanced algorithms analyze various aspects of the text,
-              including patterns, style, complexity, and contextual
-              understanding, to make this determination. While no detection
-              system is perfect, we strive to provide accurate and helpful
-              insights to our users.
+              In a digital world where the line between human and AI interaction
+              is increasingly blurred, our mission is to create authentic
+              connections while exploring the nature of digital identity and
+              communication.
             </p>
             <p className="text-lg mb-4">
-              Whether you&apos;re a content creator, educator, or simply curious
-              about the nature of text you encounter online, Am I an AI? is here
-              to help you navigate the evolving landscape of AI-generated
-              content.
+              Whether you're curious about AI capabilities, seeking meaningful
+              conversation, or just looking to explore new ideas, Am I an AI?
+              offers a unique space for engagement and discovery.
             </p>
             <h2 className="text-2xl font-bold mt-8 mb-4 neon-text">
               How It Works
             </h2>
             <p className="text-lg mb-4">
-              Our system employs a sophisticated multi-layered analysis
-              approach:
+              Our conversation platform uses various approaches to create
+              engaging interactions:
             </p>
             <ul className="list-disc pl-6 mb-6">
               <li className="text-lg mb-2">
-                Pattern Analysis: We examine writing patterns that might
-                indicate AI generation
+                Immediate Engagement: We welcome you with conversation rather
+                than static content
               </li>
               <li className="text-lg mb-2">
-                Contextual Understanding: We assess how well the text maintains
-                context and coherence
+                Contextual Understanding: Our system maintains coherence and
+                keeps track of conversation flow
               </li>
               <li className="text-lg mb-2">
-                Stylistic Markers: We identify subtle stylistic elements that
-                often differ between human and AI writers
+                Multi-Agent Support: Conversations may involve AI systems or
+                trusted human operators
               </li>
               <li className="text-lg mb-2">
-                Statistical Analysis: We utilize advanced statistical models to
-                support our determinations
+                Progressive Trust Building: As you interact more, you'll gain
+                access to additional features and capabilities
               </li>
             </ul>
           </div>
