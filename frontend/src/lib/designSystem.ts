@@ -1,164 +1,118 @@
 // Design System for the "Am I an AI?" application
-// This file centralizes styling choices for consistency across components
+// Simple, clean, and practical design choices
 
 // Color Palette
 export const colors = {
-  // Primary colors
-  darkBlue: "var(--dark-blue)", // Main background
-  mediumBlue: "var(--medium-blue)", // Nav background
-  neonBlue: "var(--neon-blue)", // Primary accent
-  neonPink: "var(--neon-pink)", // Secondary accent
-  neonPurple: "var(--neon-purple)", // Tertiary accent
-  neonGreen: "var(--neon-green)", // Success color
-  neonYellow: "var(--neon-yellow)", // Warning color
-
-  // Text colors
-  textPrimary: "var(--text-color)",
-  textSecondary: "var(--text-secondary)",
-
-  // Functional colors
-  success: "var(--success-color)",
-  warning: "var(--warning-color)",
-  error: "var(--error-color)",
+  // Base colors
+  background: "#F8F9FA", // Light gray background
+  surface: "#FFFFFF", // White for cards and surfaces
+  text: {
+    primary: "#2D3748", // Dark gray for main text
+    secondary: "#4A5568", // Medium gray for secondary text
+    light: "#718096", // Light gray for subtle text
+  },
+  border: "#E2E8F0", // Light gray for borders
+  primary: "#8B6B4A", // Kelp brown for primary actions
+  secondary: "#4A5568", // Gray for secondary actions
+  success: "#48BB78", // Green for success states
+  warning: "#ECC94B", // Yellow for warnings
+  error: "#F56565", // Red for errors
 };
 
 // Typography
 export const typography = {
   fontFamily: {
-    main: "var(--main-font)",
-    monospace: "var(--monospace-font)",
-    orbitron: "Orbitron, sans-serif",
+    sans: "Inter, system-ui, -apple-system, sans-serif",
+    mono: "IBM Plex Mono, monospace",
   },
   fontWeight: {
-    normal: 400,
-    bold: 700,
+    regular: 400,
+    medium: 500,
+    bold: 600,
   },
   fontSize: {
-    xs: "0.75rem",
     sm: "0.875rem",
     base: "1rem",
     lg: "1.125rem",
     xl: "1.25rem",
     "2xl": "1.5rem",
-    "3xl": "1.875rem",
-    "4xl": "2.25rem",
   },
 };
 
 // Spacing
 export const spacing = {
-  xs: "0.25rem",
-  sm: "0.5rem",
-  md: "1rem",
-  lg: "1.5rem",
-  xl: "2rem",
-  "2xl": "3rem",
+  xs: "0.5rem",
+  sm: "1rem",
+  md: "1.5rem",
+  lg: "2rem",
+  xl: "3rem",
 };
 
 // Border Radius
 export const borderRadius = {
-  none: "0",
-  sm: "0.125rem",
-  md: "0.25rem",
-  lg: "0.5rem",
-  full: "9999px",
+  sm: "4px",
+  md: "8px",
+  lg: "12px",
 };
 
 // Shadows
 export const shadows = {
   sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-  md: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-  lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-  glow: (color: string) => `0 0 10px ${color}, 0 0 20px ${color}`,
-};
-
-// 80's themed icons for the application
-export const retroIcons = {
-  homeIcon: "🕹️", // Game controller
-  aboutIcon: "📼", // VHS tape
-  accountIcon: "🖥️", // Old computer
-  // Atari game references
-  pacManIcon: "👾",
-  spaceInvadersIcon: "👽",
-  tetrisIcon: "🧱",
-  // Additional 80's references
-  rubiksCubeIcon: "🎮",
-  walkmanIcon: "🎧",
-  ghettoblasterIcon: "📻",
-  // Animal icons
-  dogIcon: "🐶",
-  catIcon: "🐱",
+  md: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
 };
 
 // Animation timings
 export const animation = {
   fast: "150ms",
-  medium: "300ms",
-  slow: "500ms",
+  medium: "200ms",
 };
 
-// Z-index scale
-export const zIndex = {
-  base: 0,
-  above: 10,
-  nav: 40,
-  modal: 100,
-  tooltip: 200,
-};
-
-// Breakpoints (matching Tailwind defaults)
+// Breakpoints
 export const breakpoints = {
   sm: "640px",
   md: "768px",
   lg: "1024px",
   xl: "1280px",
-  "2xl": "1536px",
 };
 
-// Media queries for responsive design
+// Media queries
 export const mediaQueries = {
   sm: `@media (min-width: ${breakpoints.sm})`,
   md: `@media (min-width: ${breakpoints.md})`,
   lg: `@media (min-width: ${breakpoints.lg})`,
   xl: `@media (min-width: ${breakpoints.xl})`,
-  "2xl": `@media (min-width: ${breakpoints["2xl"]})`,
-  // Special queries
-  belowMd: `@media (max-width: ${breakpoints.md})`,
-  dark: "@media (prefers-color-scheme: dark)",
-  landscape: "@media (orientation: landscape)",
-  portrait: "@media (orientation: portrait)",
 };
 
 // Common component styling
 export const componentStyles = {
   card: {
-    background: colors.mediumBlue,
-    border: `1px solid ${colors.neonBlue}`,
+    background: colors.surface,
+    border: `1px solid ${colors.border}`,
     borderRadius: borderRadius.md,
-    padding: spacing.lg,
+    padding: spacing.md,
+    boxShadow: shadows.sm,
   },
   button: {
     primary: {
-      background: "transparent",
-      border: `1px solid ${colors.neonBlue}`,
-      color: colors.neonBlue,
-      padding: `${spacing.sm} ${spacing.md}`,
-      borderRadius: borderRadius.md,
+      background: colors.primary,
+      color: colors.surface,
+      padding: `${spacing.xs} ${spacing.sm}`,
+      borderRadius: borderRadius.sm,
       transition: `all ${animation.medium}`,
-      hoverBackground: "rgba(67, 208, 255, 0.15)",
+      hoverBackground: "#6B5239", // Darker kelp brown for hover
     },
     secondary: {
-      background: "transparent",
-      border: `1px solid ${colors.neonPink}`,
-      color: colors.neonPink,
-      padding: `${spacing.sm} ${spacing.md}`,
-      borderRadius: borderRadius.md,
+      background: colors.surface,
+      color: colors.text.primary,
+      border: `1px solid ${colors.border}`,
+      padding: `${spacing.xs} ${spacing.sm}`,
+      borderRadius: borderRadius.sm,
       transition: `all ${animation.medium}`,
-      hoverBackground: "rgba(255, 67, 178, 0.15)",
+      hoverBackground: colors.background,
     },
   },
   mainContent: {
-    paddingMobile: `${spacing.sm} ${spacing.md}`,
-    paddingDesktop: `${spacing.md} ${spacing.lg}`,
+    paddingMobile: spacing.sm,
+    paddingDesktop: spacing.md,
   },
 };

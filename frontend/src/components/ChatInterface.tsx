@@ -106,7 +106,7 @@ export default function ChatInterface() {
   }, [addSystemMessage, hasInitialized]);
 
   return (
-    <div className="flex flex-col h-[80vh] max-w-3xl mx-auto rounded-lg border border-neon-blue bg-dark-blue">
+    <div className="flex flex-col h-[80vh] max-w-3xl mx-auto rounded-lg border border-[#E2E8F0] bg-white shadow-sm">
       {/* Messages container */}
       <div className="flex-1 p-4 overflow-y-auto">
         {messages.map((message) => (
@@ -119,8 +119,8 @@ export default function ChatInterface() {
             <div
               className={`p-3 rounded-lg max-w-xs md:max-w-md ${
                 message.type === "user"
-                  ? "bg-neon-purple text-white rounded-tr-none"
-                  : "bg-medium-blue text-neon-green rounded-tl-none"
+                  ? "bg-[#8B6B4A] text-white rounded-tr-none"
+                  : "bg-[#F8F9FA] text-[#2D3748] rounded-tl-none border border-[#E2E8F0]"
               }`}
             >
               <p className="break-words">{message.content}</p>
@@ -131,7 +131,7 @@ export default function ChatInterface() {
         {/* Typing indicator */}
         {isTyping && (
           <div className="my-2 mr-auto">
-            <div className="p-3 rounded-lg rounded-tl-none bg-medium-blue text-neon-green flex space-x-1">
+            <div className="p-3 rounded-lg rounded-tl-none bg-[#F8F9FA] text-[#2D3748] border border-[#E2E8F0] flex space-x-1">
               <span className="animate-pulse">.</span>
               <span className="animate-pulse animation-delay-200">.</span>
               <span className="animate-pulse animation-delay-400">.</span>
@@ -146,7 +146,7 @@ export default function ChatInterface() {
       {/* Input form */}
       <form
         onSubmit={handleSubmit}
-        className="p-2 border-t border-neon-blue flex"
+        className="p-2 border-t border-[#E2E8F0] flex"
       >
         <input
           ref={inputRef}
@@ -154,12 +154,12 @@ export default function ChatInterface() {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder="Type your message..."
-          className="flex-1 p-2 bg-medium-blue text-white border border-neon-blue rounded-l-md focus:outline-none focus:ring-1 focus:ring-neon-pink"
+          className="flex-1 p-2 bg-white text-[#2D3748] border border-[#E2E8F0] rounded-l-md focus:outline-none focus:ring-1 focus:ring-[#8B6B4A]"
           aria-label="Type your message"
         />
         <button
           type="submit"
-          className="px-4 py-2 bg-neon-purple text-white rounded-r-md hover:bg-neon-pink transition-colors"
+          className="px-4 py-2 bg-[#8B6B4A] text-white rounded-r-md hover:bg-[#6B5239] transition-colors"
           aria-label="Send message"
         >
           <FiSend />

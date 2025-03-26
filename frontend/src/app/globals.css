@@ -1,196 +1,105 @@
 /* 1980's Sci-Fi Theme */
-@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Roboto+Mono:wght@300;400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 0, 0, 0;
-  --background-end-rgb: 0, 0, 0;
-
-  /* Cyberpunk color palette */
-  --neon-blue: #00ffff;
-  --neon-pink: #ff00ff;
-  --neon-green: #00ff00;
-  --neon-purple: #9900ff;
-  --neon-yellow: #ffff00;
-  --dark-blue: #050a30;
-  --medium-blue: #0a1852;
-  --terminal-green: #00ff9d;
-  --grid-color: rgba(0, 243, 255, 0.2);
-  --text-color: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --success-color: #0cff6f;
-  --warning-color: #ffee00;
-  --error-color: #ff3860;
-  --main-font: "Roboto Mono", monospace;
-  --monospace-font: "Roboto Mono", monospace;
+  --foreground-rgb: 45, 55, 72;
+  --background-rgb: 248, 249, 250;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  @apply bg-dark-blue text-white;
-  font-family: "Roboto Mono", monospace;
+  background: rgb(var(--background-rgb));
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 @layer base {
   body {
-    @apply bg-dark-blue text-white;
-    font-family: "Roboto Mono", monospace;
+    @apply bg-[#F8F9FA] text-[#2D3748];
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
   }
 }
 
 @layer components {
   /* Grid background */
   .grid-background {
-    @apply fixed top-0 left-0 w-full h-full z-[-1] opacity-70;
-    background-image: linear-gradient(var(--grid-color) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-    background-size: 40px 40px;
+    @apply fixed top-0 left-0 w-full h-full z-[-1] opacity-10;
+    background-image: linear-gradient(#000000 1px, transparent 1px),
+      linear-gradient(90deg, #000000 1px, transparent 1px);
+    background-size: 20px 20px;
   }
 
-  .grid-background::after {
-    content: "";
-    @apply absolute top-0 left-0 w-full h-full;
-    background: radial-gradient(
-      circle at center,
-      transparent 0%,
-      var(--dark-blue) 80%
-    );
+  /* Typography */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold text-[#2D3748];
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
   }
 
-  /* Neon elements */
-  .neon-text {
-    text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
-    color: var(--neon-blue);
+  h1 {
+    @apply text-3xl md:text-4xl;
   }
 
-  .neon-border {
-    box-shadow: 0 0 5px var(--neon-blue), inset 0 0 5px var(--neon-blue);
-    border: 1px solid var(--neon-blue);
+  h2 {
+    @apply text-2xl md:text-3xl;
   }
 
-  /* Terminal-like elements */
-  .terminal {
-    @apply bg-dark-blue border border-neon-blue rounded-md p-4 shadow-lg;
-    position: relative;
-    background-color: rgba(5, 10, 48, 0.8);
+  h3 {
+    @apply text-xl md:text-2xl;
   }
 
-  .terminal::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 10px;
-    background: repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 10px,
-      rgba(0, 255, 255, 0.15) 10px,
-      rgba(0, 255, 255, 0.15) 20px
-    );
-    border-top-left-radius: 0.375rem; /* To match the terminal's border-radius */
-    border-top-right-radius: 0.375rem;
+  /* Buttons */
+  .button {
+    @apply px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
   }
 
-  /* Buttons and interactive elements */
-  .sci-fi-button {
-    @apply px-4 py-2 border rounded-md transition duration-200 ease-in-out;
-    background-color: rgba(0, 0, 0, 0.3);
-    border-color: var(--neon-blue);
-    color: var(--neon-blue);
-    text-shadow: 0 0 5px var(--neon-blue);
-    position: relative;
-    overflow: hidden;
+  .button-primary {
+    @apply bg-[#8B6B4A] text-white hover:bg-[#6B5239];
   }
 
-  .sci-fi-button:hover {
-    background-color: rgba(0, 255, 255, 0.1);
-    color: white;
-    text-shadow: 0 0 8px var(--neon-blue);
+  .button-secondary {
+    @apply bg-white text-[#2D3748] border border-[#E2E8F0] hover:bg-[#F8F9FA];
   }
 
-  .sci-fi-button:before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(0, 255, 255, 0.4),
-      transparent
-    );
-    transition: 0.5s;
-  }
-
-  .sci-fi-button:hover:before {
-    left: 100%;
+  /* Cards */
+  .card {
+    @apply bg-white border border-[#E2E8F0] rounded-lg p-6;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
 
   /* Form elements */
-  .sci-fi-input {
-    @apply w-full p-2 rounded-md border bg-dark-blue text-white;
-    background-color: rgba(5, 10, 48, 0.8);
-    border-color: var(--neon-blue);
-    box-shadow: 0 0 5px var(--neon-blue), inset 0 0 2px var(--neon-blue);
+  .input {
+    @apply w-full px-4 py-2 border border-[#E2E8F0] rounded-md bg-white text-[#2D3748];
+    font-family: "IBM Plex Mono", monospace;
   }
 
-  .sci-fi-input:focus {
-    outline: none;
-    box-shadow: 0 0 10px var(--neon-blue), inset 0 0 5px var(--neon-blue);
+  .input:focus {
+    @apply outline-none border-[#8B6B4A] ring-1 ring-[#8B6B4A];
   }
 
-  .sci-fi-input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  /* Loading animation */
-  .sci-fi-loading {
-    @apply w-[50px] h-[50px] rounded-full animate-spin;
-    border: 3px solid rgba(0, 243, 255, 0.3);
-    border-top: 3px solid var(--neon-blue);
-  }
-
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-
-  /* Navigation elements */
+  /* Navigation */
   .nav-link {
-    @apply uppercase transition-all duration-300;
-    font-family: "Orbitron", sans-serif;
-    letter-spacing: 1px;
-  }
-
-  .nav-link:hover {
-    @apply text-neon-blue;
-    text-shadow: 0 0 5px var(--neon-blue);
+    @apply text-[#4A5568] hover:text-[#2D3748] transition-colors duration-200;
   }
 
   .nav-link.active {
-    @apply text-neon-blue border-neon-blue;
-    text-shadow: 0 0 5px var(--neon-blue);
+    @apply text-[#2D3748] font-medium;
   }
 
-  /* Typing animation for text areas */
+  /* Loading animation */
+  .loading {
+    @apply w-6 h-6 border-2 border-[#8B6B4A] border-t-transparent rounded-full animate-spin;
+  }
+
+  /* Typing animation */
   @keyframes blink {
     0%,
     100% {
@@ -203,55 +112,11 @@ body {
 
   .typing-cursor::after {
     content: "|";
-    @apply animate-blink text-neon-blue;
+    @apply animate-blink text-[#2D3748];
   }
 
   .animate-blink {
     animation: blink 1s infinite;
-  }
-
-  /* Grid background */
-  .grid-bg {
-    background-image: linear-gradient(var(--grid-color) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-
-  .retro-screen-effect {
-    position: relative;
-  }
-
-  .retro-screen-effect::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.1) 0px,
-      rgba(0, 0, 0, 0.1) 1px,
-      transparent 1px,
-      transparent 2px
-    );
-    pointer-events: none;
-  }
-
-  .retro-screen-effect::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(
-      circle at center,
-      transparent 0%,
-      rgba(5, 10, 48, 0.4) 70%,
-      rgba(5, 10, 48, 0.8) 100%
-    );
-    pointer-events: none;
   }
 }
 
@@ -261,14 +126,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--dark-blue);
+  background: #f8f9fa;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--neon-blue);
+  background: #cbd5e0;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--neon-pink);
+  background: #a0aec0;
 }

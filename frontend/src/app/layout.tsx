@@ -2,14 +2,13 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import QueryProvider from "@/providers/QueryProvider";
-import { AuthProvider } from "@/providers/AuthProvider";
 import NavMenu from "@/components/NavMenu";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Am I an AI?",
-  description: "Detect whether text was written by a human or AI",
+  description: "interactive portal for exploring AI identity and communication",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },
@@ -27,10 +26,8 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <QueryProvider>
-          <AuthProvider>
-            <NavMenu />
-            {children}
-          </AuthProvider>
+          <NavMenu />
+          {children}
         </QueryProvider>
       </body>
     </html>

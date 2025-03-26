@@ -1,5 +1,11 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import ChatInterface from "./ChatInterface";
 
 jest.useFakeTimers();
@@ -12,7 +18,9 @@ describe("ChatInterface", () => {
     render(<ChatInterface />);
 
     // Advance timers to trigger the initial greeting
-    jest.advanceTimersByTime(1500);
+    await act(async () => {
+      jest.advanceTimersByTime(1500);
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Hello, how are you?")).toBeInTheDocument();
@@ -27,10 +35,16 @@ describe("ChatInterface", () => {
     const submitButton = screen.getByRole("button", { name: /send message/i });
 
     // Type a message
-    fireEvent.change(input, { target: { value: "I am doing well, thanks!" } });
+    await act(async () => {
+      fireEvent.change(input, {
+        target: { value: "I am doing well, thanks!" },
+      });
+    });
 
     // Submit the message
-    fireEvent.click(submitButton);
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
 
     // Check if user message appears
     await waitFor(() => {
@@ -38,7 +52,9 @@ describe("ChatInterface", () => {
     });
 
     // Advance timers to trigger the response
-    jest.advanceTimersByTime(2500);
+    await act(async () => {
+      jest.advanceTimersByTime(2500);
+    });
 
     // Check if response appears
     await waitFor(() => {
