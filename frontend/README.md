@@ -1,17 +1,16 @@
 # Am I an AI? (Next.js Version)
 
-This is the Next.js version of the "Am I an AI?" application, migrated from Create React App for improved performance, developer experience, and future scalability.
+This is the Next.js version of the "Am I an AI?" application, built for clean, modern interactions and meaningful conversations.
 
 ## Features
 
 - 🚀 Built with Next.js 15
 - ⚛️ Using React 19
-- 🔍 AI-powered text analysis
-- 💻 80's retro-futuristic design
+- 🎨 Clean, modern design system
 - 📱 Fully responsive for all device sizes
-- ⚡ Server-side rendering for improved performance
-- 🔒 Authentication and account management
-- 🔄 Advanced state management with Zustand and React Query
+- ⚡ Static site generation for optimal performance
+- 💬 Focused conversation interface
+- 🎯 Simplified, purposeful UI
 
 ## Getting Started
 
@@ -26,23 +25,19 @@ This is the Next.js version of the "Am I an AI?" application, migrated from Crea
 
    ```bash
    git clone https://github.com/yourusername/amianai.git
-   cd amianai/frontend-next
+   cd amianai/frontend
    ```
 
 2. Install dependencies
 
    ```bash
    npm install
-   # or
-   yarn install
    ```
 
 3. Run the development server
 
    ```bash
    npm run dev
-   # or
-   yarn dev
    ```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
@@ -52,23 +47,18 @@ This is the Next.js version of the "Am I an AI?" application, migrated from Crea
 ```
 src/
 ├── app/               # App Router pages
-│   ├── page.tsx       # Home page
-│   ├── analysis/      # Text analysis page
-│   ├── about/         # About page
-│   ├── donate/        # Donation page
-│   └── account/       # User account page
+│   ├── page.tsx      # Home page
+│   ├── about/        # About page
+│   └── not-found.tsx # 404 page
 ├── components/        # Reusable components
-├── hooks/             # Custom React hooks
-│   └── useQueries.ts  # React Query hooks
-├── providers/         # Context providers
-│   ├── QueryProvider.tsx    # React Query provider
-│   └── AuthProvider.tsx     # Authentication provider
-├── store/             # Zustand stores
-│   └── useAuthStore.ts      # Auth state management
-├── services/          # API services
-│   └── api.ts         # API service functions
-└── public/            # Static assets
-    └── images/        # Image files
+│   ├── ChatContainer.tsx    # Main chat interface
+│   ├── ChatInterface.tsx    # Chat implementation
+│   └── NavMenu.tsx         # Navigation menu
+├── hooks/            # Custom React hooks
+├── lib/             # Utilities and constants
+│   └── designSystem.ts     # Design system definitions
+├── test/            # Test utilities
+└── types/           # TypeScript type definitions
 ```
 
 ## Key Technologies
@@ -77,81 +67,46 @@ src/
 - **UI Library**: React 19
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
-- **State Management**:
-  - **Zustand**: For global UI state and authentication
-  - **React Query**: For server state, data fetching, and caching
 - **Testing**: Jest and React Testing Library
 
-## State Management Architecture
+## Design System
 
-The application uses a hybrid state management approach:
+The application uses a clean, modern design system:
 
-### Client State (Zustand)
+- **Colors**: Professional palette with kelp brown accents
+- **Typography**: Clear hierarchy with Inter font
+- **Components**: Minimal, focused UI elements
+- **Layout**: Centered, readable content areas
 
-- Authentication state (login status, user info)
-- UI state (theme preferences, modal visibility)
-- Persisted with localStorage for session continuity
+## Testing
 
-### Server State (React Query)
+Run the test suite:
 
-- Remote data fetching with automatic caching
-- Optimistic updates for mutations
-- Automatic refetching and background updates
-- Loading and error states
+```bash
+npm test
+```
 
-This separation provides cleaner code organization and better performance.
+Tests cover:
 
-## User Account Implementation Plan
+- Component rendering
+- User interactions
+- Accessibility
+- Responsive design
 
-Currently, the application uses a simulated authentication system with mock data. To implement real user accounts, the following steps are planned:
+## Development Workflow
 
-### Phase 1: Backend Setup
-
-- [ ] Set up a backend service (Node.js/Express, Python/FastAPI, or serverless functions)
-- [ ] Implement a database solution (DynamoDB, PostgreSQL, Supabase, or Firebase)
-- [ ] Create user account schema with necessary fields (name, email, password hash, etc.)
-- [ ] Implement secure password hashing and storage
-
-### Phase 2: API Development
-
-- [ ] Create RESTful endpoints for authentication:
-  - [ ] User registration with email verification
-  - [ ] Login with JWT token generation
-  - [ ] Password reset functionality
-  - [ ] Account management (update profile, delete account)
-- [ ] Implement secure session management
-- [ ] Set up API rate limiting and security measures
-
-### Phase 3: Frontend Integration
-
-- [ ] Update the API service to connect to the real backend
-- [ ] Enhance form validation and error handling
-- [ ] Implement email verification flow
-- [ ] Add password reset functionality
-- [ ] Create account settings page for profile management
-
-### Phase 4: Enhanced Features
-
-- [ ] Social authentication (Google, GitHub, etc.)
-- [ ] User roles and permissions
-- [ ] Activity tracking and usage statistics
-- [ ] User preferences and settings
-- [ ] Premium account features
-
-### Phase 5: Testing and Deployment
-
-- [ ] Comprehensive testing of authentication flows
-- [ ] Security audit and penetration testing
-- [ ] Performance optimization
-- [ ] Documentation
-- [ ] Staging and production deployment
+1. Make changes in a feature branch
+2. Run tests and linting
+3. Build and check production build
+4. Create pull request
+5. Deploy after review
 
 ## Future Enhancements
 
-- Enhanced text analysis capabilities
-- More extensive account features
-- Additional retro-themed UI elements
-- Advanced data visualization
+- Enhanced conversation capabilities
+- Additional accessibility features
+- Performance optimizations
+- Extended test coverage
 
 ## License
 
