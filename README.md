@@ -28,6 +28,10 @@ We're building an ecosystem designed to nurture meaningful interactions built on
 - AWS CLI configured with appropriate permissions
 - Terraform >= 1.0.0
 
+### Deployment
+
+The site is deployed at [amianai.com](https://amianai.com)
+
 ### Local Development
 
 1. Install dependencies:

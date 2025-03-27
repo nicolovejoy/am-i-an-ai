@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 
 export default function About() {
@@ -48,7 +46,7 @@ export default function About() {
                 </li>
                 <li className="text-lg mb-2 text-[#4A5568]">
                   <strong className="text-[#2D3748]">Simplification:</strong> We
-                  continuously look for ways to remove complexity
+                  prioritize clarity and simplicity in our solutions
                 </li>
               </ul>
             </div>
