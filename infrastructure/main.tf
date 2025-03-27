@@ -120,7 +120,7 @@ resource "aws_cloudfront_distribution" "website" {
     minimum_protocol_version = "TLSv1.2_2021"
   }
 
-  # Custom error response to handle client-side routing in Next.js
+  # Custom error responses to handle client-side routing
   custom_error_response {
     error_code            = 403
     response_code         = 200
@@ -130,6 +130,14 @@ resource "aws_cloudfront_distribution" "website" {
 
   custom_error_response {
     error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
+  }
+
+  # Add custom error response for 500 errors
+  custom_error_response {
+    error_code            = 500
     response_code         = 200
     response_page_path    = "/index.html"
     error_caching_min_ttl = 10

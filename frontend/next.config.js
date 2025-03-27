@@ -9,6 +9,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Ensure proper handling of client-side routing
+  assetPrefix:
+    process.env.NODE_ENV === "production" ? "https://amianai.com" : "",
 };
 
 module.exports = nextConfig;
