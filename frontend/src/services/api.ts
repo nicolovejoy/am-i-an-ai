@@ -5,6 +5,12 @@
 
 import { Message } from "@/types/chat";
 
+declare const process: {
+  env: {
+    NEXT_PUBLIC_API_URL?: string;
+  };
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 export type UserProfile = {
@@ -144,7 +150,9 @@ export const sendMessage = async (message: string): Promise<ChatResponse> => {
 
     return response.json();
   } catch (error) {
-    console.error("Error sending message:", error);
-    throw error;
+    // Instead of console.error, we'll throw the error to be handled by the caller
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to send message"
+    );
   }
 };

@@ -80,20 +80,19 @@ export default function ChatInterface() {
     const userMessage = inputValue.trim();
     addUserMessage(userMessage);
     setInputValue("");
+    setIsTyping(true);
 
     try {
-      setIsTyping(true);
-
-      // TODO: Call our backend API here
-      // For now, just echo back the message
+      // TODO: Replace with actual API call
+      // For now, simulate a response
       setTimeout(() => {
         addAssistantMessage(`Server received: ${userMessage}`);
         setIsTyping(false);
       }, 1000);
     } catch (error) {
-      console.error("Error getting response:", error);
-      addSystemMessage("Sorry, I encountered an error. Please try again.");
+      // Handle error appropriately
       setIsTyping(false);
+      addAssistantMessage("Sorry, I encountered an error. Please try again.");
     }
   };
 
