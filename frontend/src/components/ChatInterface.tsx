@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { FiSend } from "react-icons/fi";
 
 // Define types for our chat data
-type MessageType = "system" | "user";
+type MessageType = "system" | "user" | "assistant";
 
 interface Message {
   id: string;
@@ -59,33 +59,49 @@ export default function ChatInterface() {
     ]);
   };
 
+  // Add an assistant message
+  const addAssistantMessage = (content: string) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: generateId(),
+        content,
+        type: "assistant",
+        timestamp: new Date(),
+      },
+    ]);
+  };
+
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
-    addUserMessage(inputValue);
+    const userMessage = inputValue.trim();
+    addUserMessage(userMessage);
     setInputValue("");
 
-    // Simple response logic - can be expanded later
-    handleResponse();
-  };
+    try {
+      setIsTyping(true);
 
-  // Simple response handler - this can be replaced with API calls later
-  const handleResponse = () => {
-    // Wait a moment before showing the typing indicator
-    setTimeout(() => {
-      // For now, just respond with a follow-up question
-      addSystemMessage(
-        "Thanks for sharing. What brings you to our site today?",
-        1500
-      );
-    }, 500);
+      // TODO: Call our backend API here
+      // For now, just echo back the message
+      setTimeout(() => {
+        addAssistantMessage(`Server received: ${userMessage}`);
+        setIsTyping(false);
+      }, 1000);
+    } catch (error) {
+      console.error("Error getting response:", error);
+      addSystemMessage("Sorry, I encountered an error. Please try again.");
+      setIsTyping(false);
+    }
   };
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current?.scrollIntoView) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // Initial greeting when the component mounts
@@ -96,7 +112,7 @@ export default function ChatInterface() {
     // Only add the initial greeting if it hasn't been sent yet
     if (!hasInitialized) {
       const timer = setTimeout(() => {
-        addSystemMessage("Hello, how are you?", 800);
+        addSystemMessage("Hello! What's up?", 800);
         setHasInitialized(true);
       }, 500);
 
@@ -120,6 +136,8 @@ export default function ChatInterface() {
               className={`p-3 rounded-lg max-w-xs md:max-w-md ${
                 message.type === "user"
                   ? "bg-[#8B6B4A] text-white rounded-tr-none"
+                  : message.type === "assistant"
+                  ? "bg-[#E8F5E9] text-[#2D3748] rounded-tl-none border border-[#E2E8F0]"
                   : "bg-[#F8F9FA] text-[#2D3748] rounded-tl-none border border-[#E2E8F0]"
               }`}
             >

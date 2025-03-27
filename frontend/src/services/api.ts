@@ -3,6 +3,10 @@
 // For now we'll simulate an API response
 // Later we can connect to a real AI detection API
 
+import { Message } from "@/types/chat";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
 export type UserProfile = {
   name: string;
   email: string;
@@ -111,4 +115,36 @@ export const getUserProfile = async (): Promise<UserProfile> => {
     joined: new Date().toISOString(),
     usageCount: Math.floor(Math.random() * 50),
   };
+};
+
+// Chat types
+export type ChatRequest = {
+  message: string;
+};
+
+export type ChatResponse = {
+  message: string;
+  messages?: Message[];
+};
+
+// Chat API endpoints
+export const sendMessage = async (message: string): Promise<ChatResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error sending message:", error);
+    throw error;
+  }
 };
