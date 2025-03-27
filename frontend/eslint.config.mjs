@@ -6,16 +6,16 @@ import globals from "globals";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Simplify the configuration to avoid circular references
+// Create a compatibility layer for older configs
 const compat = new FlatCompat({
   baseDirectory: __dirname,
   recommendedConfig: { extends: [] },
 });
 
 export default [
-  // Exclude the .next folder from linting
+  // Exclude build and dependency directories
   {
-    ignores: [".next/**/*", "node_modules/**/*"],
+    ignores: [".next/**/*", "node_modules/**/*", "out/**/*"],
   },
 
   // Base configuration for all TypeScript/TSX files
@@ -50,12 +50,6 @@ export default [
         );
         return typescriptEslint;
       })(),
-      functional: await (async () => {
-        const { default: functional } = await import(
-          "eslint-plugin-functional"
-        );
-        return functional;
-      })(),
       react: await (async () => {
         const { default: react } = await import("eslint-plugin-react");
         return react;
@@ -77,18 +71,6 @@ export default [
       "no-unused-vars": "off", // Handled by TypeScript
       "no-console": "warn",
       "no-undef": "error",
-
-      // Enforce functional programming patterns
-      "functional/no-classes": "error",
-      "functional/no-this-expressions": "error",
-      "functional/no-let": "error",
-      "functional/immutable-data": "error",
-      "functional/readonly-type": "warn",
-      "functional/no-loop-statements": "warn",
-
-      // Less strict for React components
-      "functional/no-expression-statements": "off",
-      "functional/functional-parameters": "off",
 
       // TypeScript specific rules
       "@typescript-eslint/no-unused-vars": "error",
@@ -126,9 +108,6 @@ export default [
     rules: {
       // Disable rules that are too restrictive for test files
       "no-undef": "off",
-      "functional/no-expression-statements": "off",
-      "functional/immutable-data": "off",
-      "functional/no-let": "off",
       "@typescript-eslint/no-unused-vars": "warn",
     },
   },
@@ -137,8 +116,6 @@ export default [
   {
     files: ["**/lib/api.ts", "**/services/api.ts"],
     rules: {
-      // Relax some functional rules for API modules
-      "functional/no-let": "off",
       "no-console": "warn",
     },
   },
