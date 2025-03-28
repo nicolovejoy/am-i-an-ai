@@ -6,11 +6,13 @@ The "Am I an AI?" application is built with a modern web architecture featuring 
 
 ### Frontend Architecture
 
-- **Single Page Application (SPA)**: Built with React and TypeScript
-- **Client-Side Routing**: Using React Router for navigation
-- **State Management**: React hooks for local state management
+- **Next.js Application**: Built with Next.js 15, React 19, and TypeScript
+- **App Router**: Using Next.js App Router for file-system based routing
+- **State Management**: Zustand for global state, React hooks for local state
 - **Component Structure**: Modular components with clear separation of concerns
-- **Design System**: Centralized styling with CSS variables and TypeScript interfaces
+- **Design System**: Tailwind CSS for styling with TypeScript interfaces
+- **Server Components**: Leveraging Next.js server components for improved performance
+- **Static Site Generation**: Utilizing Next.js static exports for optimal deployment
 
 ### Backend Architecture
 
@@ -18,7 +20,7 @@ The backend follows a serverless architecture pattern:
 
 - **API Gateway**: Routes API requests to appropriate Lambda functions
 - **Lambda Functions**: Process requests and return responses
-- **S3**: Hosts static website assets
+- **S3**: Hosts static website assets (Next.js static export)
 - **CloudFront**: CDN for global content delivery
 - **Route53**: DNS management
 
@@ -97,9 +99,10 @@ The CI/CD pipeline is implemented with GitHub Actions:
 2. GitHub Actions workflow is triggered
 3. Dependencies are installed
 4. Tests are run
-5. Frontend is built
-6. Built files are deployed to S3
-7. CloudFront cache is invalidated
+5. Next.js application is built (`next build`)
+6. Static files are exported (`next export`)
+7. Built files are deployed to S3
+8. CloudFront cache is invalidated
 
 ## Security Considerations
 
