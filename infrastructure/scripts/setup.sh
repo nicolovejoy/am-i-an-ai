@@ -2,7 +2,10 @@
 set -e
 
 # Ensure we're in the infrastructure directory
-cd "$(dirname "$0")/.." || exit 1
+SCRIPT_DIR="$(dirname "$0")"
+if [ "$(basename "$(pwd)")" != "infrastructure" ]; then
+    cd "$SCRIPT_DIR/.." || exit 1
+fi
 
 # Check prerequisites
 command -v terraform >/dev/null 2>&1 || { echo "Terraform is required but not installed. Aborting." >&2; exit 1; }
@@ -42,6 +45,14 @@ cd ../frontend || exit 1
 npm install
 npm run build
 aws s3 sync out/ s3://${DOMAIN_NAME}/ --delete
-aws cloudfront create-invalidation --distribution-id $(terraform output -raw cloudfront_distribution_id) --paths "/*"
+
+# Get CloudFront distribution ID and create invalidation
+DISTRIBUTION_ID=$(cd ../infrastructure && terraform output -json | jq -r .cloudfront_distribution_id.value)
+if [ -n "$DISTRIBUTION_ID" ]; then
+    echo "Creating CloudFront invalidation..."
+    aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"
+else
+    echo "Warning: Could not get CloudFront distribution ID"
+fi
 
 echo "Setup complete!" 

@@ -464,4 +464,108 @@ resource "aws_lambda_permission" "api_gateway" {
   
   # Allow invocation from any stage, method, and resource path
   source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
+}
+
+# Cognito User Pool
+resource "aws_cognito_user_pool" "main" {
+  name = "${var.project_name}-user-pool"
+  
+  password_policy {
+    minimum_length    = 8
+    require_lowercase = true
+    require_numbers   = true
+    require_symbols   = true
+    require_uppercase = true
+  }
+  
+  auto_verified_attributes = ["email"]
+  
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+    email_subject       = "Your verification code"
+    email_message       = "Your verification code is {####}"
+  }
+  
+  tags = var.tags
+}
+
+# Cognito User Pool Client
+resource "aws_cognito_user_pool_client" "main" {
+  name         = "${var.project_name}-client"
+  user_pool_id = aws_cognito_user_pool.main.id
+  
+  generate_secret = false
+  
+  explicit_auth_flows = [
+    "ALLOW_USER_SRP_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+    "ALLOW_USER_PASSWORD_AUTH"
+  ]
+}
+
+# Output Cognito User Pool ID and Client ID
+output "cognito_user_pool_id" {
+  description = "The ID of the Cognito User Pool"
+  value       = aws_cognito_user_pool.main.id
+}
+
+output "cognito_client_id" {
+  description = "The ID of the Cognito User Pool Client"
+  value       = aws_cognito_user_pool_client.main.id
+}
+
+# Auth Lambda Function
+resource "aws_lambda_function" "auth" {
+  filename         = "auth_lambda.zip"
+  function_name    = "${var.project_name}-auth"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "signup.handler"
+  runtime         = "nodejs18.x"
+  timeout         = 30
+  memory_size     = 128
+  source_code_hash = filebase64sha256("auth_lambda.zip")
+  environment {
+    variables = {
+      COGNITO_CLIENT_ID = aws_cognito_user_pool_client.main.id
+    }
+  }
+}
+
+# API Gateway endpoint for auth
+resource "aws_api_gateway_resource" "auth" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  path_part   = "auth"
+}
+
+resource "aws_api_gateway_resource" "signup" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_resource.auth.id
+  path_part   = "signup"
+}
+
+resource "aws_api_gateway_method" "signup" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.signup.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "signup" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  resource_id = aws_api_gateway_resource.signup.id
+  http_method = aws_api_gateway_method.signup.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.auth.invoke_arn
+}
+
+# Lambda permission for API Gateway
+resource "aws_lambda_permission" "auth" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.auth.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
 } 

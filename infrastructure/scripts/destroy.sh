@@ -29,7 +29,7 @@ fi
 
 # Get CloudFront distribution ID
 echo "Getting CloudFront distribution ID..."
-DIST_ID=$(terraform output -raw cloudfront_distribution_id 2>/dev/null || echo "")
+DIST_ID=$(terraform output -json | jq -r .cloudfront_distribution_id.value 2>/dev/null || echo "")
 echo "Distribution ID: ${DIST_ID}"
 
 if [ -n "$DIST_ID" ]; then
@@ -60,6 +60,10 @@ if [ -n "$DIST_ID" ]; then
 else
     echo "No CloudFront distribution found, skipping disable step..."
 fi
+
+# Clean up Lambda deployment packages
+echo "Cleaning up Lambda deployment packages..."
+rm -f backend_lambda.zip auth_lambda.zip
 
 # Destroy infrastructure
 echo "Destroying infrastructure..."
