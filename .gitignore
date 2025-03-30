@@ -38,5 +38,3 @@ backend/.env
 # Lambda deployment packages
 *.zip
 
-infrastructure/backend_lambda.zip
-infrastructure/backend_lambda.zip
