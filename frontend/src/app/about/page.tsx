@@ -12,17 +12,16 @@ export default function About() {
             <div className="prose max-w-none">
               <p className="text-lg mb-4 text-[#4A5568]">
                 Am I an AI? is an interactive portal that invites visitors to
-                engage in conversations from the moment they arrive. Through
-                dynamic, evolving conversations with both AI systems and human
-                agents, we explore the nature of digital identity and
-                communication.
+                explore the nature of digital identity and communication.
+                Through a clean, modern interface, we provide a space for
+                reflection and discovery about the evolving relationship between
+                humans and AI.
               </p>
               <p className="text-lg mb-4 text-[#4A5568]">
-                We're building an ecosystem designed to nurture meaningful
-                interactions built on trust and mutual respect. Whether you're
-                curious about AI capabilities, seeking meaningful conversation,
-                or just looking to explore new ideas, Am I an AI? offers a safe
-                space for engagement and discovery.
+                We're building an ecosystem designed to foster understanding and
+                exploration. Whether you're curious about AI capabilities or
+                just looking to explore new ideas, Am I an AI? offers a safe
+                space for discovery and learning.
               </p>
               <h2 className="text-2xl font-semibold mt-8 mb-4 text-[#2D3748]">
                 Our Approach

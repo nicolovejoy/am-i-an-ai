@@ -1,7 +1,11 @@
 #!/bin/bash
 set -e
 
-DOMAIN_NAME="amianai.com"
+# Check environment variables
+if [ -z "$DOMAIN_NAME" ]; then
+    echo "Error: DOMAIN_NAME environment variable is required. Aborting." >&2
+    exit 1
+fi
 
 # Ensure we're in the infrastructure directory for terraform commands
 cd "$(dirname "$0")/.." || exit 1

@@ -1,6 +1,6 @@
 # Am I an AI? (Next.js Version)
 
-This is the Next.js version of the "Am I an AI?" application, built for clean, modern interactions and meaningful conversations.
+This is the Next.js version of the "Am I an AI?" application, built for clean, modern design and focused user experience.
 
 ## Features
 
@@ -9,7 +9,6 @@ This is the Next.js version of the "Am I an AI?" application, built for clean, m
 - 🎨 Clean, modern design system
 - 📱 Fully responsive for all device sizes
 - ⚡ Static site generation for optimal performance
-- 💬 Focused conversation interface
 - 🎯 Simplified, purposeful UI
 
 ## Getting Started
@@ -89,7 +88,7 @@ npm test
 Tests cover:
 
 - Component rendering
-- User interactions
+- User experience
 - Accessibility
 - Responsive design
 
@@ -103,7 +102,7 @@ Tests cover:
 
 ## Future Enhancements
 
-- Enhanced conversation capabilities
+- Enhanced user experience
 - Additional accessibility features
 - Performance optimizations
 - Extended test coverage

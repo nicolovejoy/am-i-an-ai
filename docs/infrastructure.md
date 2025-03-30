@@ -2,23 +2,33 @@
 
 ## System Architecture
 
-The "Am I an AI?" application is built with a modern web architecture featuring a static frontend with serverless backend components:
+The "Am I an AI?" application is built with a modern web architecture featuring a Next.js frontend with serverless backend components:
 
 ### Frontend Architecture
 
-- **Single Page Application (SPA)**: Built with React and TypeScript
-- **Client-Side Routing**: Using React Router for navigation
-- **State Management**: React hooks for local state management
+- **Next.js Application**: Built with Next.js 15, React 19, and TypeScript
+- **App Router**: Using Next.js App Router for file-system based routing
+- **State Management**:
+  - Zustand for global state management
+  - React Query for server state management
+  - React hooks for local state
 - **Component Structure**: Modular components with clear separation of concerns
-- **Design System**: Centralized styling with CSS variables and TypeScript interfaces
+- **Design System**: Tailwind CSS for styling with TypeScript interfaces
+- **Testing**: Jest and React Testing Library for testing
+- **Development Tools**:
+  - ESLint for code linting
+  - TypeScript for type safety
+  - PostCSS and Autoprefixer for CSS processing
 
 ### Backend Architecture
 
 The backend follows a serverless architecture pattern:
 
-- **API Gateway**: Routes API requests to appropriate Lambda functions
+- **API Gateway**: Routes API requests to Lambda functions
 - **Lambda Functions**: Process requests and return responses
-- **S3**: Hosts static website assets
+- **DynamoDB Tables**:
+  - Users table for user management
+- **S3**: Hosts static website assets (Next.js static export)
 - **CloudFront**: CDN for global content delivery
 - **Route53**: DNS management
 
@@ -33,22 +43,43 @@ The project uses AWS infrastructure managed by Terraform:
   - Configured for website hosting
   - Restricted access via CloudFront
   - Lifecycle policies for object management
+  - Public access block configuration for security
 
 - **CloudFront**: CDN for global content delivery
 
   - HTTPS enforcement
-  - Caching strategies for optimal performance
-  - Geo-restrictions (if applicable)
-  - Origin access identity for S3 security
+  - Custom error responses for client-side routing
+  - Multiple origin support (S3 and API Gateway)
+  - Optimized caching behaviors
+  - IPv6 enabled
 
 - **Route53**: DNS management
 
   - A records pointing to CloudFront distribution
-  - Health checks for high availability
+  - DNS validation for SSL certificate
 
 - **ACM**: SSL certificate management
+
   - Automated renewal
+  - DNS validation method
+  - TLSv1.2_2021 minimum protocol version
   - US-East-1 region for CloudFront compatibility
+
+- **API Gateway**: REST API management
+
+  - Lambda integration
+  - Proxy resource for flexible routing
+  - CORS support
+
+- **Lambda**: Serverless compute
+
+  - Node.js runtime
+  - IAM roles with least privilege
+  - DynamoDB access permissions
+
+- **DynamoDB**: NoSQL database
+  - Users table for user management
+  - Optimized for read/write performance
 
 ### Infrastructure as Code
 
@@ -57,35 +88,28 @@ All infrastructure is defined using Terraform for consistency and reproducibilit
 ```hcl
 # S3 bucket for website hosting
 resource "aws_s3_bucket" "website" {
-  bucket = var.domain_name
-  tags   = var.tags
+  bucket        = var.domain_name
+  force_destroy = true
+  tags          = var.tags
 }
 
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "website" {
+  enabled             = true
+  is_ipv6_enabled    = true
+  default_root_object = "index.html"
+  aliases            = ["amianai.com"]
+
   origin {
     domain_name = aws_s3_bucket.website.bucket_regional_domain_name
     origin_id   = "S3-${aws_s3_bucket.website.bucket}"
 
     s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.oai.cloudfront_access_identity_path
+      origin_access_identity = aws_cloudfront_origin_access_identity.website.cloudfront_access_identity_path
     }
   }
 
-  # Configuration details...
-}
-
-# Route53 records
-resource "aws_route53_record" "website" {
-  zone_id = data.aws_route53_zone.selected.zone_id
-  name    = var.domain_name
-  type    = "A"
-
-  alias {
-    name                   = aws_cloudfront_distribution.website.domain_name
-    zone_id                = aws_cloudfront_distribution.website.hosted_zone_id
-    evaluate_target_health = false
-  }
+  # Additional configuration...
 }
 ```
 
@@ -97,9 +121,10 @@ The CI/CD pipeline is implemented with GitHub Actions:
 2. GitHub Actions workflow is triggered
 3. Dependencies are installed
 4. Tests are run
-5. Frontend is built
-6. Built files are deployed to S3
-7. CloudFront cache is invalidated
+5. Next.js application is built (`next build`)
+6. Static files are exported
+7. Built files are deployed to S3
+8. CloudFront cache is invalidated
 
 ## Security Considerations
 
@@ -108,9 +133,10 @@ The infrastructure includes several security measures:
 - **S3 Bucket Policies**: Restricting direct access to website content
 - **CloudFront OAI**: Only allowing CloudFront to access S3 content
 - **HTTPS Enforcement**: All traffic is encrypted in transit
-- **WAF (optional)**: Protection against common web vulnerabilities
 - **IAM Policies**: Least privilege principle for all service accounts
 - **OIDC for GitHub Actions**: No long-lived credentials in CI/CD
+- **Public Access Block**: S3 bucket security controls
+- **TLSv1.2_2021**: Modern TLS configuration
 
 ## Cost Optimization
 
@@ -120,6 +146,7 @@ The serverless architecture provides cost optimization:
 - **No always-on servers**: Reduces baseline costs
 - **CloudFront caching**: Reduces origin requests
 - **S3 lifecycle policies**: Manages storage costs
+- **DynamoDB on-demand**: Pay only for actual database operations
 
 ## Monitoring & Logging
 
@@ -129,6 +156,7 @@ Infrastructure monitoring utilizes:
 - **CloudTrail**: Audit logs for all AWS API calls
 - **S3 Access Logs**: Detailed logs of website access
 - **CloudFront Logs**: Detailed CDN request logs
+- **API Gateway Logs**: API request/response logging
 
 ## Disaster Recovery
 
