@@ -13,6 +13,9 @@ provider "aws" {
   region = "us-east-1"  # Single region for everything
 }
 
+# Get current AWS region
+data "aws_region" "current" {}
+
 # S3 bucket for website hosting
 resource "aws_s3_bucket" "website" {
   bucket        = var.domain_name
@@ -486,7 +489,25 @@ resource "aws_cognito_user_pool" "main" {
     email_message       = "Your verification code is {####}"
   }
   
+  schema {
+    attribute_data_type = "String"
+    name               = "email"
+    required           = true
+    mutable           = true
+
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 256
+    }
+  }
+  
   tags = var.tags
+}
+
+# Cognito User Pool Domain
+resource "aws_cognito_user_pool_domain" "main" {
+  domain       = "auth-amianai"
+  user_pool_id = aws_cognito_user_pool.main.id
 }
 
 # Cognito User Pool Client
@@ -499,8 +520,26 @@ resource "aws_cognito_user_pool_client" "main" {
   explicit_auth_flows = [
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
-    "ALLOW_USER_PASSWORD_AUTH"
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_ADMIN_USER_PASSWORD_AUTH"
   ]
+  
+  supported_identity_providers = ["COGNITO"]
+  
+  callback_urls = ["https://${var.domain_name}/auth/callback"]
+  logout_urls   = ["https://${var.domain_name}/"]
+  
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code", "implicit"]
+  allowed_oauth_scopes                 = ["email", "openid", "profile"]
+}
+
+# API Gateway Authorizer
+resource "aws_api_gateway_authorizer" "cognito" {
+  name          = "cognito-authorizer"
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  type          = "COGNITO_USER_POOLS"
+  provider_arns = [aws_cognito_user_pool.main.arn]
 }
 
 # Output Cognito User Pool ID and Client ID
@@ -514,21 +553,82 @@ output "cognito_client_id" {
   value       = aws_cognito_user_pool_client.main.id
 }
 
+output "cognito_domain" {
+  description = "The domain of the Cognito User Pool"
+  value       = aws_cognito_user_pool_domain.main.domain
+}
+
+output "cognito_region" {
+  description = "The AWS region where Cognito is deployed"
+  value       = data.aws_region.current.name
+}
+
 # Auth Lambda Function
 resource "aws_lambda_function" "auth" {
   filename         = "auth_lambda.zip"
   function_name    = "${var.project_name}-auth"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "signup.handler"
+  role            = aws_iam_role.auth_lambda_role.arn
+  handler         = "index.handler"
   runtime         = "nodejs18.x"
   timeout         = 30
-  memory_size     = 128
+  memory_size     = 256
   source_code_hash = filebase64sha256("auth_lambda.zip")
   environment {
     variables = {
-      COGNITO_CLIENT_ID = aws_cognito_user_pool_client.main.id
+      USER_POOL_ID = aws_cognito_user_pool.main.id
+      CLIENT_ID    = aws_cognito_user_pool_client.main.id
     }
   }
+}
+
+# Auth Lambda IAM Role
+resource "aws_iam_role" "auth_lambda_role" {
+  name = "${var.project_name}-auth-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Auth Lambda IAM Policy
+resource "aws_iam_role_policy" "auth_lambda_policy" {
+  name = "${var.project_name}-auth-lambda-policy"
+  role = aws_iam_role.auth_lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:AdminCreateUser",
+          "cognito-idp:AdminSetUserPassword",
+          "cognito-idp:AdminInitiateAuth",
+          "cognito-idp:AdminRespondToAuthChallenge",
+          "cognito-idp:AdminGetUser",
+          "cognito-idp:AdminUpdateUserAttributes",
+          "cognito-idp:AdminDeleteUser",
+          "cognito-idp:ListUsers",
+          "cognito-idp:ListUserPools",
+          "cognito-idp:DescribeUserPool",
+          "cognito-idp:DescribeUserPoolClient",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 # API Gateway endpoint for auth

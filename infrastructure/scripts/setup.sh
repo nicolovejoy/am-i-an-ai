@@ -42,9 +42,9 @@ sleep 30
 # Deploy initial content
 echo "Deploying initial content..."
 cd ../frontend || exit 1
-npm install
+npm ci
 npm run build
-aws s3 sync out/ s3://${DOMAIN_NAME}/ --delete
+aws s3 sync out/ s3://${DOMAIN_NAME}/ --delete --cache-control "max-age=86400"
 
 # Get CloudFront distribution ID and create invalidation
 DISTRIBUTION_ID=$(cd ../infrastructure && terraform output -json | jq -r .cloudfront_distribution_id.value)

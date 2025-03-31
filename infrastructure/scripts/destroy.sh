@@ -7,8 +7,11 @@ if [ -z "$DOMAIN_NAME" ]; then
     exit 1
 fi
 
-# Ensure we're in the infrastructure directory for terraform commands
-cd "$(dirname "$0")/.." || exit 1
+# Ensure we're in the infrastructure directory
+SCRIPT_DIR="$(dirname "$0")"
+if [ "$(basename "$(pwd)")" != "infrastructure" ]; then
+    cd "$SCRIPT_DIR/.." || exit 1
+fi
 
 echo "⚠️  This will destroy all resources for ${DOMAIN_NAME}"
 echo "Are you sure? (y/n)"
@@ -61,12 +64,16 @@ else
     echo "No CloudFront distribution found, skipping disable step..."
 fi
 
-# Clean up Lambda deployment packages
-echo "Cleaning up Lambda deployment packages..."
-rm -f backend_lambda.zip auth_lambda.zip
+# Build Lambda functions for terraform destroy
+echo "Building Lambda functions..."
+./scripts/build_lambda.sh
 
 # Destroy infrastructure
 echo "Destroying infrastructure..."
 terraform destroy -auto-approve
+
+# Clean up Lambda deployment packages
+echo "Cleaning up Lambda deployment packages..."
+rm -f backend_lambda.zip auth_lambda.zip
 
 echo "Infrastructure destroyed successfully!" 
