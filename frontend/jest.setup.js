@@ -2,6 +2,17 @@
 // Setup file for Jest
 
 import "@testing-library/jest-dom";
+import { configure } from "@testing-library/react";
+import { toHaveNoViolations } from "jest-axe";
+
+// Extend expect with axe matchers
+expect.extend(toHaveNoViolations);
+
+// Configure testing-library
+configure({
+  asyncUtilTimeout: 5000,
+  defaultHidden: true,
+});
 
 // Setup mock for localStorage
 Object.defineProperty(window, "localStorage", {
@@ -41,6 +52,12 @@ process.env = {
   NEXT_PUBLIC_COGNITO_USER_POOL_ID: "test-pool-id",
   NEXT_PUBLIC_COGNITO_CLIENT_ID: "test-client-id",
 };
+
+// Cleanup after each test
+afterEach(() => {
+  jest.clearAllMocks();
+  localStorage.clear();
+});
 
 // Don't mock these globally - let individual tests handle their own mocking
 // jest.mock("@/store/useAuthStore", () => ({...}));

@@ -23,6 +23,13 @@ const config = {
     "!src/**/*.d.ts",
     "!src/**/*.stories.{js,jsx,ts,tsx}",
   ],
+  testTimeout: 10000,
+  testMatch: [
+    "**/__tests__/**/*.[jt]s?(x)",
+    "**/?(*.)+(spec|test).[jt]s?(x)",
+    "**/performance/**/*.[jt]s?(x)",
+  ],
+  snapshotSerializers: ["@emotion/jest/serializer"],
 };
 
 module.exports = config;

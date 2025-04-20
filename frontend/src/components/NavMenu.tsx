@@ -56,6 +56,18 @@ const NavMenu: React.FC = () => {
               >
                 About
               </Link>
+              {isAuthenticated && (
+                <Link
+                  href="/"
+                  className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                    isActive("/")
+                      ? "text-[#8B6B4A] border-b-2 border-[#8B6B4A]"
+                      : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-b-2 hover:border-[#8B6B4A]"
+                  }`}
+                >
+                  Chat
+                </Link>
+              )}
             </div>
           </div>
 
@@ -128,6 +140,19 @@ const NavMenu: React.FC = () => {
             >
               About
             </Link>
+            {isAuthenticated && (
+              <Link
+                href="/"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`block px-3 py-2 text-base font-medium flex items-center ${
+                  isActive("/")
+                    ? "text-[#8B6B4A] border-l-4 border-[#8B6B4A]"
+                    : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-l-4 hover:border-[#8B6B4A]"
+                }`}
+              >
+                Chat
+              </Link>
+            )}
             {isAuthenticated ? (
               <button
                 onClick={handleSignOut}

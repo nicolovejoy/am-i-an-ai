@@ -105,10 +105,42 @@ export default [
         afterAll: "readonly",
       },
     },
+    plugins: {
+      jest: await (async () => {
+        const { default: jest } = await import("eslint-plugin-jest");
+        return jest;
+      })(),
+      "testing-library": await (async () => {
+        const { default: testingLibrary } = await import(
+          "eslint-plugin-testing-library"
+        );
+        return testingLibrary;
+      })(),
+    },
     rules: {
       // Disable rules that are too restrictive for test files
       "no-undef": "off",
       "@typescript-eslint/no-unused-vars": "warn",
+
+      // Testing best practices
+      "jest/valid-expect": "error",
+      "jest/prefer-expect-assertions": "off",
+      "jest/no-disabled-tests": "warn",
+      "jest/no-focused-tests": "error",
+      "jest/no-identical-title": "error",
+      "jest/valid-title": "error",
+      "jest/no-conditional-expect": "error",
+      "jest/no-interpolation-in-snapshots": "error",
+
+      // Testing Library specific rules
+      "testing-library/await-async-queries": "error",
+      "testing-library/no-await-sync-queries": "error",
+      "testing-library/no-container": "error",
+      "testing-library/no-node-access": "error",
+      "testing-library/prefer-screen-queries": "error",
+      "testing-library/prefer-presence-queries": "error",
+      "testing-library/prefer-find-by": "error",
+      "testing-library/render-result-naming-convention": "error",
     },
   },
 
