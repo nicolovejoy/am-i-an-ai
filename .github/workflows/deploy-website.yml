@@ -42,16 +42,26 @@ jobs:
         working-directory: frontend
         run: npm test -- --watchAll=false --coverage
 
-      - name: Build Next.js site
-        run: |
-          cd frontend
-          npm run build
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::218141621131:role/github-actions
           aws-region: us-east-1
+
+      - name: Get Cognito Values
+        id: get-cognito
+        run: |
+          USER_POOL_ID=$(aws cognito-idp list-user-pools --max-results 1 --query 'UserPools[0].Id' --output text)
+          CLIENT_ID=$(aws cognito-idp list-user-pool-clients --user-pool-id $USER_POOL_ID --max-results 1 --query 'UserPoolClients[0].ClientId' --output text)
+          echo "user_pool_id=$USER_POOL_ID" >> $GITHUB_OUTPUT
+          echo "client_id=$CLIENT_ID" >> $GITHUB_OUTPUT
+
+      - name: Build Next.js site
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ steps.get-cognito.outputs.user_pool_id }}
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ steps.get-cognito.outputs.client_id }}
+        run: npm run build
 
       - name: Sync to S3
         run: |
