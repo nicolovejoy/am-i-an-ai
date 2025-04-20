@@ -5,20 +5,27 @@ import { act } from "@testing-library/react";
 
 async function customRender(
   ui: React.ReactElement,
-  { ...renderOptions }: RenderOptions = {}
+  { delay = 0, ...renderOptions }: RenderOptions & { delay?: number } = {}
 ) {
   function Wrapper({ children }: { children: React.ReactNode }) {
     return <AuthProvider>{children}</AuthProvider>;
   }
 
-  const rendered = rtlRender(ui, { wrapper: Wrapper, ...renderOptions });
+  let rendered: ReturnType<typeof rtlRender>;
 
-  // Wait for any pending state updates
+  // Wrap the initial render in act
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    rendered = rtlRender(ui, { wrapper: Wrapper, ...renderOptions });
   });
 
-  return rendered;
+  // Only wait if a delay is specified
+  if (delay > 0) {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    });
+  }
+
+  return rendered!;
 }
 
 // re-export everything

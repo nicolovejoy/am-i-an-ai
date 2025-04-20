@@ -2,12 +2,11 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import NavMenu from "../NavMenu";
-import { useAuth } from "../../contexts/AuthContext";
 import { usePathname } from "next/navigation";
 
 // Mock next navigation
 jest.mock("next/navigation", () => ({
-  usePathname: () => "/",
+  usePathname: jest.fn().mockReturnValue("/"),
 }));
 
 // Mock next/image
@@ -30,67 +29,72 @@ jest.mock("next/image", () => ({
 }));
 
 // Mock AuthContext
+const mockUseAuth = jest.fn();
 jest.mock("../../contexts/AuthContext", () => ({
-  useAuth: () => ({
-    isAuthenticated: false,
-    isLoading: false,
-    error: null,
-    user: null,
-    signOut: jest.fn(),
-  }),
+  useAuth: () => mockUseAuth(),
 }));
 
 describe("NavMenu", () => {
   const mockUsePathname = usePathname as jest.Mock;
-  const mockUseAuth = useAuth as jest.Mock;
 
   beforeEach(() => {
     // Reset mocks before each test
     jest.clearAllMocks();
     mockUsePathname.mockReturnValue("/");
+    // Set default mock return value
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      user: null,
+      signOut: jest.fn(),
+    });
   });
 
   it("renders logo and brand name", () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false, signOut: jest.fn() });
     render(<NavMenu />);
-
     expect(screen.getByText("Am I an AI?")).toBeInTheDocument();
   });
 
   it("shows About link for all users", () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false, signOut: jest.fn() });
     render(<NavMenu />);
-
-    // Check for desktop About link
     expect(screen.getByRole("link", { name: "About" })).toBeInTheDocument();
   });
 
   it("shows Chat link only for authenticated users", () => {
     // Test unauthenticated state
-    mockUseAuth.mockReturnValue({ isAuthenticated: false, signOut: jest.fn() });
     render(<NavMenu />);
     expect(
       screen.queryByRole("link", { name: "Chat" })
     ).not.toBeInTheDocument();
 
     // Test authenticated state
-    mockUseAuth.mockReturnValue({ isAuthenticated: true, signOut: jest.fn() });
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      user: null,
+      signOut: jest.fn(),
+    });
     render(<NavMenu />);
     expect(screen.getByRole("link", { name: "Chat" })).toBeInTheDocument();
   });
 
   it("shows Sign In and Sign Up links for unauthenticated users", () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false, signOut: jest.fn() });
     render(<NavMenu />);
-
     expect(screen.getByRole("link", { name: "Sign In" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Sign Up" })).toBeInTheDocument();
   });
 
   it("shows Sign Out button for authenticated users", () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: true, signOut: jest.fn() });
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      user: null,
+      signOut: jest.fn(),
+    });
     render(<NavMenu />);
-
     expect(
       screen.getByRole("button", { name: "Sign Out" })
     ).toBeInTheDocument();
@@ -120,6 +124,9 @@ describe("NavMenu", () => {
     const mockSignOut = jest.fn();
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      user: null,
       signOut: mockSignOut,
     });
     render(<NavMenu />);

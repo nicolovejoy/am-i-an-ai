@@ -29,12 +29,19 @@ describe("AuthContext", () => {
     jest.clearAllMocks();
   });
 
-  it("should provide initial loading state", () => {
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
+  it("should provide initial loading state", async () => {
+    // Mock getCurrentUser to return a pending promise that never resolves
+    (cognitoService.getCurrentUser as jest.Mock).mockImplementation(
+      () => new Promise(() => {})
     );
+
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+    });
 
     expect(screen.getByTestId("isLoading").textContent).toBe("true");
     expect(screen.getByTestId("isAuthenticated").textContent).toBe("false");
@@ -45,11 +52,13 @@ describe("AuthContext", () => {
     const mockUser = { email: "test@example.com", sub: "123" };
     (cognitoService.getCurrentUser as jest.Mock).mockResolvedValue(mockUser);
 
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+    });
 
     // Wait for the auth check to complete
     await act(async () => {
@@ -68,11 +77,13 @@ describe("AuthContext", () => {
       new Error("Auth failed")
     );
 
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+    });
 
     // Wait for the auth check to complete
     await act(async () => {
@@ -88,11 +99,13 @@ describe("AuthContext", () => {
     const mockUser = { email: "test@example.com", sub: "123" };
     (cognitoService.getCurrentUser as jest.Mock).mockResolvedValue(mockUser);
 
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+    });
 
     // Wait for initial auth check
     await act(async () => {
