@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { AuthState, AuthError } from "../types/auth";
+import { AuthState } from "../types/auth";
 import { cognitoService } from "../services/cognito";
 
 interface AuthContextType extends AuthState {

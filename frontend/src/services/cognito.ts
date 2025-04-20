@@ -6,15 +6,24 @@ import {
   CognitoUser,
   AuthenticationDetails,
   ISignUpResult,
-  ICognitoUserData,
-  ICognitoUserAttributeData,
   NodeCallback,
 } from "amazon-cognito-identity-js";
 import { SignUpFormData, SignInFormData, AuthError } from "../types/auth";
 
+declare const process: {
+  env: {
+    NEXT_PUBLIC_COGNITO_USER_POOL_ID: string;
+    NEXT_PUBLIC_COGNITO_CLIENT_ID: string;
+  };
+};
+
+interface CognitoError extends Error {
+  code?: string;
+}
+
 const userPool = new CognitoUserPool({
-  UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!,
-  ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!,
+  UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,
+  ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
 });
 
 export const cognitoService = {
@@ -27,10 +36,11 @@ export const cognitoService = {
         }),
       ];
 
-      const callback: NodeCallback<Error, ISignUpResult> = (err, result) => {
+      const callback: NodeCallback<Error, ISignUpResult> = (err) => {
         if (err) {
+          const cognitoErr = err as CognitoError;
           reject({
-            code: (err as any).code || "UnknownError",
+            code: cognitoErr.code || "UnknownError",
             message: err.message || "An unknown error occurred",
           } as AuthError);
           return;
@@ -49,10 +59,11 @@ export const cognitoService = {
         Pool: userPool,
       });
 
-      cognitoUser.confirmRegistration(code, true, (err) => {
+      cognitoUser.confirmRegistration(code, true, (err: Error | undefined) => {
         if (err) {
+          const cognitoErr = err as CognitoError;
           reject({
-            code: (err as any).code || "UnknownError",
+            code: cognitoErr.code || "UnknownError",
             message: err.message || "An unknown error occurred",
           } as AuthError);
           return;
@@ -69,10 +80,11 @@ export const cognitoService = {
         Pool: userPool,
       });
 
-      cognitoUser.resendConfirmationCode((err) => {
+      cognitoUser.resendConfirmationCode((err: Error | undefined) => {
         if (err) {
+          const cognitoErr = err as CognitoError;
           reject({
-            code: (err as any).code || "UnknownError",
+            code: cognitoErr.code || "UnknownError",
             message: err.message || "An unknown error occurred",
           } as AuthError);
           return;
@@ -97,8 +109,9 @@ export const cognitoService = {
       cognitoUser.authenticateUser(authenticationDetails, {
         onSuccess: () => resolve(),
         onFailure: (err: Error) => {
+          const cognitoErr = err as CognitoError;
           reject({
-            code: (err as any).code || "UnknownError",
+            code: cognitoErr.code || "UnknownError",
             message: err.message || "An unknown error occurred",
           } as AuthError);
         },
@@ -121,31 +134,33 @@ export const cognitoService = {
         return;
       }
 
-      currentUser.getSession((err: Error | null, session?: any) => {
-        if (err || !session) {
-          resolve(null);
-          return;
-        }
-
-        const callback: NodeCallback<Error, CognitoUserAttribute[]> = (
-          err,
-          attributes
-        ) => {
-          if (err || !attributes) {
+      currentUser.getSession(
+        (err: Error | null, session: { isValid: () => boolean } | null) => {
+          if (err || !session) {
             resolve(null);
             return;
           }
 
-          const email =
-            attributes.find((attr) => attr.Name === "email")?.Value || "";
-          const sub =
-            attributes.find((attr) => attr.Name === "sub")?.Value || "";
+          const callback: NodeCallback<Error, CognitoUserAttribute[]> = (
+            err,
+            attributes
+          ) => {
+            if (err || !attributes) {
+              resolve(null);
+              return;
+            }
 
-          resolve({ email, sub });
-        };
+            const email =
+              attributes.find((attr) => attr.Name === "email")?.Value || "";
+            const sub =
+              attributes.find((attr) => attr.Name === "sub")?.Value || "";
 
-        currentUser.getUserAttributes(callback);
-      });
+            resolve({ email, sub });
+          };
+
+          currentUser.getUserAttributes(callback);
+        }
+      );
     });
   },
 };
