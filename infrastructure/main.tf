@@ -288,6 +288,14 @@ resource "aws_iam_role_policy" "github_actions" {
           "cloudfront:ListDistributions"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:ListUserPools",
+          "cognito-idp:ListUserPoolClients"
+        ]
+        Resource = "*"
       }
     ]
   })
