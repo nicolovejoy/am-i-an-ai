@@ -1,61 +1,57 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import { AuthState } from "../types/auth";
 import { cognitoService } from "../services/cognito";
 
-interface AuthContextType extends AuthState {
+interface AuthContextType {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  user: any | null;
+  checkAuth: () => Promise<void>;
   signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [state, setState] = useState<AuthState>({
-    isAuthenticated: false,
-    isLoading: true,
-    error: null,
-    user: null,
-  });
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<any | null>(null);
 
   const checkAuth = async () => {
     try {
-      const user = await cognitoService.getCurrentUser();
-      setState({
-        isAuthenticated: !!user,
-        isLoading: false,
-        error: null,
-        user,
-      });
+      const currentUser = await cognitoService.getCurrentUser();
+      setIsAuthenticated(true);
+      setUser(currentUser);
     } catch (error) {
-      setState({
-        isAuthenticated: false,
-        isLoading: false,
-        error: {
-          code: (error as Error).name || "UnknownError",
-          message: (error as Error).message || "An unknown error occurred",
-        },
-        user: null,
-      });
+      setIsAuthenticated(false);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signOut = () => {
     cognitoService.signOut();
-    setState({
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      user: null,
-    });
+    setIsAuthenticated(false);
+    setUser(null);
   };
 
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, signOut }}>
+    <AuthContext.Provider
+      value={{ isAuthenticated, isLoading, user, checkAuth, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );

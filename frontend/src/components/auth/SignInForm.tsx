@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { SignInFormData, AuthError } from "../../types/auth";
 import { cognitoService } from "../../services/cognito";
+import { useAuth } from "../../contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 const signInSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -15,6 +17,8 @@ const signInSchema = z.object({
 export const SignInForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
+  const { checkAuth } = useAuth();
+  const router = useRouter();
 
   const {
     register,
@@ -30,7 +34,8 @@ export const SignInForm = () => {
 
     try {
       await cognitoService.signIn(data);
-      // Redirect or update auth state here
+      await checkAuth();
+      router.push("/");
     } catch (err) {
       setError(err as AuthError);
     } finally {
