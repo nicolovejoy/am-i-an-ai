@@ -1,19 +1,23 @@
 "use client";
 
-import {
+import React, {
   createContext,
   useContext,
   useEffect,
   useState,
   ReactNode,
 } from "react";
-import { AuthState } from "../types/auth";
 import { cognitoService } from "../services/cognito";
+
+interface User {
+  email: string;
+  sub: string;
+}
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
-  user: any | null;
+  user: User | null;
   checkAuth: () => Promise<void>;
   signOut: () => void;
 }
@@ -23,7 +27,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   const checkAuth = async () => {
     try {
