@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import QueryProvider from "@/providers/QueryProvider";
 import NavMenu from "@/components/NavMenu";
+import { AuthProvider } from "../contexts/AuthContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,10 +26,12 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body className={inter.className}>
-        <QueryProvider>
-          <NavMenu />
-          {children}
-        </QueryProvider>
+        <AuthProvider>
+          <QueryProvider>
+            <NavMenu />
+            {children}
+          </QueryProvider>
+        </AuthProvider>
       </body>
     </html>
   );

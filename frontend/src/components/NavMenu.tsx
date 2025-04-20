@@ -5,10 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FaBars, FaTimes } from "react-icons/fa";
 import Image from "next/image";
+import { useAuth } from "../contexts/AuthContext";
 
 const NavMenu: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { isAuthenticated, signOut } = useAuth();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -16,6 +18,11 @@ const NavMenu: React.FC = () => {
 
   const isActive = (path: string) => {
     return pathname === path;
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -50,6 +57,37 @@ const NavMenu: React.FC = () => {
                 About
               </Link>
             </div>
+          </div>
+
+          {/* Desktop Auth Links */}
+          <div className="hidden sm:flex sm:items-center sm:space-x-4">
+            {isAuthenticated ? (
+              <button
+                onClick={handleSignOut}
+                className="px-3 py-2 text-sm font-medium text-[#4A5568] hover:text-[#8B6B4A] transition-colors"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/auth/signin"
+                  className={`px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive("/auth/signin")
+                      ? "text-[#8B6B4A] border-b-2 border-[#8B6B4A]"
+                      : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-b-2 hover:border-[#8B6B4A]"
+                  }`}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/auth/signup"
+                  className="px-3 py-2 text-sm font-medium text-white bg-[#8B6B4A] rounded-md hover:bg-[#6B4A2A] transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -90,6 +128,35 @@ const NavMenu: React.FC = () => {
             >
               About
             </Link>
+            {isAuthenticated ? (
+              <button
+                onClick={handleSignOut}
+                className="w-full text-left px-3 py-2 text-base font-medium text-[#4A5568] hover:text-[#8B6B4A] hover:bg-gray-50"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/auth/signin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`block px-3 py-2 text-base font-medium ${
+                    isActive("/auth/signin")
+                      ? "text-[#8B6B4A] border-l-4 border-[#8B6B4A]"
+                      : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-l-4 hover:border-[#8B6B4A]"
+                  }`}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/auth/signup"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block px-3 py-2 text-base font-medium text-[#4A5568] hover:text-[#8B6B4A] hover:bg-gray-50"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}
