@@ -27,6 +27,17 @@ jest.mock("next/image", () => ({
   ),
 }));
 
+// Mock AuthContext
+jest.mock("../contexts/AuthContext", () => ({
+  useAuth: () => ({
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+    user: null,
+    signOut: jest.fn(),
+  }),
+}));
+
 describe("NavMenu", () => {
   it("renders navigation links", () => {
     render(<NavMenu />);
