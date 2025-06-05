@@ -136,7 +136,7 @@ export const cognitoService = {
 
       currentUser.getSession(
         (err: Error | null, session: { isValid: () => boolean } | null) => {
-          if (err || !session) {
+          if (err || !session || !session.isValid()) {
             resolve(null);
             return;
           }

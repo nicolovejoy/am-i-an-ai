@@ -32,8 +32,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkAuth = async () => {
     try {
       const currentUser = await cognitoService.getCurrentUser();
-      setIsAuthenticated(true);
-      setUser(currentUser);
+      if (currentUser) {
+        setIsAuthenticated(true);
+        setUser(currentUser);
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
     } catch (error) {
       setIsAuthenticated(false);
       setUser(null);
