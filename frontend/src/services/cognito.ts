@@ -163,4 +163,37 @@ export const cognitoService = {
       );
     });
   },
+
+  updateUserAttributes: async (attributes: { [key: string]: string }): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const currentUser = userPool.getCurrentUser();
+      if (!currentUser) {
+        reject(new Error("No user is currently signed in"));
+        return;
+      }
+
+      currentUser.getSession((err: Error | null, session: { isValid: () => boolean } | null) => {
+        if (err || !session) {
+          reject(err || new Error("No valid session"));
+          return;
+        }
+
+        const attributeList = Object.entries(attributes).map(
+          ([name, value]) => new CognitoUserAttribute({ Name: name, Value: value })
+        );
+
+        currentUser.updateAttributes(attributeList, (err: Error | undefined) => {
+          if (err) {
+            const cognitoErr = err as CognitoError;
+            reject({
+              code: cognitoErr.code || "UnknownError",
+              message: err.message || "An unknown error occurred",
+            } as AuthError);
+            return;
+          }
+          resolve();
+        });
+      });
+    });
+  },
 };
