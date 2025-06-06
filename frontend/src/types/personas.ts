@@ -51,7 +51,7 @@ export interface AIModelConfig {
   topP?: number;
   frequencyPenalty?: number;
   presencePenalty?: number;
-  customParameters?: Record<string, any>;
+  customParameters?: Record<string, unknown>;
 }
 
 export interface Persona {

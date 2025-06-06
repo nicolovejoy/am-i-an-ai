@@ -1,4 +1,4 @@
-import { User, UserCreate, UserUpdate, UserProfile, UserNotification } from './users';
+import { User, UserUpdate, UserProfile, UserNotification } from './users';
 import { Persona, PersonaCreate, PersonaUpdate, PersonaStats, PersonalityTraits } from './personas';
 import { Conversation, ConversationCreate, ConversationUpdate, ConversationSummary, ConversationAnalytics } from './conversations';
 import { Message, MessageCreate, MessageUpdate, ConversationHistory, MessageSearch, MessageSearchResult } from './messages';
@@ -22,7 +22,7 @@ export interface PaginatedResponse<T> {
 export interface ServiceError {
   code: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   timestamp: Date;
 }
 
@@ -179,7 +179,7 @@ export interface AIAgentConfig {
 export interface BehaviorUpdate {
   personality?: Partial<PersonalityTraits>;
   communicationStyle?: string;
-  responsePatterns?: any[]; // Will be defined later
+  responsePatterns?: unknown[]; // Will be defined later
   learningEnabled?: boolean;
 }
 

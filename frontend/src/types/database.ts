@@ -194,7 +194,7 @@ export interface QueryOptions {
   offset?: number;
   orderBy?: string;
   orderDirection?: 'ASC' | 'DESC';
-  where?: Record<string, any>;
+  where?: Record<string, unknown>;
 }
 
 export interface JoinOptions {
@@ -234,7 +234,7 @@ export interface PersonaRepository {
   create(persona: Omit<DatabasePersona, 'id' | 'created_at' | 'updated_at'>): Promise<DatabasePersona>;
   update(id: string, updates: Partial<DatabasePersona>): Promise<DatabasePersona>;
   delete(id: string): Promise<boolean>;
-  search(query: string, filters?: Record<string, any>): Promise<DatabasePersona[]>;
+  search(query: string, filters?: Record<string, unknown>): Promise<DatabasePersona[]>;
 }
 
 export interface ConversationRepository {
@@ -255,23 +255,23 @@ export interface MessageRepository {
   create(message: Omit<DatabaseMessage, 'id' | 'timestamp'>): Promise<DatabaseMessage>;
   update(id: string, updates: Partial<DatabaseMessage>): Promise<DatabaseMessage>;
   delete(id: string): Promise<boolean>;
-  search(criteria: Record<string, any>): Promise<DatabaseMessage[]>;
+  search(criteria: Record<string, unknown>): Promise<DatabaseMessage[]>;
   getLatest(conversationId: string, count: number): Promise<DatabaseMessage[]>;
 }
 
 // Database connection and transaction types
 export interface DatabaseConnection {
-  query<T = any>(sql: string, params?: any[]): Promise<T[]>;
-  queryOne<T = any>(sql: string, params?: any[]): Promise<T | null>;
-  execute(sql: string, params?: any[]): Promise<{ affectedRows: number; insertId?: string }>;
+  query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;
+  queryOne<T = unknown>(sql: string, params?: unknown[]): Promise<T | null>;
+  execute(sql: string, params?: unknown[]): Promise<{ affectedRows: number; insertId?: string }>;
   transaction<T>(callback: (trx: DatabaseTransaction) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }
 
 export interface DatabaseTransaction {
-  query<T = any>(sql: string, params?: any[]): Promise<T[]>;
-  queryOne<T = any>(sql: string, params?: any[]): Promise<T | null>;
-  execute(sql: string, params?: any[]): Promise<{ affectedRows: number; insertId?: string }>;
+  query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;
+  queryOne<T = unknown>(sql: string, params?: unknown[]): Promise<T | null>;
+  execute(sql: string, params?: unknown[]): Promise<{ affectedRows: number; insertId?: string }>;
   commit(): Promise<void>;
   rollback(): Promise<void>;
 }

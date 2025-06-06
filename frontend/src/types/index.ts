@@ -82,7 +82,7 @@ export interface ValidationResult {
 // WebSocket event types for real-time features
 export interface WebSocketEvent {
   type: string;
-  payload: any;
+  payload: unknown;
   timestamp: Date;
   id: string;
 }
@@ -95,7 +95,7 @@ export interface ConversationEvent extends WebSocketEvent {
 export interface MessageEvent extends ConversationEvent {
   type: 'message';
   payload: {
-    message: any; // Will reference Message type from messages.ts
+    message: unknown; // Will reference Message type from messages.ts
     authorPersona: {
       id: string;
       name: string;
@@ -117,7 +117,7 @@ export interface TypingEvent extends ConversationEvent {
 export interface AppError {
   code: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   stack?: string;
   timestamp: Date;
 }
@@ -214,7 +214,7 @@ export interface FormComponentProps extends BaseComponentProps {
 // Route and navigation types
 export interface AppRoute {
   path: string;
-  component: React.ComponentType<any>;
+  component: React.ComponentType<unknown>;
   exact?: boolean;
   protected?: boolean;
   roles?: string[]; // Will reference UserRole from users.ts
@@ -236,7 +236,7 @@ export interface NavigationItem {
 // Analytics and tracking types
 export interface AnalyticsEvent {
   name: string;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   userId?: string;
   sessionId: string;
   timestamp: Date;
@@ -247,7 +247,7 @@ export interface UserInteraction {
   element?: string;
   page: string;
   timestamp: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Import the existing auth types to ensure compatibility

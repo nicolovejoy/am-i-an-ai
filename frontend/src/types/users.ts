@@ -129,7 +129,7 @@ export interface UserActivity {
   id: string;
   userId: string;
   type: 'conversation_started' | 'conversation_completed' | 'persona_created' | 'achievement_unlocked' | 'rating_given';
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   timestamp: Date;
 }
 
@@ -139,7 +139,7 @@ export interface UserNotification {
   type: 'conversation_invite' | 'conversation_ended' | 'rating_received' | 'achievement_unlocked' | 'system_announcement';
   title: string;
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   isRead: boolean;
   createdAt: Date;
   expiresAt?: Date;
