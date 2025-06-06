@@ -29,7 +29,7 @@ const config = {
     "**/?(*.)+(spec|test).[jt]s?(x)",
     "**/performance/**/*.[jt]s?(x)",
   ],
-  snapshotSerializers: ["@emotion/jest/serializer"],
+  // snapshotSerializers: ["@emotion/jest/serializer"],
   maxWorkers: "50%",
   cache: true,
   clearMocks: true,

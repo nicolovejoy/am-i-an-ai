@@ -205,8 +205,15 @@ persona_reveals (conversation_id, persona_id, revealed_at, reveal_type)
 - [x] Implement service interface contracts for all major operations
 - [x] Design database schema types with type-safe query builders
 - [x] Add WebSocket event types for real-time features
-- [ ] Implement actual database repositories and migrations
-- [ ] Create database connection and transaction utilities
+- [x] Implement PostgreSQL database connection with connection pooling
+- [x] Create comprehensive migration system with rollback support
+- [x] Build type-safe query builder with fluent API
+- [x] Implement User repository with CRUD, search, and usage tracking
+- [x] Create Persona repository with full-text search and compatibility matching
+- [x] Build Conversation repository with participant management and state tracking
+- [x] Implement Message repository with full-text search and moderation
+- [x] Add database seed data with realistic users, personas, and conversations
+- [x] Create database CLI scripts for migrations, seeding, and reset operations
 
 **Authentication & User Management**
 - [ ] Extend current auth system for persona management
