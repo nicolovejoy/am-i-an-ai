@@ -7,6 +7,10 @@ import { z } from "zod";
 import { SignUpFormData, AuthError } from "../../types/auth";
 import { cognitoService } from "../../services/cognito";
 import { useRouter } from "next/navigation";
+import { FormField } from "../forms/FormField";
+import { PasswordInput } from "../forms/PasswordInput";
+import { ButtonLoader } from "../LoadingSpinner";
+import { useToastContext } from "../../contexts/ToastContext";
 
 const signUpSchema = z
   .object({
@@ -29,14 +33,18 @@ export const SignUpForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
   const router = useRouter();
+  const { success, error: showError } = useToastContext();
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
   });
+
+  const password = watch("password");
 
   const onSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
@@ -44,9 +52,15 @@ export const SignUpForm = () => {
 
     try {
       await cognitoService.signUp(data);
+      success(
+        "Account created successfully!", 
+        "Please check your email for verification instructions."
+      );
       router.push(`/auth/verify?email=${encodeURIComponent(data.email)}`);
     } catch (err) {
-      setError(err as AuthError);
+      const authError = err as AuthError;
+      setError(authError);
+      showError("Sign up failed", authError.message);
     } finally {
       setIsLoading(false);
     }
@@ -62,71 +76,61 @@ export const SignUpForm = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Email
-          </label>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <FormField 
+          label="Email" 
+          error={errors.email}
+          required
+          helpText="We'll send you a verification email"
+        >
           <input
             type="email"
-            id="email"
             {...register("email")}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            placeholder="your@email.com"
           />
-          {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-          )}
-        </div>
+        </FormField>
 
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
+        <FormField 
+          label="Password" 
+          error={errors.password}
+          required
+        >
+          <PasswordInput
             {...register("password")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            placeholder="Enter a strong password"
+            showStrength={true}
+            value={password || ""}
           />
-          {errors.password && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.password.message}
-            </p>
-          )}
-        </div>
+        </FormField>
 
-        <div>
-          <label
-            htmlFor="confirmPassword"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Confirm Password
-          </label>
+        <FormField 
+          label="Confirm Password" 
+          error={errors.confirmPassword}
+          required
+          helpText="Enter the same password again"
+        >
           <input
             type="password"
-            id="confirmPassword"
             {...register("confirmPassword")}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            placeholder="Confirm your password"
           />
-          {errors.confirmPassword && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.confirmPassword.message}
-            </p>
-          )}
-        </div>
+        </FormField>
 
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#8B6B4A] hover:bg-[#6B4A2A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8B6B4A] disabled:opacity-50"
+          className="w-full flex justify-center items-center gap-2 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#8B6B4A] hover:bg-[#6B4A2A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8B6B4A] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? "Signing up..." : "Sign Up"}
+          {isLoading ? (
+            <>
+              <ButtonLoader />
+              <span>Creating account...</span>
+            </>
+          ) : (
+            "Sign Up"
+          )}
         </button>
       </form>
     </div>

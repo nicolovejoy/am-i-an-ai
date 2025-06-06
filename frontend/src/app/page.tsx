@@ -4,19 +4,13 @@ import React from "react";
 import ChatContainer from "@/components/ChatContainer";
 import { useAuth } from "../contexts/AuthContext";
 import Link from "next/link";
+import { FullPageLoader } from "@/components/LoadingSpinner";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div 
-          data-testid="loading-spinner"
-          className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"
-        ></div>
-      </div>
-    );
+    return <FullPageLoader text="Loading your experience..." />;
   }
 
   if (!isAuthenticated) {

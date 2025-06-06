@@ -4,6 +4,8 @@ import { Inter } from "next/font/google";
 import QueryProvider from "@/providers/QueryProvider";
 import NavMenu from "@/components/NavMenu";
 import { AuthProvider } from "../contexts/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ToastProvider } from "../contexts/ToastContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,12 +28,16 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body className={inter.className}>
-        <AuthProvider>
-          <QueryProvider>
-            <NavMenu />
-            {children}
-          </QueryProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+          <ToastProvider>
+            <AuthProvider>
+              <QueryProvider>
+                <NavMenu />
+                {children}
+              </QueryProvider>
+            </AuthProvider>
+          </ToastProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

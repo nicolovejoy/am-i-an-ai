@@ -8,6 +8,9 @@ import { useAuth } from "../../contexts/AuthContext";
 import { ProtectedRoute } from "../../components/auth/ProtectedRoute";
 import { cognitoService } from "../../services/cognito";
 import { AuthError } from "../../types/auth";
+import { ErrorBoundary } from "../../components/ErrorBoundary";
+import { ButtonLoader } from "../../components/LoadingSpinner";
+import { useToastContext } from "../../contexts/ToastContext";
 
 const profileSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -22,7 +25,7 @@ const ProfileContent = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToastContext();
 
   const {
     register,
@@ -39,15 +42,16 @@ const ProfileContent = () => {
   const onSubmit = async (data: ProfileFormData) => {
     setIsLoading(true);
     setError(null);
-    setSuccess(null);
     
     try {
       await cognitoService.updateUserAttributes({ email: data.email });
       await checkAuth();
-      setSuccess("Profile updated successfully!");
+      showSuccess("Profile updated!", "Your profile has been updated successfully.");
       setIsEditing(false);
     } catch (err) {
-      setError(err as AuthError);
+      const authError = err as AuthError;
+      setError(authError);
+      showError("Profile update failed", authError.message);
     } finally {
       setIsLoading(false);
     }
@@ -56,14 +60,12 @@ const ProfileContent = () => {
   const handleEdit = () => {
     setIsEditing(true);
     setError(null);
-    setSuccess(null);
     reset({ email: user?.email || "" });
   };
 
   const handleCancel = () => {
     setIsEditing(false);
     setError(null);
-    setSuccess(null);
     reset({ email: user?.email || "" });
   };
 
@@ -87,12 +89,6 @@ const ProfileContent = () => {
         {error && (
           <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">
             {error.message}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-4 p-4 bg-green-100 text-green-700 rounded">
-            {success}
           </div>
         )}
 
@@ -120,9 +116,16 @@ const ProfileContent = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Saving..." : "Save"}
+                {isLoading ? (
+                  <>
+                    <ButtonLoader />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  "Save"
+                )}
               </button>
               <button
                 type="button"
@@ -157,7 +160,28 @@ const ProfileContent = () => {
 export default function ProfilePage() {
   return (
     <ProtectedRoute>
-      <ProfileContent />
+      <ErrorBoundary
+        fallback={
+          <div className="max-w-2xl mx-auto p-6">
+            <div className="bg-white rounded-lg shadow-md p-6 text-center">
+              <h2 className="text-xl font-semibold text-red-600 mb-4">
+                Profile Error
+              </h2>
+              <p className="text-gray-600 mb-4">
+                We couldn't load your profile. Please try refreshing the page.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        }
+      >
+        <ProfileContent />
+      </ErrorBoundary>
     </ProtectedRoute>
   );
 }
