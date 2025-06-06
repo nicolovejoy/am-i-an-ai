@@ -14,7 +14,7 @@ jest.mock("@/components/ChatContainer", () => {
 const mockUseAuth = {
   isAuthenticated: false,
   isLoading: false,
-  user: null,
+  user: null as { email: string; sub: string; } | null,
   checkAuth: jest.fn(),
   signOut: jest.fn(),
 };
