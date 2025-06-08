@@ -1,6 +1,6 @@
-# Architecture Diagram
+# AmIAnAI System Architecture
 
-This diagram illustrates the system architecture of the "Am I an AI?" application.
+Current system architecture for the multi-persona conversation platform.
 
 ```mermaid
 graph TB
@@ -8,6 +8,7 @@ graph TB
         Next[Next.js App]
         Next --> |Static Assets| CDN
         Next --> |API Requests| API
+        Next --> |Database Calls| DB
     end
 
     subgraph AWS[Amazon Web Services]
@@ -17,10 +18,16 @@ graph TB
             CDN --> |Serves| S3
         end
 
-        subgraph Backend[Backend Infrastructure]
-            API[API Gateway]
-            Lambda[Lambda Functions]
-            API --> |Routes| Lambda
+        subgraph Database[Database Layer]
+            RDS[PostgreSQL RDS]
+            Secrets[Secrets Manager]
+            Secrets --> |Credentials| RDS
+        end
+
+        subgraph Auth[Authentication]
+            Cognito[AWS Cognito]
+            UserPool[User Pool]
+            Cognito --> UserPool
         end
 
         subgraph DNS[DNS & Security]
@@ -29,136 +36,127 @@ graph TB
         end
     end
 
-    subgraph CI[CI/CD Pipeline]
-        GitHub[GitHub Repository]
-        Actions[GitHub Actions]
-        Actions --> |Deploys| S3
-        Actions --> |Invalidates| CDN
+    subgraph Infrastructure[Infrastructure as Code]
+        Terraform[Terraform]
+        Scripts[Deployment Scripts]
+        Terraform --> |Manages| AWS
     end
 
     %% Connections
     Client --> |HTTPS| CDN
-    Client --> |HTTPS| API
+    Next --> |API Calls| RDS
+    Next --> |Auth| Cognito
     Route53 --> |DNS| CDN
     ACM --> |SSL/TLS| CDN
-    GitHub --> |Triggers| Actions
+    Scripts --> |Deploys| Terraform
 
     %% Styling
     classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white
     classDef client fill:#61DAFB,stroke:#282C34,stroke-width:2px,color:black
-    classDef ci fill:#24292E,stroke:#0366D6,stroke-width:2px,color:white
+    classDef infra fill:#7B68EE,stroke:#483D8B,stroke-width:2px,color:white
 
-    class AWS,Frontend,Backend,DNS aws
+    class AWS,Frontend,Database,Auth,DNS aws
     class Client,Next client
-    class CI,GitHub,Actions ci
+    class Infrastructure,Terraform,Scripts infra
 ```
 
-## Implementation Status
+## Current Implementation Status
 
-### Built Components ✅
+### ✅ Completed Components
 
-1. **Frontend Infrastructure**
+**Infrastructure & Database**
+- PostgreSQL RDS instance (`eeyore-postgres`) 
+- AWS Secrets Manager for database credentials
+- VPC with public/private subnets
+- Security groups and IAM roles
+- Terraform configuration with deployment scripts
 
-   - Next.js application setup with TypeScript
-   - Basic routing structure
-   - Tailwind CSS styling
-   - Component architecture
-   - Basic testing setup
-   - Clean, modern design system implementation
+**Frontend Application**
+- Next.js 14 with TypeScript
+- Hybrid development (local dev + production DB)
+- Database admin API endpoints
+- AWS Cognito integration setup
+- Tailwind CSS design system
+- Component architecture with proper typing
 
-2. **AWS Infrastructure**
+**Development Workflow**
+- Production-only database strategy
+- Environment variable configuration
+- Database schema and seeding APIs
+- Local development with production data
 
-   - S3 bucket configuration for static hosting
-   - CloudFront distribution setup
-   - Route53 DNS configuration
-   - ACM certificate setup
-   - Basic Lambda function setup
-   - Basic API Gateway configuration
+### 🚧 In Progress
 
-3. **CI/CD Pipeline**
+**Database Setup**
+- Schema creation via API endpoints
+- Sample data seeding
+- Database connection testing
 
-   - GitHub repository setup
-   - Basic GitHub Actions workflow
-   - Build and test automation
-   - S3 deployment
-   - CloudFront cache invalidation
+**Core Features**
+- User authentication flow
+- Persona management system
+- Conversation interface
+- Message threading
 
-4. **Development Environment**
-   - Local development setup
-   - Testing infrastructure
-   - Code quality tools (ESLint, TypeScript)
-   - Design system documentation
+### 📋 Planned Components
 
-### In Progress 🚧
+**Application Features**
+- Multi-persona conversations
+- AI agent integration
+- Real-time messaging
+- Conversation analytics
+- User dashboard
 
-1. **Backend Features**
+**Infrastructure Enhancements**
+- CloudWatch monitoring
+- Performance optimization
+- Security hardening
+- Backup strategies
 
-   - User authentication system
-   - API endpoint implementation
-   - Error handling and logging
-   - Request validation
+## Architecture Decisions
 
-2. **Frontend Features**
-   - User interface components
-   - Form handling
-   - Error states
-   - Loading states
-   - Responsive design refinements
+### Production-Only Strategy
+- **No local database** - all development uses AWS RDS
+- **Hybrid development** - local Next.js + production database
+- **Single environment** - simplifies deployment and testing
+- **Environment parity** - eliminates dev/prod differences
 
-### Planned Components 📋
+### Database Design
+- **PostgreSQL** on AWS RDS for relational data
+- **JSONB fields** for flexible persona/conversation metadata
+- **UUID primary keys** for scalability
+- **Comprehensive indexes** for query performance
 
-1. **Security & Monitoring**
-
-   - WAF implementation
-   - CloudWatch monitoring
-   - Security scanning
-   - Performance monitoring
-
-2. **Additional Features**
-   - User analytics
-   - Advanced text analysis
-   - API rate limiting
-   - Caching strategies
-
-## Component Description
-
-### Frontend Layer
-
-- **Next.js Application**: React-based application with TypeScript
-- **CloudFront CDN**: Global content delivery network
-- **S3 Bucket**: Static website hosting
-- **Design System**: Clean, modern UI components
-
-### Backend Layer
-
-- **API Gateway**: REST API endpoint management
-- **Lambda Functions**: Serverless compute for API processing
-
-### DNS & Security
-
-- **Route53**: DNS management
-- **ACM**: SSL/TLS certificate management
-
-### CI/CD Pipeline
-
-- **GitHub Repository**: Source code management
-- **GitHub Actions**: Automated deployment pipeline
+### Security Model
+- **AWS Cognito** for user authentication
+- **Secrets Manager** for database credentials
+- **Environment-controlled admin** operations
+- **Production database protection**
 
 ## Data Flow
 
-1. **Static Content**:
+### User Authentication
+1. User signs up/in via Cognito
+2. JWT tokens manage session state
+3. Frontend validates auth status
+4. Protected routes enforce authentication
 
-   - Next.js app serves static content through CloudFront
-   - CloudFront caches content at edge locations
-   - S3 stores the static website files
+### Database Operations
+1. Next.js API routes connect to RDS
+2. Connection pooling for performance
+3. Admin endpoints for schema management
+4. Repository pattern for data access
 
-2. **API Requests**:
+### Development Workflow
+1. Local Next.js development server
+2. Real-time connection to production database
+3. API-based database administration
+4. Build and deploy to S3/CloudFront
 
-   - Client makes API requests to API Gateway
-   - API Gateway routes to appropriate Lambda function
-   - Lambda processes request and returns response
+## Key Benefits
 
-3. **Deployment**:
-   - Code changes trigger GitHub Actions
-   - Actions builds and deploys to S3
-   - CloudFront cache is invalidated
+- **Fast iteration** - local development with real data
+- **Environment consistency** - single production database
+- **Simplified deployment** - no database migration complexity
+- **Real data testing** - authentic development experience
+- **Infrastructure automation** - Terraform-managed resources

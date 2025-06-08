@@ -22,7 +22,7 @@ export class UserRepository implements IUserRepository {
   }
 
   async create(userData: Omit<DatabaseUser, 'id' | 'created_at' | 'updated_at'>): Promise<DatabaseUser> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const result = await db.queryOne<DatabaseUser>(`
       INSERT INTO ${this.tableName} (
@@ -53,7 +53,7 @@ export class UserRepository implements IUserRepository {
   }
 
   async update(id: string, updates: Partial<DatabaseUser>): Promise<DatabaseUser> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     // Build dynamic update query
     const updateFields: string[] = [];
@@ -93,7 +93,7 @@ export class UserRepository implements IUserRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const result = await db.execute(`
       DELETE FROM ${this.tableName} WHERE id = $1
@@ -146,7 +146,7 @@ export class UserRepository implements IUserRepository {
   }
 
   async updateLastLogin(id: string): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     await db.execute(`
       UPDATE ${this.tableName} 
       SET last_login_at = NOW(), updated_at = NOW()
@@ -155,7 +155,7 @@ export class UserRepository implements IUserRepository {
   }
 
   async incrementUsage(id: string, usageType: 'messages' | 'conversations' | 'personas'): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     await db.execute(`
       UPDATE ${this.tableName}
@@ -171,7 +171,7 @@ export class UserRepository implements IUserRepository {
   }
 
   async resetMonthlyUsage(): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     await db.execute(`
       UPDATE ${this.tableName}

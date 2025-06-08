@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.1"
+    }
   }
   
   required_version = ">= 1.2.0"
@@ -65,18 +69,6 @@ resource "aws_cloudfront_distribution" "website" {
       origin_access_identity = aws_cloudfront_origin_access_identity.website.cloudfront_access_identity_path
     }
   }
-  
-  origin {
-    domain_name = replace(aws_api_gateway_deployment.api.invoke_url, "/^https?://([^/]*).*/", "$1")
-    origin_id   = "ApiGateway"
-    
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
-  }
 
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
@@ -93,24 +85,6 @@ resource "aws_cloudfront_distribution" "website" {
     min_ttl     = 0
     default_ttl = 3600
     max_ttl     = 86400
-  }
-  
-  ordered_cache_behavior {
-    path_pattern           = "/api/*"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "ApiGateway"
-    viewer_protocol_policy = "redirect-to-https"
-    
-    forwarded_values {
-      query_string = true
-      headers      = ["Authorization", "Origin", "Referer"]
-      cookies { forward = "all" }
-    }
-    
-    min_ttl     = 0
-    default_ttl = 0
-    max_ttl     = 0
   }
 
   restrictions {
@@ -138,7 +112,6 @@ resource "aws_cloudfront_distribution" "website" {
     error_caching_min_ttl = 10
   }
 
-  # Add custom error response for 500 errors
   custom_error_response {
     error_code            = 500
     response_code         = 200
@@ -301,80 +274,268 @@ resource "aws_iam_role_policy" "github_actions" {
   })
 }
 
-output "github_actions_role_arn" {
-  value       = aws_iam_role.github_actions.arn
-  description = "ARN of the GitHub Actions role"
+############################
+# VPC and Networking
+############################
+
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-vpc"
+  })
+}
+
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-igw"
+  })
+}
+
+# Public subnets for NAT gateways
+resource "aws_subnet" "public" {
+  count = 2
+  
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.${count.index + 1}.0/24"
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = true
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-public-${count.index + 1}"
+    Type = "public"
+  })
+}
+
+# Private subnets for RDS
+resource "aws_subnet" "private" {
+  count = 2
+  
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.${count.index + 10}.0/24"
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-private-${count.index + 1}"
+    Type = "private"
+  })
+}
+
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+# Elastic IPs for NAT gateways
+resource "aws_eip" "nat" {
+  count = 2
+  
+  domain = "vpc"
+  depends_on = [aws_internet_gateway.main]
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-nat-eip-${count.index + 1}"
+  })
+}
+
+# NAT gateways
+resource "aws_nat_gateway" "main" {
+  count = 2
+  
+  allocation_id = aws_eip.nat[count.index].id
+  subnet_id     = aws_subnet.public[count.index].id
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-nat-${count.index + 1}"
+  })
+  
+  depends_on = [aws_internet_gateway.main]
+}
+
+# Route table for public subnets
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+  
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
+  }
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-public-rt"
+  })
+}
+
+# Route table associations for public subnets
+resource "aws_route_table_association" "public" {
+  count = 2
+  
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
+}
+
+# Route tables for private subnets
+resource "aws_route_table" "private" {
+  count = 2
+  
+  vpc_id = aws_vpc.main.id
+  
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main[count.index].id
+  }
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-private-rt-${count.index + 1}"
+  })
+}
+
+# Route table associations for private subnets
+resource "aws_route_table_association" "private" {
+  count = 2
+  
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private[count.index].id
 }
 
 ############################
-# DynamoDB Tables
+# Security Groups
 ############################
 
-resource "aws_dynamodb_table" "users_table" {
-  name         = "${var.environment}-users"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "id"
-  range_key    = "email"
+# Security group for RDS
+resource "aws_security_group" "rds" {
+  name_prefix = "${var.project_name}-rds-"
+  vpc_id      = aws_vpc.main.id
 
-  attribute {
-    name = "id"
-    type = "S"
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.main.cidr_block]
+    description = "PostgreSQL access from VPC"
   }
 
-  attribute {
-    name = "email"
-    type = "S"
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  global_secondary_index {
-    name               = "EmailIndex"
-    hash_key           = "email"
-    projection_type    = "ALL"
-    write_capacity     = 1
-    read_capacity      = 1
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-rds-sg"
+  })
+}
+
+############################
+# RDS PostgreSQL Database
+############################
+
+# DB subnet group
+resource "aws_db_subnet_group" "main" {
+  name       = "${var.project_name}-db-subnet-group"
+  subnet_ids = aws_subnet.public[*].id
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-db-subnet-group"
+  })
+}
+
+# RDS parameter group
+resource "aws_db_parameter_group" "main" {
+  family = "postgres16"
+  name   = "${var.project_name}-db-params"
+
+  parameter {
+    name  = "log_statement"
+    value = "all"
+  }
+
+  parameter {
+    name  = "log_min_duration_statement"
+    value = "1000"
   }
 
   tags = var.tags
 }
 
-# API Gateway for backend API
-resource "aws_api_gateway_rest_api" "api" {
-  name        = "${var.environment}-api"
-  description = "Interactive Agent Portal API"
-  
-  endpoint_configuration {
-    types = ["REGIONAL"]
-  }
-  
+# Generate random password for RDS
+resource "random_password" "db_password" {
+  length  = 32
+  special = true
+  # Exclude characters that RDS doesn't allow: / @ " (space)
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+# Store database password in AWS Secrets Manager
+resource "aws_secretsmanager_secret" "db_password" {
+  name                    = "${var.project_name}-db-password"
+  description             = "Database password for PostgreSQL"
+  recovery_window_in_days = 0  # Allow immediate deletion for dev
+
   tags = var.tags
 }
 
-# Lambda function for backend API
-resource "aws_lambda_function" "api" {
-  function_name = "${var.environment}-api"
-  role          = aws_iam_role.lambda_role.arn
-  handler       = "lambda.handler"
-  runtime       = "nodejs20.x"
-  
-  filename         = "backend_lambda.zip"
-  source_code_hash = filebase64sha256("backend_lambda.zip")
-  
-  memory_size = 256
-  timeout     = 30
-  
-  environment {
-    variables = {
-      NODE_ENV                 = var.environment
-      DYNAMODB_USERS_TABLE     = aws_dynamodb_table.users_table.name
-    }
-  }
-  
-  tags = var.tags
+resource "aws_secretsmanager_secret_version" "db_password" {
+  secret_id     = aws_secretsmanager_secret.db_password.id
+  secret_string = jsonencode({
+    username = "amianai_admin"
+    password = random_password.db_password.result
+  })
 }
 
-# Lambda IAM role
-resource "aws_iam_role" "lambda_role" {
-  name = "${var.environment}-lambda-role"
+# RDS PostgreSQL instance
+resource "aws_db_instance" "main" {
+  identifier = "${var.project_name}-postgres"
+
+  # Engine configuration
+  engine         = "postgres"
+  engine_version = "16.9"
+  instance_class = "db.t3.micro"
+
+  # Storage configuration
+  allocated_storage     = 20
+  max_allocated_storage = 100
+  storage_type          = "gp3"
+  storage_encrypted     = true
+
+  # Database configuration
+  db_name  = "amianai"
+  username = "amianai_admin"
+  password = random_password.db_password.result
+
+  # Network configuration
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  publicly_accessible    = true
+
+  # Backup configuration
+  backup_retention_period = 7
+  backup_window          = "03:00-04:00"
+  maintenance_window     = "sun:04:00-sun:05:00"
+
+  # Performance and monitoring
+  parameter_group_name   = aws_db_parameter_group.main.name
+  monitoring_interval    = 60
+  monitoring_role_arn    = aws_iam_role.rds_monitoring.arn
+  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
+
+  # Deletion protection
+  skip_final_snapshot       = true
+  delete_automated_backups  = true
+  deletion_protection       = false
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-postgres"
+  })
+}
+
+# IAM role for RDS monitoring
+resource "aws_iam_role" "rds_monitoring" {
+  name = "${var.project_name}-rds-monitoring-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -383,7 +544,7 @@ resource "aws_iam_role" "lambda_role" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "lambda.amazonaws.com"
+          Service = "monitoring.rds.amazonaws.com"
         }
       }
     ]
@@ -392,92 +553,15 @@ resource "aws_iam_role" "lambda_role" {
   tags = var.tags
 }
 
-# Lambda IAM policy
-resource "aws_iam_role_policy" "lambda_policy" {
-  name = "${var.environment}-lambda-policy"
-  role = aws_iam_role.lambda_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:Query",
-          "dynamodb:Scan"
-        ]
-        Resource = [
-          aws_dynamodb_table.users_table.arn,
-          "${aws_dynamodb_table.users_table.arn}/index/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
+resource "aws_iam_role_policy_attachment" "rds_monitoring" {
+  role       = aws_iam_role.rds_monitoring.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
 }
 
-# API Gateway deployment
-resource "aws_api_gateway_deployment" "api" {
-  depends_on = [aws_api_gateway_integration.lambda_integration]
-  
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  stage_name  = "prod"  # Using a fixed stage name for simplicity
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# API Gateway Lambda proxy resource (root resource)
-resource "aws_api_gateway_resource" "proxy" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
-  path_part   = "{proxy+}"
-}
-
-# API Gateway method for the proxy resource
-resource "aws_api_gateway_method" "proxy" {
-  rest_api_id   = aws_api_gateway_rest_api.api.id
-  resource_id   = aws_api_gateway_resource.proxy.id
-  http_method   = "ANY"
-  authorization = "NONE"
-}
-
-# API Gateway integration with Lambda
-resource "aws_api_gateway_integration" "lambda_integration" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_resource.proxy.id
-  http_method = aws_api_gateway_method.proxy.http_method
-  
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
-}
-
-# Permission for API Gateway to invoke Lambda
-resource "aws_lambda_permission" "api_gateway" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  principal     = "apigateway.amazonaws.com"
-  
-  # Allow invocation from any stage, method, and resource path
-  source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
-}
-
+############################
 # Cognito User Pool
+############################
+
 resource "aws_cognito_user_pool" "main" {
   name = "${var.project_name}-user-pool"
   
@@ -512,13 +596,11 @@ resource "aws_cognito_user_pool" "main" {
   tags = var.tags
 }
 
-# Cognito User Pool Domain
 resource "aws_cognito_user_pool_domain" "main" {
   domain       = "auth-amianai"
   user_pool_id = aws_cognito_user_pool.main.id
 }
 
-# Cognito User Pool Client
 resource "aws_cognito_user_pool_client" "main" {
   name         = "${var.project_name}-client"
   user_pool_id = aws_cognito_user_pool.main.id
@@ -542,15 +624,30 @@ resource "aws_cognito_user_pool_client" "main" {
   allowed_oauth_scopes                 = ["email", "openid", "profile"]
 }
 
-# API Gateway Authorizer
-resource "aws_api_gateway_authorizer" "cognito" {
-  name          = "cognito-authorizer"
-  rest_api_id   = aws_api_gateway_rest_api.api.id
-  type          = "COGNITO_USER_POOLS"
-  provider_arns = [aws_cognito_user_pool.main.arn]
+############################
+# Outputs
+############################
+
+output "github_actions_role_arn" {
+  value       = aws_iam_role.github_actions.arn
+  description = "ARN of the GitHub Actions role"
 }
 
-# Output Cognito User Pool ID and Client ID
+output "website_url" {
+  value       = "https://${var.domain_name}"
+  description = "Website URL"
+}
+
+output "s3_bucket_name" {
+  value       = aws_s3_bucket.website.bucket
+  description = "S3 bucket name"
+}
+
+output "cloudfront_distribution_id" {
+  value       = aws_cloudfront_distribution.website.id
+  description = "CloudFront distribution ID"
+}
+
 output "cognito_user_pool_id" {
   description = "The ID of the Cognito User Pool"
   value       = aws_cognito_user_pool.main.id
@@ -571,109 +668,23 @@ output "cognito_region" {
   value       = data.aws_region.current.name
 }
 
-# Auth Lambda Function
-resource "aws_lambda_function" "auth" {
-  filename         = "auth_lambda.zip"
-  function_name    = "${var.project_name}-auth"
-  role            = aws_iam_role.auth_lambda_role.arn
-  handler         = "index.handler"
-  runtime         = "nodejs18.x"
-  timeout         = 30
-  memory_size     = 256
-  source_code_hash = filebase64sha256("auth_lambda.zip")
-  environment {
-    variables = {
-      USER_POOL_ID = aws_cognito_user_pool.main.id
-      CLIENT_ID    = aws_cognito_user_pool_client.main.id
-    }
-  }
+output "database_endpoint" {
+  description = "The RDS instance endpoint"
+  value       = aws_db_instance.main.endpoint
+  sensitive   = true
 }
 
-# Auth Lambda IAM Role
-resource "aws_iam_role" "auth_lambda_role" {
-  name = "${var.project_name}-auth-lambda-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-      }
-    ]
-  })
+output "database_port" {
+  description = "The RDS instance port"
+  value       = aws_db_instance.main.port
 }
 
-# Auth Lambda IAM Policy
-resource "aws_iam_role_policy" "auth_lambda_policy" {
-  name = "${var.project_name}-auth-lambda-policy"
-  role = aws_iam_role.auth_lambda_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "cognito-idp:AdminCreateUser",
-          "cognito-idp:AdminSetUserPassword",
-          "cognito-idp:AdminInitiateAuth",
-          "cognito-idp:AdminRespondToAuthChallenge",
-          "cognito-idp:AdminGetUser",
-          "cognito-idp:AdminUpdateUserAttributes",
-          "cognito-idp:AdminDeleteUser",
-          "cognito-idp:ListUsers",
-          "cognito-idp:ListUserPools",
-          "cognito-idp:DescribeUserPool",
-          "cognito-idp:DescribeUserPoolClient",
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
+output "database_name" {
+  description = "The RDS instance database name"
+  value       = aws_db_instance.main.db_name
 }
 
-# API Gateway endpoint for auth
-resource "aws_api_gateway_resource" "auth" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
-  path_part   = "auth"
+output "database_secret_arn" {
+  description = "ARN of the secret containing database credentials"
+  value       = aws_secretsmanager_secret.db_password.arn
 }
-
-resource "aws_api_gateway_resource" "signup" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_resource.auth.id
-  path_part   = "signup"
-}
-
-resource "aws_api_gateway_method" "signup" {
-  rest_api_id   = aws_api_gateway_rest_api.api.id
-  resource_id   = aws_api_gateway_resource.signup.id
-  http_method   = "POST"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "signup" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_resource.signup.id
-  http_method = aws_api_gateway_method.signup.http_method
-
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.auth.invoke_arn
-}
-
-# Lambda permission for API Gateway
-resource "aws_lambda_permission" "auth" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.auth.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
-} 

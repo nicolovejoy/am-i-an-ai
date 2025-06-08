@@ -8,12 +8,10 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "jest --coverage",
-    "db:migrate": "node -r ts-node/register -e \"import('./src/lib/migrations').then(m => m.runMigrations())\"",
-    "db:rollback": "node -r ts-node/register -e \"import('./src/lib/migrations').then(m => m.rollbackMigration())\"",
-    "db:seed": "node -r ts-node/register -e \"import('./src/lib/seedData').then(s => s.seedDatabase())\"",
-    "db:reset": "node -r ts-node/register -e \"import('./src/lib/seedData').then(s => s.resetDatabase())\""
+    "db:show": "npx tsx scripts/show-data.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "3.826.0",
     "@hookform/resolvers": "4.1.3",
     "@tanstack/react-query": "5.68.0",
     "@tanstack/react-query-devtools": "5.68.0",
@@ -55,6 +53,7 @@
     "postcss": "8.4.38",
     "tailwindcss": "3.4.3",
     "ts-node": "^10.9.2",
+    "tsx": "4.19.4",
     "typescript": "5.4.5",
     "typescript-eslint": "^7.18.0"
   }

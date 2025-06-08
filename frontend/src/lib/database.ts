@@ -17,7 +17,8 @@ class PostgreSQLConnection implements DatabaseConnection {
       ssl: config.ssl ? { rejectUnauthorized: false } : false,
       max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 10000,  // 10 seconds for schema operations
+      query_timeout: 30000,  // 30 seconds for long queries
     });
   }
 
@@ -104,20 +105,16 @@ class PostgreSQLTransaction implements DatabaseTransaction {
 }
 
 // Database configuration
-export const createDatabaseConnection = (): DatabaseConnection => {
-  // eslint-disable-next-line no-undef -- process is available in Node.js environment
+export const createDatabaseConnection = async (): Promise<DatabaseConnection> => {
+  const { getDatabaseCredentials } = await import('./secrets');
+  const credentials = await getDatabaseCredentials();
+  
   const config = {
-    // eslint-disable-next-line no-undef -- process is available in Node.js environment
-    host: process.env.DB_HOST || 'localhost',
-    // eslint-disable-next-line no-undef -- process is available in Node.js environment
-    port: parseInt(process.env.DB_PORT || '5432'),
-    // eslint-disable-next-line no-undef -- process is available in Node.js environment
-    database: process.env.DB_NAME || 'amianai_dev',
-    // eslint-disable-next-line no-undef -- process is available in Node.js environment
-    user: process.env.DB_USER || 'postgres',
-    // eslint-disable-next-line no-undef -- process is available in Node.js environment
-    password: process.env.DB_PASSWORD || '',
-    // eslint-disable-next-line no-undef -- process is available in Node.js environment
+    host: credentials.host || process.env.DB_HOST || 'localhost',
+    port: credentials.port || parseInt(process.env.DB_PORT || '5432'),
+    database: credentials.dbname || process.env.DB_NAME || 'amianai_dev',
+    user: credentials.username,
+    password: credentials.password,
     ssl: process.env.NODE_ENV === 'production',
   };
 
@@ -127,9 +124,9 @@ export const createDatabaseConnection = (): DatabaseConnection => {
 // Singleton instance
 let dbInstance: DatabaseConnection | null = null;
 
-export const getDatabase = (): DatabaseConnection => {
+export const getDatabase = async (): Promise<DatabaseConnection> => {
   if (!dbInstance) {
-    dbInstance = createDatabaseConnection();
+    dbInstance = await createDatabaseConnection();
   }
   return dbInstance;
 };
@@ -222,13 +219,13 @@ export class QueryBuilder<T> {
 
   async execute(): Promise<T[]> {
     const { sql, params } = this.buildQuery();
-    const db = getDatabase();
+    const db = await getDatabase();
     return await db.query<T>(sql, params);
   }
 
   async first(): Promise<T | null> {
     const { sql, params } = this.buildQuery();
-    const db = getDatabase();
+    const db = await getDatabase();
     return await db.queryOne<T>(sql, params);
   }
 
@@ -237,7 +234,7 @@ export class QueryBuilder<T> {
     this.selectColumns = ['COUNT(*) as count'];
     
     const { sql, params } = this.buildQuery();
-    const db = getDatabase();
+    const db = await getDatabase();
     const result = await db.queryOne<{ count: string }>(sql, params);
     
     this.selectColumns = originalSelect;

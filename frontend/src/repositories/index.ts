@@ -6,7 +6,7 @@ export { MessageRepository, MessageMapper, MessageService } from './MessageRepos
 
 // Database utilities
 export { getDatabase, createDatabaseConnection, table, QueryBuilder } from '../lib/database';
-export { MigrationRunner, runMigrations, rollbackMigration, getMigrationStatus } from '../lib/migrations';
+// export { MigrationRunner, runMigrations, rollbackMigration, getMigrationStatus } from '../lib/migrations';
 export { SeedDataManager, seedDatabase, clearDatabase, resetDatabase } from '../lib/seedData';
 
 // Import service classes

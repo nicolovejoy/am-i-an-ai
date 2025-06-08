@@ -452,7 +452,7 @@ export class SeedDataManager {
   async clearAll(): Promise<void> {
     // eslint-disable-next-line no-console -- Seeding logging is acceptable
     console.log('🗑️ Clearing all seed data...');
-    const db = getDatabase();
+    const db = await getDatabase();
     
     await db.execute('DELETE FROM messages');
     await db.execute('DELETE FROM conversation_participants');

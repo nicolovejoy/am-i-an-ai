@@ -1,112 +1,176 @@
-# Am I an AI? (Next.js Version)
+# AmIAnAI - Multi-Persona Conversation System
 
-This is the Next.js version of the "Am I an AI?" application, built for clean, modern design and focused user experience.
+A platform where humans and AI agents interact through ambiguous personas, built with Next.js and PostgreSQL.
 
-## Features
+## 🏗️ Architecture Overview
 
-- 🚀 Built with Next.js 15
-- ⚛️ Using React 19
-- 🎨 Clean, modern design system
-- 📱 Fully responsive for all device sizes
-- ⚡ Static site generation for optimal performance
-- 🎯 Simplified, purposeful UI
+- **Frontend**: Next.js app deployed to AWS S3/CloudFront
+- **Database**: PostgreSQL on AWS RDS (production-only)
+- **Auth**: AWS Cognito
+- **Infrastructure**: Terraform-managed AWS resources
 
-## Getting Started
+## 🚀 Development Setup (Hybrid Approach)
+
+**Strategy**: Local Next.js development server + Production AWS database
 
 ### Prerequisites
 
-- Node.js 18.17.0 or later
-- npm or yarn
+- Node.js 18+ 
+- AWS CLI configured with appropriate permissions
+- Access to AmIAnAI AWS account
 
-### Installation
+### Quick Start
 
-1. Clone the repository
-
+1. **Clone and Install**
    ```bash
-   git clone https://github.com/yourusername/amianai.git
+   git clone https://github.com/nicolovejoy/amianai.git
    cd amianai/frontend
-   ```
-
-2. Install dependencies
-
-   ```bash
    npm install
    ```
 
-3. Run the development server
-
+2. **Configure Environment**
    ```bash
-   npm run dev
+   cp .env.example .env.local
+   # Edit .env.local with production database settings
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+3. **Start Development Server**
+   ```bash
+   npm run dev  # Usually starts on localhost:3001
+   ```
 
-## Project Structure
+4. **Setup Database** (First time only)
+   ```bash
+   # Create schema
+   curl -X POST http://localhost:3001/api/admin/setup-database
+   
+   # Seed sample data
+   curl -X POST http://localhost:3001/api/admin/seed-database
+   
+   # Verify setup
+   curl http://localhost:3001/api/admin/database-status
+   ```
+
+## 📊 Database Management
+
+### API Endpoints
+- `GET /api/admin/database-status` - Check connection and table counts
+- `POST /api/admin/setup-database` - Create schema (tables + indexes)
+- `POST /api/admin/seed-database` - Clear and populate with sample data
+
+### Safety Features
+- Requires `ENABLE_DB_ADMIN=true` environment variable
+- Production database protection built-in
+- Clear logging of all operations
+
+## 🛠️ Development Workflow
+
+1. **Local Development**: Make changes with instant hot reload
+2. **Test with Production Data**: Use real AWS database for testing
+3. **Build and Deploy**: Deploy to S3/CloudFront when ready
+
+```bash
+# Development
+npm run dev
+
+# Testing
+npm run test
+npm run lint
+
+# Production Build
+npm run build
+
+# Type Checking
+npx tsc --noEmit
+```
+
+## 🗂️ Project Structure
 
 ```
 src/
-├── app/               # App Router pages
-│   ├── page.tsx      # Home page
-│   ├── about/        # About page
-│   └── not-found.tsx # 404 page
-├── components/        # Reusable components
-│   ├── ChatContainer.tsx    # Main chat interface
-│   ├── ChatInterface.tsx    # Chat implementation
-│   └── NavMenu.tsx         # Navigation menu
-├── hooks/            # Custom React hooks
-├── lib/             # Utilities and constants
-│   └── designSystem.ts     # Design system definitions
-├── test/            # Test utilities
-└── types/           # TypeScript type definitions
+├── app/
+│   ├── api/admin/         # Database admin endpoints
+│   ├── auth/              # Authentication pages
+│   ├── profile/           # User profile
+│   └── about/             # Static pages
+├── components/
+│   ├── auth/              # Auth-related components
+│   ├── forms/             # Form components
+│   └── [core]/            # Chat, navigation, etc.
+├── contexts/              # React contexts (Auth, Toast)
+├── hooks/                 # Custom React hooks
+├── lib/                   # Core utilities
+│   ├── database.ts        # Database connection
+│   ├── schema.ts          # Database schema (legacy)
+│   ├── secrets.ts         # AWS Secrets Manager
+│   └── seedData.ts        # Sample data (legacy)
+├── repositories/          # Data access layer
+├── services/              # External services (Cognito, APIs)
+├── types/                 # TypeScript definitions
+└── providers/             # React Query, context providers
 ```
 
-## Key Technologies
+## 🎯 Core Features
 
-- **Framework**: Next.js 15
-- **UI Library**: React 19
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Testing**: Jest and React Testing Library
+- **Multi-Persona System**: Users can create multiple personas (human/AI)
+- **Ambiguous Conversations**: Participants' true nature (human/AI) is hidden
+- **Conversation Management**: Structured discussions with goals and constraints
+- **User Authentication**: AWS Cognito integration
+- **Real-time Chat**: Message threading and conversation flows
 
-## Design System
+## 🔒 Environment Configuration
 
-The application uses a clean, modern design system:
+### Required Variables
+```bash
+# Database (Production)
+DB_SECRET_ARN=arn:aws:secretsmanager:...
+ENABLE_DB_ADMIN=true
 
-- **Colors**: Professional palette with kelp brown accents
-- **Typography**: Clear hierarchy with Inter font
-- **Components**: Minimal, focused UI elements
-- **Layout**: Centered, readable content areas
+# Cognito
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_...
+NEXT_PUBLIC_COGNITO_CLIENT_ID=...
 
-## Testing
+# Environment
+NODE_ENV=production
+```
 
-Run the test suite:
+## 📚 Related Documentation
+
+- **Infrastructure**: See `/infrastructure/` for Terraform setup
+- **Next Steps**: See `../NEXT_STEPS.md` for immediate tasks
+- **Project Guidelines**: See `../CLAUDE.md` for development strategy
+
+## ⚠️ Important Notes
+
+- **Production-Only Database**: No local database setup
+- **AWS Dependency**: Requires active AWS infrastructure
+- **Database Admin**: Use admin APIs carefully - they modify production data
+- **Environment Parity**: Local development uses production database
+
+## 🧪 Testing
 
 ```bash
-npm test
+npm test              # Run test suite
+npm run test:watch    # Watch mode
+npm run lint          # ESLint
+npm run type-check    # TypeScript validation
 ```
 
-Tests cover:
+## 🚀 Deployment
 
-- Component rendering
-- User experience
-- Accessibility
-- Responsive design
+Deployment is handled through infrastructure scripts:
 
-## Development Workflow
+```bash
+cd ../infrastructure
+DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/setup.sh
+```
 
-1. Make changes in a feature branch
-2. Run tests and linting
-3. Build and check production build
-4. Create pull request
-5. Deploy after review
+This builds and deploys the frontend to S3/CloudFront automatically.
 
-## Future Enhancements
+## 📈 Next Steps
 
-- Enhanced user experience
-- Additional accessibility features
-- Performance optimizations
-- Extended test coverage
-
-## License
-
-[MIT License](LICENSE)
+1. Complete database setup (see `NEXT_STEPS.md`)
+2. Build conversation interface
+3. Implement persona management
+4. Add AI integration
+5. Production optimization

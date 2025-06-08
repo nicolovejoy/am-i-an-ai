@@ -23,7 +23,7 @@ export class ConversationRepository implements IConversationRepository {
   }
 
   async findByUser(userId: string, status?: string): Promise<DatabaseConversation[]> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     let sql = `
       SELECT DISTINCT c.*
@@ -48,7 +48,7 @@ export class ConversationRepository implements IConversationRepository {
   }
 
   async findByPersona(personaId: string): Promise<DatabaseConversation[]> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const sql = `
       SELECT c.*
@@ -62,7 +62,7 @@ export class ConversationRepository implements IConversationRepository {
   }
 
   async create(conversationData: Omit<DatabaseConversation, 'id' | 'created_at'>): Promise<DatabaseConversation> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const result = await db.queryOne<DatabaseConversation>(`
       INSERT INTO ${this.tableName} (
@@ -99,7 +99,7 @@ export class ConversationRepository implements IConversationRepository {
   }
 
   async update(id: string, updates: Partial<DatabaseConversation>): Promise<DatabaseConversation> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     // Build dynamic update query
     const updateFields: string[] = [];
@@ -137,7 +137,7 @@ export class ConversationRepository implements IConversationRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     // Delete participants first (foreign key constraint)
     await db.execute(`DELETE FROM ${this.participantsTable} WHERE conversation_id = $1`, [id]);
@@ -155,7 +155,7 @@ export class ConversationRepository implements IConversationRepository {
   }
 
   async addParticipant(participant: DatabaseConversationParticipant): Promise<DatabaseConversationParticipant> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const result = await db.queryOne<DatabaseConversationParticipant>(`
       INSERT INTO ${this.participantsTable} (
@@ -183,7 +183,7 @@ export class ConversationRepository implements IConversationRepository {
     personaId: string, 
     updates: Partial<DatabaseConversationParticipant>
   ): Promise<DatabaseConversationParticipant> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     // Build dynamic update query
     const updateFields: string[] = [];
@@ -236,7 +236,7 @@ export class ConversationRepository implements IConversationRepository {
   }
 
   async updateMessageCount(id: string, increment: number = 1): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     await db.execute(`
       UPDATE ${this.tableName}
@@ -252,7 +252,7 @@ export class ConversationRepository implements IConversationRepository {
     averageResponseTime?: number;
     qualityScore?: number;
   }): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const updateFields: string[] = [];
     const values: unknown[] = [];
@@ -290,7 +290,7 @@ export class ConversationRepository implements IConversationRepository {
   }
 
   async setParticipantActiveTime(conversationId: string, personaId: string): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     await db.execute(`
       UPDATE ${this.participantsTable}
@@ -300,7 +300,7 @@ export class ConversationRepository implements IConversationRepository {
   }
 
   async revealParticipant(conversationId: string, personaId: string): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     await db.execute(`
       UPDATE ${this.participantsTable}
@@ -444,7 +444,7 @@ export class ConversationService {
     conversationData: ConversationCreate, 
     createdBy: string
   ): Promise<Conversation> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     return await db.transaction(async () => {
       // Create the conversation

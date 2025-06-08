@@ -1,0 +1,97 @@
+#!/bin/bash
+set -e
+
+# Ensure we're in the infrastructure directory
+SCRIPT_DIR="$(dirname "$0")"
+if [ "$(basename "$(pwd)")" != "infrastructure" ]; then
+    cd "$SCRIPT_DIR/.." || exit 1
+fi
+
+# Check prerequisites
+command -v terraform >/dev/null 2>&1 || { echo "Terraform is required but not installed. Aborting." >&2; exit 1; }
+command -v aws >/dev/null 2>&1 || { echo "AWS CLI is required but not installed. Aborting." >&2; exit 1; }
+command -v npm >/dev/null 2>&1 || { echo "npm is required but not installed. Aborting." >&2; exit 1; }
+
+# Check environment variables
+if [ -z "$AWS_PROFILE" ]; then
+    echo "Warning: AWS_PROFILE not set. Using default profile."
+fi
+
+if [ -z "$DOMAIN_NAME" ]; then
+    echo "Error: DOMAIN_NAME environment variable is required. Aborting." >&2
+    exit 1
+fi
+
+if [ -z "$GITHUB_USERNAME" ]; then
+    echo "Error: GITHUB_USERNAME environment variable is required. Aborting." >&2
+    exit 1
+fi
+
+# Initialize Terraform
+echo "Initializing Terraform..."
+terraform init
+
+# Apply infrastructure
+echo "Applying infrastructure..."
+terraform apply -var="github_username=${GITHUB_USERNAME}"
+
+# Wait for certificate validation and RDS to be ready
+echo "Waiting for infrastructure to be ready..."
+sleep 60
+
+# Get database connection details
+echo "Getting database connection details..."
+DB_ENDPOINT=$(terraform output -raw database_endpoint)
+DB_SECRET_ARN=$(terraform output -raw database_secret_arn)
+
+echo "Database endpoint: ${DB_ENDPOINT}"
+echo "Database secret ARN: ${DB_SECRET_ARN}"
+
+# Build and deploy frontend
+echo "Building frontend..."
+cd ../frontend || exit 1
+npm ci
+
+# Set environment variables for build
+export NEXT_PUBLIC_COGNITO_REGION=$(cd ../infrastructure && terraform output -raw cognito_region)
+export NEXT_PUBLIC_COGNITO_USER_POOL_ID=$(cd ../infrastructure && terraform output -raw cognito_user_pool_id)
+export NEXT_PUBLIC_COGNITO_CLIENT_ID=$(cd ../infrastructure && terraform output -raw cognito_client_id)
+
+# Build the application
+npm run build
+
+# Deploy to S3
+echo "Deploying to S3..."
+aws s3 sync out/ s3://${DOMAIN_NAME}/ --delete --cache-control "max-age=86400"
+
+# Get CloudFront distribution ID and create invalidation
+DISTRIBUTION_ID=$(cd ../infrastructure && terraform output -raw cloudfront_distribution_id)
+if [ -n "$DISTRIBUTION_ID" ]; then
+    echo "Creating CloudFront invalidation..."
+    aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"
+else
+    echo "Warning: Could not get CloudFront distribution ID"
+fi
+
+echo ""
+echo "🎉 Setup complete!"
+echo ""
+echo "Next steps:"
+echo "1. Update frontend/.env.local with database details:"
+echo "   DB_SECRET_ARN=${DB_SECRET_ARN}"
+echo "   DB_HOST=${DB_ENDPOINT%:*}"  # Remove port from endpoint
+echo "   DB_PORT=5432"
+echo "   DB_NAME=amianai"
+echo "   ENABLE_DB_ADMIN=true"
+echo ""
+echo "2. Setup database schema and seed data:"
+echo "   cd frontend && npm run dev"
+echo "   curl -X POST http://localhost:3000/api/admin/setup-database/"
+echo "   curl -X POST http://localhost:3000/api/admin/seed-database/"
+echo ""
+echo "3. Your website will be available at: https://${DOMAIN_NAME}"
+echo ""
+echo "Database connection details:"
+echo "- Endpoint: ${DB_ENDPOINT}"
+echo "- Secret ARN: ${DB_SECRET_ARN}"
+echo "- Use AWS Secrets Manager to retrieve credentials"

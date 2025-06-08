@@ -49,7 +49,7 @@ export class MessageRepository implements IMessageRepository {
   }
 
   async create(messageData: Omit<DatabaseMessage, 'id' | 'timestamp'>): Promise<DatabaseMessage> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const result = await db.queryOne<DatabaseMessage>(`
       INSERT INTO ${this.tableName} (
@@ -87,7 +87,7 @@ export class MessageRepository implements IMessageRepository {
   }
 
   async update(id: string, updates: Partial<DatabaseMessage>): Promise<DatabaseMessage> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     // Build dynamic update query
     const updateFields: string[] = [];
@@ -125,7 +125,7 @@ export class MessageRepository implements IMessageRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const result = await db.execute(`
       DELETE FROM ${this.tableName} WHERE id = $1
@@ -135,7 +135,7 @@ export class MessageRepository implements IMessageRepository {
   }
 
   async search(criteria: Record<string, unknown>): Promise<DatabaseMessage[]> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     let sql = `
       SELECT m.*, 
@@ -231,7 +231,7 @@ export class MessageRepository implements IMessageRepository {
 
   // Additional utility methods
   async getNextSequenceNumber(conversationId: string): Promise<number> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const result = await db.queryOne<{ max_sequence: number | null }>(`
       SELECT MAX(sequence_number) as max_sequence 
@@ -247,7 +247,7 @@ export class MessageRepository implements IMessageRepository {
     limit: number = 50,
     cursor?: string
   ): Promise<ConversationHistory> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     let sql = `
       SELECT m.*, p.name as persona_name, p.type as persona_type
@@ -325,7 +325,7 @@ export class MessageRepository implements IMessageRepository {
   }
 
   async updateModerationStatus(id: string, status: ModerationStatus): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     await db.execute(`
       UPDATE ${this.tableName}
@@ -335,7 +335,7 @@ export class MessageRepository implements IMessageRepository {
   }
 
   async hideMessage(id: string): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     await db.execute(`
       UPDATE ${this.tableName}
@@ -362,7 +362,7 @@ export class MessageRepository implements IMessageRepository {
   }
 
   async updateMessageMetadata(id: string, metadata: Record<string, unknown>): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     await db.execute(`
       UPDATE ${this.tableName}

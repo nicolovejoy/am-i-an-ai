@@ -53,7 +53,7 @@ export class PersonaRepository implements IPersonaRepository {
   }
 
   async create(personaData: Omit<DatabasePersona, 'id' | 'created_at' | 'updated_at'>): Promise<DatabasePersona> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const result = await db.queryOne<DatabasePersona>(`
       INSERT INTO ${this.tableName} (
@@ -89,7 +89,7 @@ export class PersonaRepository implements IPersonaRepository {
   }
 
   async update(id: string, updates: Partial<DatabasePersona>): Promise<DatabasePersona> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     // Build dynamic update query
     const updateFields: string[] = [];
@@ -129,7 +129,7 @@ export class PersonaRepository implements IPersonaRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const result = await db.execute(`
       DELETE FROM ${this.tableName} WHERE id = $1
@@ -139,7 +139,7 @@ export class PersonaRepository implements IPersonaRepository {
   }
 
   async search(query: string, filters: Record<string, unknown> = {}): Promise<DatabasePersona[]> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     let sql = `
       SELECT *, 
@@ -212,7 +212,7 @@ export class PersonaRepository implements IPersonaRepository {
     sharedInterests?: string[];
     experienceLevel?: string;
   } = {}): Promise<DatabasePersona[]> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     // Get the source persona first
     const sourcePersona = await this.findById(personaId);
@@ -266,7 +266,7 @@ export class PersonaRepository implements IPersonaRepository {
     totalMessages?: number; 
     averageRating?: number 
   }): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     const updateFields: string[] = [];
     const values: unknown[] = [];
@@ -305,7 +305,7 @@ export class PersonaRepository implements IPersonaRepository {
   }
 
   async incrementMessageCount(id: string, count: number = 1): Promise<void> {
-    const db = getDatabase();
+    const db = await getDatabase();
     
     await db.execute(`
       UPDATE ${this.tableName}

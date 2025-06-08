@@ -64,16 +64,12 @@ else
     echo "No CloudFront distribution found, skipping disable step..."
 fi
 
-# Build Lambda functions for terraform destroy
-echo "Building Lambda functions..."
-./scripts/build_lambda.sh
+# No Lambda functions to build in new architecture
 
 # Destroy infrastructure
 echo "Destroying infrastructure..."
 terraform destroy -auto-approve
 
-# Clean up Lambda deployment packages
-echo "Cleaning up Lambda deployment packages..."
-rm -f backend_lambda.zip auth_lambda.zip
+# No Lambda deployment packages to clean up
 
 echo "Infrastructure destroyed successfully!" 
