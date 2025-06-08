@@ -69,6 +69,16 @@ const NavMenu: React.FC = () => {
                     Chat
                   </Link>
                   <Link
+                    href="/personas"
+                    className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                      isActive("/personas")
+                        ? "text-[#8B6B4A] border-b-2 border-[#8B6B4A]"
+                        : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-b-2 hover:border-[#8B6B4A]"
+                    }`}
+                  >
+                    Personas
+                  </Link>
+                  <Link
                     href="/profile"
                     className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
                       isActive("/profile")
@@ -164,6 +174,17 @@ const NavMenu: React.FC = () => {
                   }`}
                 >
                   Chat
+                </Link>
+                <Link
+                  href="/personas"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`block px-3 py-2 text-base font-medium flex items-center ${
+                    isActive("/personas")
+                      ? "text-[#8B6B4A] border-l-4 border-[#8B6B4A]"
+                      : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-l-4 hover:border-[#8B6B4A]"
+                  }`}
+                >
+                  Personas
                 </Link>
                 <Link
                   href="/profile"
