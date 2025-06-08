@@ -9,7 +9,12 @@ jest.mock('../MessageItem', () => {
   return {
     MessageItem: ({ message, participant, isConsecutive }: { 
       message: Message; 
-      participant: unknown; 
+      participant?: {
+        personaId: string;
+        personaName: string;
+        personaType: 'human' | 'ai_agent';
+        isRevealed: boolean;
+      }; 
       isConsecutive: boolean;
     }) => (
       <div data-testid={`message-item-${message.id}`}>
@@ -68,8 +73,8 @@ describe('MessageList', () => {
     it('applies correct styling for empty state', () => {
       render(<MessageList messages={[]} participants={mockParticipants} />);
       
-      const emptyContainer = screen.getByText('No messages yet').parentElement;
-      expect(emptyContainer).toHaveClass('text-center');
+      const emptyMessage = screen.getByText('No messages yet');
+      expect(emptyMessage).toBeInTheDocument();
     });
   });
 

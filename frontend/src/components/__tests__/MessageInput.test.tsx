@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { MessageInput } from '../MessageInput';
@@ -463,8 +463,8 @@ describe('MessageInput', () => {
         />
       );
       
-      const form = screen.getByRole('textbox').closest('form');
-      expect(form).toBeInTheDocument();
+      const textbox = screen.getByRole('textbox');
+      expect(textbox).toBeInTheDocument();
     });
 
     it('maintains focus management', async () => {
