@@ -118,18 +118,26 @@ npx tsx scripts/show-data.ts
 
 ## 🚀 **Immediate Implementation Plan: Journey 2 (Experienced User → New Conversation)**
 
-### **Phase 1: Navigation Improvements** ⭐ **START HERE**
-- [ ] **Rename "Chat" → "Conversations"** in navigation (US022) 
-- [ ] **Add "Start New Conversation" button** to conversation list page (US026)
-- [ ] **Update navigation active state logic** for conversations route
-- [ ] **Test navigation changes** and ensure accessibility compliance
+### **✅ Phase 1: Navigation Improvements - COMPLETED (2025-06-08)**
+- [x] **Rename "Chat" → "Conversations"** in navigation (US022) ✅ 
+- [x] **Add "Start New Conversation" button** to conversation list page (US026) ✅
+- [x] **Update navigation active state logic** for conversations route ✅
+- [x] **Test navigation changes** and ensure accessibility compliance ✅
 
-### **Phase 2: Conversation Creation Flow** 
-- [ ] **Create /conversations/new route** with conversation setup form (US027-028)
-- [ ] **Persona Selection Component** - Choose 2 personas for conversation (US026, US029)
-- [ ] **Conversation Goals & Topics** - Set conversation objectives and constraints (US027)
-- [ ] **Conversation Creation API** - Backend endpoint to create new conversations
-- [ ] **Integration with ConversationRepository** - Database persistence
+**Status**: All navigation improvements complete. Conversations route properly highlights for /, /conversations/*. ConversationList has comprehensive CTAs.
+
+### **Phase 2: Conversation Creation Flow** ⭐ **NEXT SESSION**
+- [x] **Create /conversations/new route** - Basic form structure exists ✅
+- [ ] **Enhance Persona Selection UX** - Improve persona picker with compatibility hints (US026, US029)
+- [ ] **Add Conversation Goals & Topics** - Set objectives and constraints (US027)
+- [ ] **Create Conversation API** - Backend endpoint to persist new conversations
+- [ ] **Connect Creation to Detail View** - Link creation → conversation page flow
+
+**Priority Tasks for Next Session:**
+1. **Enhance persona selection** - Add compatibility scoring, better UX
+2. **Add conversation goals/topics** - Rich setup form with objectives
+3. **Create conversation API** - Backend endpoint for conversation creation
+4. **End-to-end flow** - Creation → redirect to conversation detail
 
 ### **Phase 3: Enhanced Conversation Management**
 - [ ] **Conversation Filters** - Filter by status, participants, date (US023)
@@ -184,15 +192,40 @@ npx tsx scripts/show-data.ts
 
 ---
 
-## 🎯 **Next Session Action Plan**
+## 🎯 **Next Session Action Plan - Start Fresh Context**
 
-**Start with Phase 1: Navigation Improvements**
+**✅ COMPLETED: Phase 1 Navigation Improvements** 
+All navigation tasks complete. Ready for Phase 2.
 
-1. **Rename "Chat" → "Conversations"** in NavMenu component (5 min)
-2. **Add "Start New Conversation" CTA** to ConversationList (15 min)  
-3. **Test navigation flow** and update active states (10 min)
-4. **Commit Phase 1 changes** with proper testing (10 min)
+**🎯 RECOMMENDED NEXT SESSION TASKS:**
 
-**Then proceed to Phase 2: Conversation Creation Flow**
+### **Option A: Core Conversation Creation (High Impact - 45 min)**
+1. **Enhance persona selection UX** (20 min)
+   - Add compatibility scoring between personas
+   - Improve persona picker with visual indicators
+   - Add "suggested pairs" feature
+2. **Add conversation goals/topics form** (15 min)
+   - Rich topic input with suggestions
+   - Goal setting with success criteria
+3. **Create conversation API endpoint** (10 min)
+   - Backend route for conversation creation
+   - Database persistence integration
 
-This focused approach will immediately improve UX for existing users while building toward the complete Journey 2 implementation.
+### **Option B: End-to-End Creation Flow (Complete Feature - 60 min)**
+1. **Complete conversation creation form** (30 min)
+   - All fields: personas, topics, goals, constraints
+   - Form validation and error handling
+2. **Backend API integration** (20 min)
+   - Create conversation endpoint
+   - Conversation repository integration
+3. **Creation → Detail flow** (10 min)
+   - Redirect to new conversation page
+   - Initial AI message trigger
+
+### **Option C: Conversation Management Features (Polish - 30 min)**
+1. **Add conversation filters** (15 min)
+   - Status, date, participant filters
+2. **Add search functionality** (15 min)
+   - Search by content and metadata
+
+**RECOMMENDATION: Start with Option A for maximum impact with focused scope.**
