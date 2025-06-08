@@ -1,0 +1,149 @@
+"use client";
+
+import React, { useState, useRef } from 'react';
+
+interface MessageInputProps {
+  onSendMessage: (content: string) => Promise<void>;
+  conversationStatus: string;
+  disabled?: boolean;
+}
+
+export function MessageInput({ onSendMessage, conversationStatus, disabled = false }: MessageInputProps) {
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isDisabled = disabled || sending || conversationStatus !== 'active';
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage || isDisabled) return;
+
+    setSending(true);
+    try {
+      await onSendMessage(trimmedMessage);
+      setMessage('');
+      
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      // TODO: Show error toast
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
+  // Auto-resize textarea
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setMessage(value);
+
+    // Auto-resize
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+    }
+  };
+
+  const getStatusMessage = () => {
+    switch (conversationStatus) {
+      case 'paused':
+        return 'Conversation is paused';
+      case 'completed':
+        return 'Conversation has ended';
+      case 'terminated':
+        return 'Conversation was terminated';
+      default:
+        return null;
+    }
+  };
+
+  const statusMessage = getStatusMessage();
+
+  return (
+    <div className="bg-white border-t border-gray-200 p-4">
+      <div className="max-w-4xl mx-auto">
+        {statusMessage && (
+          <div className="mb-3 text-center">
+            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+              {statusMessage}
+            </span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex items-end space-x-3">
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={handleTextareaChange}
+              onKeyDown={handleKeyDown}
+              placeholder={isDisabled ? "Cannot send messages" : "Type your message... (Enter to send, Shift+Enter for new line)"}
+              disabled={isDisabled}
+              className={`
+                w-full px-4 py-3 border rounded-lg resize-none min-h-[48px] max-h-[120px]
+                focus:outline-none focus:ring-2 focus:border-transparent
+                ${isDisabled
+                  ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'border-gray-300 focus:ring-[#8B6B4A] text-gray-900'
+                }
+              `}
+              rows={1}
+            />
+            
+            {/* Character count */}
+            <div className="absolute bottom-1 right-2 text-xs text-gray-400">
+              {message.length}/1000
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isDisabled || !message.trim()}
+            className={`
+              px-4 py-3 rounded-lg font-medium transition-all
+              ${isDisabled || !message.trim()
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-[#8B6B4A] text-white hover:bg-[#7A5A3A] focus:outline-none focus:ring-2 focus:ring-[#8B6B4A] focus:ring-offset-2'
+              }
+            `}
+          >
+            {sending ? (
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+                <span>Sending</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <span>Send</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </div>
+            )}
+          </button>
+        </form>
+
+        {/* Help text */}
+        {conversationStatus === 'active' && (
+          <div className="mt-2 text-xs text-gray-400 text-center">
+            Press Enter to send, Shift+Enter for new line
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
