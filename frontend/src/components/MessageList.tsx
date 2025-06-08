@@ -12,17 +12,18 @@ interface MessageListProps {
     personaType: 'human' | 'ai_agent';
     isRevealed: boolean;
   }>;
+  typingPersonas?: Set<string>;
 }
 
-export function MessageList({ messages, participants }: MessageListProps) {
+export function MessageList({ messages, participants, typingPersonas = new Set() }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive or typing indicators change
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, typingPersonas]);
 
   // Create participant lookup for efficient access
   const participantMap = React.useMemo(() => {
@@ -65,6 +66,36 @@ export function MessageList({ messages, participants }: MessageListProps) {
             participant={participant}
             isConsecutive={isConsecutive}
           />
+        );
+      })}
+      
+      {/* Typing indicators */}
+      {Array.from(typingPersonas).map(personaId => {
+        const participant = participantMap.get(personaId);
+        if (!participant) return null;
+
+        return (
+          <div key={`typing-${personaId}`} className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                <span className="text-xs font-medium text-gray-600">
+                  {participant.personaName.charAt(0)}
+                </span>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="bg-gray-100 rounded-lg px-4 py-3 max-w-xs">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {participant.personaName} is typing...
+              </div>
+            </div>
+          </div>
         );
       })}
     </div>

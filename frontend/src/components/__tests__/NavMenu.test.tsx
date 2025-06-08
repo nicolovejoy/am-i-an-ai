@@ -61,11 +61,11 @@ describe("NavMenu", () => {
     expect(screen.getByRole("link", { name: "About" })).toBeInTheDocument();
   });
 
-  it("shows Chat link only for authenticated users", () => {
+  it("shows Conversations link only for authenticated users", () => {
     // Test unauthenticated state
     render(<NavMenu />);
     expect(
-      screen.queryByRole("link", { name: "Chat" })
+      screen.queryByRole("link", { name: "Conversations" })
     ).not.toBeInTheDocument();
 
     // Test authenticated state
@@ -77,7 +77,7 @@ describe("NavMenu", () => {
       signOut: jest.fn(),
     });
     render(<NavMenu />);
-    expect(screen.getByRole("link", { name: "Chat" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Conversations" })).toBeInTheDocument();
   });
 
   it("shows Sign In and Sign Up links for unauthenticated users", () => {

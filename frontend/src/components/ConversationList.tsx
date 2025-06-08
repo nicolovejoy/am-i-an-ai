@@ -215,27 +215,49 @@ export default function ConversationList() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-2xl font-semibold text-[#2D3748]">Your Conversations</h2>
         
-        {/* Status Filter */}
-        <select
-          value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#8B6B4A] focus:border-transparent"
-        >
-          <option value="all">All Conversations</option>
-          <option value="active">Active</option>
-          <option value="paused">Paused</option>
-          <option value="completed">Completed</option>
-        </select>
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Start New Conversation Button */}
+          <Link
+            href="/conversations/new"
+            className="inline-flex items-center px-4 py-2 bg-[#8B6B4A] text-white text-sm font-medium rounded-md hover:bg-[#7A5A3A] focus:outline-none focus:ring-2 focus:ring-[#8B6B4A] focus:ring-offset-2 transition-colors"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Start New Conversation
+          </Link>
+          
+          {/* Status Filter */}
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#8B6B4A] focus:border-transparent"
+          >
+            <option value="all">All Conversations</option>
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
       </div>
 
       {/* Conversations List */}
       {conversations.length === 0 ? (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <div className="text-gray-600 mb-4">No conversations found</div>
-          <div className="text-gray-500 text-sm">Start a new conversation to get started!</div>
+          <div className="text-gray-500 text-sm mb-6">Start your first conversation to begin engaging with personas!</div>
+          <Link
+            href="/conversations/new"
+            className="inline-flex items-center px-6 py-3 bg-[#8B6B4A] text-white font-medium rounded-md hover:bg-[#7A5A3A] focus:outline-none focus:ring-2 focus:ring-[#8B6B4A] focus:ring-offset-2 transition-colors"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Start New Conversation
+          </Link>
         </div>
       ) : (
         <div className="space-y-4">

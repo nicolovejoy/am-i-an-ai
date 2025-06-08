@@ -66,7 +66,7 @@ const NavMenu: React.FC = () => {
                         : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-b-2 hover:border-[#8B6B4A]"
                     }`}
                   >
-                    Chat
+                    Conversations
                   </Link>
                   <Link
                     href="/personas"
@@ -173,7 +173,7 @@ const NavMenu: React.FC = () => {
                       : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-l-4 hover:border-[#8B6B4A]"
                   }`}
                 >
-                  Chat
+                  Conversations
                 </Link>
                 <Link
                   href="/personas"

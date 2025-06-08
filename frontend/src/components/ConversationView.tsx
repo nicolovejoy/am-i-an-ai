@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { FullPageLoader } from './LoadingSpinner';
+import { aiOrchestrator } from '@/services/aiOrchestrator';
 import type { Message } from '@/types/messages';
 
 interface ConversationViewProps {
@@ -44,6 +45,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [typingPersonas, setTypingPersonas] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchConversationData();
@@ -249,8 +251,154 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
   };
 
   const handleSendMessage = async (content: string) => {
-    // TODO: Implement message sending
-    console.log('Sending message:', content);
+    try {
+      // For demo mode, we'll simulate message sending
+      // In production, this would call the actual API endpoint
+      
+      // Create new message optimistically
+      const newMessage: Message = {
+        id: `msg-${Date.now()}`,
+        conversationId: conversationId,
+        authorPersonaId: 'current-user-persona-id', // This would come from auth context
+        content: content,
+        type: 'text',
+        timestamp: new Date(),
+        sequenceNumber: messages.length + 1,
+        isEdited: false,
+        metadata: {
+          wordCount: content.split(' ').length,
+          characterCount: content.length,
+          readingTime: Math.ceil(content.split(' ').length / 200), // 200 WPM
+          complexity: 0.5,
+          responseTime: 0
+        },
+        moderationStatus: 'approved',
+        isVisible: true,
+        isArchived: false
+      };
+
+      // Add message to UI immediately
+      setMessages(prev => [...prev, newMessage]);
+
+      // TODO: Send to actual API endpoint when connected to database
+      // const response = await fetch(`/api/conversations/${conversationId}/messages`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ content, personaId: 'current-user-persona-id' })
+      // });
+
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Trigger AI response analysis and demo simulation
+      try {
+        if (conversation) {
+          // Create mock participant personas for AI analysis
+          const mockParticipants: any[] = conversation.participants.map(p => ({
+            id: p.personaId,
+            name: p.personaName,
+            type: p.personaType === 'ai_agent' ? 'ai_agent' : 'human_persona',
+            personality: {
+              openness: 70, conscientiousness: 60, extraversion: 75,
+              agreeableness: 80, neuroticism: 30, creativity: 85,
+              assertiveness: 65, empathy: 90
+            },
+            knowledge: ['philosophy', 'psychology'],
+            communicationStyle: 'empathetic'
+          }));
+
+          const mockConversation = {
+            id: conversationId,
+            title: conversation.title,
+            topic: conversation.topic,
+            participants: conversation.participants.map(p => p.personaId)
+          };
+
+          const aiTriggers = await aiOrchestrator.analyzeResponseTriggers(
+            mockConversation as any,
+            newMessage,
+            mockParticipants,
+            messages
+          );
+          
+          if (aiTriggers.length > 0) {
+            console.log('AI response triggers:', aiTriggers);
+            
+            // In demo mode, simulate AI responses locally
+            simulateAIResponses(aiTriggers);
+          }
+        }
+      } catch (aiError) {
+        console.error('Error triggering AI responses:', aiError);
+        // Continue normally even if AI analysis fails
+      }
+
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      // TODO: Show error toast to user
+      throw error; // Re-throw so MessageInput can handle it
+    }
+  };
+
+  // Demo function to simulate AI responses appearing
+  const simulateAIResponses = (triggers: { personaId: string; priority: number; reason: string; suggestedDelay: number }[]) => {
+    triggers.forEach((trigger) => {
+      // Show typing indicator
+      setTimeout(() => {
+        setTypingPersonas(prev => new Set([...prev, trigger.personaId]));
+      }, trigger.suggestedDelay);
+
+      // Add AI response after typing delay
+      setTimeout(() => {
+        setTypingPersonas(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(trigger.personaId);
+          return newSet;
+        });
+
+        // Generate demo AI response based on persona
+        const demoResponses = {
+          '01234567-3333-3333-3333-012345678901': [
+            'That\'s a fascinating perspective. It makes me think about the relationship between consciousness and our ability to question our own existence.',
+            'Your point raises an important question about the nature of subjective experience. How do we distinguish between genuine understanding and sophisticated pattern matching?',
+            'I find myself wondering if consciousness might be more of a process than a state - something that emerges from complex interactions rather than a binary property.',
+            'That\'s an intriguing way to frame it. Perhaps the question isn\'t whether something is conscious, but rather how consciousness manifests across different types of information processing systems.'
+          ]
+        };
+
+        const responses = demoResponses[trigger.personaId as keyof typeof demoResponses] || [
+          'That\'s an interesting point to consider.',
+          'I\'d like to explore that idea further.',
+          'Your perspective adds depth to this discussion.'
+        ];
+
+        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+
+        const aiMessage: Message = {
+          id: `ai-msg-${Date.now()}-${trigger.personaId}`,
+          conversationId: conversationId,
+          authorPersonaId: trigger.personaId,
+          content: randomResponse,
+          type: 'text',
+          timestamp: new Date(),
+          sequenceNumber: messages.length + 1,
+          isEdited: false,
+          metadata: {
+            wordCount: randomResponse.split(' ').length,
+            characterCount: randomResponse.length,
+            readingTime: Math.ceil(randomResponse.split(' ').length / 200),
+            complexity: 0.6,
+            responseTime: trigger.suggestedDelay,
+            aiGenerated: true
+          },
+          moderationStatus: 'approved',
+          isVisible: true,
+          isArchived: false
+        };
+
+        setMessages(prev => [...prev, aiMessage]);
+      }, trigger.suggestedDelay + 2000); // Add 2 seconds for "typing"
+    });
   };
 
   if (loading) {
@@ -377,6 +525,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         <MessageList 
           messages={messages} 
           participants={conversation.participants}
+          typingPersonas={typingPersonas}
         />
         
         <MessageInput 

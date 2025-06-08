@@ -1,3 +1,4 @@
+import React from 'react';
 import { ConversationView } from '@/components/ConversationView';
 
 interface ConversationPageProps {
@@ -15,6 +16,9 @@ export async function generateStaticParams() {
     { id: '01234567-7777-7777-7777-012345678901' },
   ];
 }
+
+// Enable dynamic params for conversations not in generateStaticParams
+export const dynamicParams = true;
 
 export default function ConversationPage({ params }: ConversationPageProps) {
   return <ConversationView conversationId={params.id} />;

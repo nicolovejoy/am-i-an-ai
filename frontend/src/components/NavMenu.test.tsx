@@ -60,7 +60,7 @@ describe("NavMenu", () => {
     expect(screen.getByText("Sign In")).toBeInTheDocument();
     expect(screen.getByText("Sign Up")).toBeInTheDocument();
     expect(screen.queryByText("Profile")).not.toBeInTheDocument();
-    expect(screen.queryByText("Chat")).not.toBeInTheDocument();
+    expect(screen.queryByText("Conversations")).not.toBeInTheDocument();
   });
 
   it("shows authenticated user links when authenticated", () => {
@@ -69,7 +69,7 @@ describe("NavMenu", () => {
     
     render(<NavMenu />);
     
-    expect(screen.getByText("Chat")).toBeInTheDocument();
+    expect(screen.getByText("Conversations")).toBeInTheDocument();
     expect(screen.getByText("Profile")).toBeInTheDocument();
     expect(screen.getByText("Sign Out")).toBeInTheDocument();
     expect(screen.queryByText("Sign In")).not.toBeInTheDocument();

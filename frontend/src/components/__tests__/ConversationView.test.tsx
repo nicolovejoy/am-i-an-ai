@@ -161,14 +161,18 @@ describe('ConversationView', () => {
     });
 
     it('handles message sending through MessageInput', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      const initialMessageCount = screen.getByTestId('message-list').textContent?.match(/(\d+) messages/)?.[1] || '0';
       
       const sendButton = screen.getByText('Send Test');
       fireEvent.click(sendButton);
       
-      expect(consoleSpy).toHaveBeenCalledWith('Sending message:', 'test message');
-      
-      consoleSpy.mockRestore();
+      // Wait for the message to be added
+      await waitFor(() => {
+        const messageList = screen.getByTestId('message-list');
+        const currentMessageCount = messageList.textContent?.match(/(\d+) messages/)?.[1] || '0';
+        // Message count should increase by at least 1 (the user message)
+        expect(parseInt(currentMessageCount)).toBeGreaterThan(parseInt(initialMessageCount));
+      });
     });
   });
 
