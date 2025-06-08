@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Disabled static export since we need API routes for persona management
-  // output: "export",
+  // Enable static export for S3 deployment
+  output: "export",
   // Make sure the basePath matches your S3 website URL structure
   // basePath: '',
   // If you're hosting at a subdirectory, set trailing slash appropriately

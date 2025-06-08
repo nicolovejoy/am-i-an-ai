@@ -23,6 +23,16 @@ export default function PersonasPage() {
       setLoading(true);
       setError(null);
       
+      // For static export, always use mock data since API routes aren't available
+      if (typeof window !== 'undefined' && window.location.protocol === 'file:') {
+        // Static export detected, use mock data
+        const { getMockPersonas } = await import('@/lib/mockData');
+        const mockPersonas = await getMockPersonas();
+        setPersonas(mockPersonas);
+        setError('Demo mode: Showing sample personas. Database connection will be restored soon.');
+        return;
+      }
+      
       // Add timeout for better UX
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
@@ -56,7 +66,8 @@ export default function PersonasPage() {
       if (err instanceof Error && (
         err.name === 'AbortError' || 
         err.message.includes('Database temporarily unavailable') ||
-        err.message.includes('Failed to fetch')
+        err.message.includes('Failed to fetch') ||
+        err.message.includes('fetch is not defined')
       )) {
         // Database unavailable, loading mock data
         const { getMockPersonas } = await import('@/lib/mockData');
@@ -81,6 +92,12 @@ export default function PersonasPage() {
 
   const handleCreatePersona = async (personaData: unknown) => {
     try {
+      // In static export mode, show demo message
+      if (typeof window !== 'undefined' && window.location.protocol === 'file:') {
+        setError('Demo mode: Creating personas is not available in the static demo. Please visit the full application.');
+        return;
+      }
+      
       const response = await fetch('/api/personas', {
         method: 'POST',
         headers: {
@@ -109,6 +126,12 @@ export default function PersonasPage() {
 
   const handleDeletePersona = async (personaId: string) => {
     try {
+      // In static export mode, show demo message
+      if (typeof window !== 'undefined' && window.location.protocol === 'file:') {
+        setError('Demo mode: Deleting personas is not available in the static demo. Please visit the full application.');
+        return;
+      }
+      
       const response = await fetch(`/api/personas/${personaId}`, {
         method: 'DELETE',
       });
