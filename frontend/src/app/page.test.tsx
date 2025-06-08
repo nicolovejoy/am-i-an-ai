@@ -3,10 +3,10 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Home from "./page";
 
-// Mock the ChatContainer component
-jest.mock("@/components/ChatContainer", () => {
-  return function MockChatContainer() {
-    return <div data-testid="chat-interface-mock" />;
+// Mock the ConversationList component
+jest.mock("@/components/ConversationList", () => {
+  return function MockConversationList() {
+    return <div data-testid="conversation-list-mock" />;
   };
 });
 
@@ -46,12 +46,11 @@ describe("Home Page", () => {
 
     render(<Home />);
 
-    // Check if the mocked chat interface component is rendered
-    expect(screen.getByTestId("chat-interface-mock")).toBeInTheDocument();
+    // Check if the mocked conversation list component is rendered
+    expect(screen.getByTestId("conversation-list-mock")).toBeInTheDocument();
     
-    // Check main title for authenticated view
-    const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading).toHaveTextContent(/am i an ai\?/i);
+    // Check that we're in the authenticated view (no title for authenticated users)
+    expect(screen.queryByText(/About Am I an AI/i)).not.toBeInTheDocument();
   });
 
   it("shows loading state", () => {
