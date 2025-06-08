@@ -1,10 +1,13 @@
-# Next Steps: Database Setup & Development
+# Next Steps: Database Setup & Core Features
 
-## 🎯 Current Status
-- ✅ AWS Infrastructure deployed (RDS PostgreSQL running)
-- ✅ Database APIs created in Next.js app
-- ✅ Hybrid development approach configured
-- ❌ Database schema not yet created
+## 🎯 Current Status (Updated: 2025-01-07)
+- ✅ AWS Infrastructure deployed and working (RDS PostgreSQL in public subnets)
+- ✅ Complete database layer implemented with PostgreSQL schema
+- ✅ Repository pattern with type-safe CRUD operations  
+- ✅ Admin API endpoints for database management
+- ✅ Improved infrastructure scripts with robust error handling
+- ✅ All code committed and CI/CD pipeline working
+- ❌ Database schema not yet deployed to production database
 - ❌ Sample data not yet seeded
 
 ## 🚀 Immediate Next Steps
@@ -12,10 +15,10 @@
 ### Step 1: Test Database Connection
 ```bash
 cd frontend
-npm run dev  # Should start on localhost:3001
+npm run dev  # Starts on http://localhost:3000
 
 # Test database status
-curl http://localhost:3001/api/admin/database-status
+curl http://localhost:3000/api/admin/database-status/
 ```
 
 **Expected Result:** Should show database connection status and table counts (likely all zeros since schema isn't created yet).
@@ -23,7 +26,7 @@ curl http://localhost:3001/api/admin/database-status
 ### Step 2: Create Database Schema
 ```bash
 # Create all tables and indexes
-curl -X POST http://localhost:3001/api/admin/setup-database
+curl -X POST http://localhost:3000/api/admin/setup-database/
 ```
 
 **Expected Result:** 
@@ -38,7 +41,7 @@ curl -X POST http://localhost:3001/api/admin/setup-database
 ### Step 3: Seed Sample Data
 ```bash
 # Add sample users, personas, conversations, and messages
-curl -X POST http://localhost:3001/api/admin/seed-database
+curl -X POST http://localhost:3000/api/admin/seed-database/
 ```
 
 **Expected Result:**
@@ -57,50 +60,71 @@ curl -X POST http://localhost:3001/api/admin/seed-database
 ### Step 4: Verify Setup
 ```bash
 # Check final status
-curl http://localhost:3001/api/admin/database-status
+curl http://localhost:3000/api/admin/database-status/
 ```
 
 **Expected Result:** Should show populated tables with data counts.
 
+## 🎛️ Database Management Tools
+
+### Option A: Use DBeaver (Recommended)
+For visual database management:
+1. **Download DBeaver Community Edition** (free)
+2. **Connect with these details:**
+   - Host: `eeyore-postgres.cw92m20s8ece.us-east-1.rds.amazonaws.com`
+   - Port: `5432`
+   - Database: `amianai`
+   - Username: `amianai_admin`
+   - Password: Get from AWS Secrets Manager
+3. **Run schema/seed operations** directly via SQL
+
+### Option B: Use Direct Scripts
+```bash
+# Run database scripts directly
+npx tsx scripts/setup-schema.ts
+npx tsx scripts/seed-database.ts
+npx tsx scripts/show-data.ts
+```
+
 ## 🔧 Development Workflow
 
 ### Daily Development
-1. **Start local dev server:** `npm run dev`
+1. **Start local dev server:** `npm run dev` (runs on http://localhost:3000)
 2. **Make code changes** - instant hot reload
 3. **Test with production data** via localhost APIs
-4. **Deploy when ready:** `npm run build && deploy to S3`
+4. **Deploy when ready:** Infrastructure handles automatic deployment
 
 ### Database Operations
-- **Schema changes:** Modify API endpoints in `src/app/api/admin/`
-- **Data resets:** `POST /api/admin/seed-database` (clears and re-seeds)
-- **Status checks:** `GET /api/admin/database-status`
+- **Schema changes:** Modify `src/lib/schema.ts` and redeploy
+- **Data resets:** `POST /api/admin/seed-database/` (clears and re-seeds)
+- **Status checks:** `GET /api/admin/database-status/`
+- **Visual management:** Use DBeaver for complex queries
 
 ## ⚠️ Important Notes
 
 - **Production Database:** All operations hit AWS RDS PostgreSQL
-- **Admin Protection:** APIs require `ENABLE_DB_ADMIN=true` in environment
+- **Admin Protection:** APIs require `ENABLE_DB_ADMIN=true` in `.env.local`
 - **Safety First:** Seed operation clears existing data - use carefully
 - **No Local DB:** Everything connects to AWS production database
-
-## 🚨 If Something Goes Wrong
-
-### Database Connection Issues
-1. Check AWS credentials: `aws sts get-caller-identity`
-2. Verify RDS is running: `aws rds describe-db-instances --db-instance-identifier eeyore-postgres`
-3. Check environment variables in `.env.local`
-
-### API Permission Denied
-- Ensure `ENABLE_DB_ADMIN=true` in `.env.local`
-- Restart dev server after env changes
-
-### Network Timeouts
-- RDS instance might be in private subnets (we made it temporarily public)
-- Check security group allows your IP: `97.113.76.220/32`
+- **Environment Variables:** Auto-configured by infrastructure setup script
 
 ## 📈 Next Development Phases
 
-1. **Complete database setup** (this phase)
-2. **Build core conversation UI**
-3. **Implement persona management**
-4. **Add AI integration**
-5. **Deploy to production**
+1. **✅ Infrastructure & Database Layer** - COMPLETE
+2. **🔄 Database Setup** - Ready to execute (this phase)  
+3. **⏭️ Core Conversation UI** - Build persona selection and chat interface
+4. **⏭️ Persona Management** - Create/edit personas, ambiguity settings
+5. **⏭️ AI Integration** - Connect AI agents, response generation
+6. **⏭️ Advanced Features** - Analytics, reveal mechanics, conversation goals
+
+## 🎯 Success Criteria for Current Phase
+
+- [ ] Database schema successfully deployed
+- [ ] Sample data seeded (3 users, 4 personas, 1 conversation, 3 messages)
+- [ ] DBeaver connection working for visual database management
+- [ ] All admin APIs responding correctly
+- [ ] Ready to begin UI development for conversation features
+
+---
+
+**🚀 Ready for New Context:** The foundation is complete! Next session should focus on database setup and beginning core conversation UI development.

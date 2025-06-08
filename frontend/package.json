@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "jest --coverage",
-    "db:show": "npx tsx scripts/show-data.ts"
+    "db:setup": "npx tsx scripts/setup-schema.ts",
+    "db:seed": "npx tsx scripts/seed-database.ts",
+    "db:show": "npx tsx scripts/show-data.ts",
+    "db:reset": "npm run db:setup && npm run db:seed"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "3.826.0",
