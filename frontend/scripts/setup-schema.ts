@@ -1,4 +1,5 @@
 #!/usr/bin/env ts-node
+/* eslint-disable no-console, no-undef */
 
 async function schemaMain() {
   try {

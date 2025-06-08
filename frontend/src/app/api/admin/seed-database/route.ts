@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getDatabase } from '../../../../lib/database';
 
 // Safety: Only allow when explicitly enabled
+// eslint-disable-next-line no-undef
 const isAdminEnabled = process.env.ENABLE_DB_ADMIN === 'true';
 
 export async function POST() {

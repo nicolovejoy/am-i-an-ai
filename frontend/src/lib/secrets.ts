@@ -17,12 +17,12 @@ export async function getDatabaseCredentials(): Promise<DatabaseCredentials> {
   }
 
   // Check if we're using AWS Secrets Manager
-  const secretArn = process.env.DB_SECRET_ARN;
+  const secretArn = process.env.DB_SECRET_ARN; // eslint-disable-line no-undef
   
   if (secretArn) {
     try {
       const client = new SecretsManagerClient({ 
-        region: process.env.AWS_REGION || 'us-east-1' 
+        region: process.env.AWS_REGION || 'us-east-1'  // eslint-disable-line no-undef
       });
       
       const command = new GetSecretValueCommand({
@@ -44,11 +44,11 @@ export async function getDatabaseCredentials(): Promise<DatabaseCredentials> {
 
   // Fall back to environment variables for local development
   const credentials: DatabaseCredentials = {
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || '',
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    dbname: process.env.DB_NAME || 'amianai_dev',
+    username: process.env.DB_USER || 'postgres', // eslint-disable-line no-undef
+    password: process.env.DB_PASSWORD || '', // eslint-disable-line no-undef
+    host: process.env.DB_HOST || 'localhost', // eslint-disable-line no-undef
+    port: parseInt(process.env.DB_PORT || '5432'), // eslint-disable-line no-undef
+    dbname: process.env.DB_NAME || 'amianai_dev', // eslint-disable-line no-undef
   };
 
   cachedCredentials = credentials;

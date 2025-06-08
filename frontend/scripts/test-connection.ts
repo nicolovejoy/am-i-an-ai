@@ -1,3 +1,4 @@
+/* eslint-disable no-console, no-undef, @typescript-eslint/no-explicit-any */
 async function testMain() {
   try {
     console.log('🔌 Testing database connection...');

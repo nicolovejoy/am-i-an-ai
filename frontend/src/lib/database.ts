@@ -110,12 +110,12 @@ export const createDatabaseConnection = async (): Promise<DatabaseConnection> =>
   const credentials = await getDatabaseCredentials();
   
   const config = {
-    host: credentials.host || process.env.DB_HOST || 'localhost',
-    port: credentials.port || parseInt(process.env.DB_PORT || '5432'),
-    database: credentials.dbname || process.env.DB_NAME || 'amianai_dev',
+    host: credentials.host || process.env.DB_HOST || 'localhost', // eslint-disable-line no-undef
+    port: credentials.port || parseInt(process.env.DB_PORT || '5432'), // eslint-disable-line no-undef
+    database: credentials.dbname || process.env.DB_NAME || 'amianai_dev', // eslint-disable-line no-undef
     user: credentials.username,
     password: credentials.password,
-    ssl: process.env.NODE_ENV === 'production',
+    ssl: process.env.NODE_ENV === 'production', // eslint-disable-line no-undef
   };
 
   return new PostgreSQLConnection(config);
