@@ -65,6 +65,21 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching personas:', error);
+    
+    // Check if it's a database connection error
+    if (error instanceof Error && (
+      error.message.includes('ETIMEDOUT') || 
+      error.message.includes('ECONNREFUSED') ||
+      error.message.includes('connection')
+    )) {
+      // Return empty personas list when database is unavailable
+      return NextResponse.json({ 
+        personas: [],
+        total: 0,
+        error: 'Database temporarily unavailable. Please try again later.'
+      });
+    }
+    
     return NextResponse.json(
       { error: 'Failed to fetch personas' },
       { status: 500 }

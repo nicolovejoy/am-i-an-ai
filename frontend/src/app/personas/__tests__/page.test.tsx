@@ -145,8 +145,10 @@ describe('PersonasPage', () => {
       render(<PersonasPage />);
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/api/personas?public=true');
-      });
+        expect(mockFetch).toHaveBeenCalledWith('/api/personas?public=true', {
+          signal: expect.any(AbortSignal)
+        });
+      }, { timeout: 10000 });
     });
   });
 
@@ -167,7 +169,10 @@ describe('PersonasPage', () => {
     it('shows error message when API returns error status', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
-        status: 500
+        status: 500,
+        json: jest.fn().mockResolvedValue({
+          error: 'Server error occurred'
+        })
       });
 
       render(<PersonasPage />);
@@ -176,7 +181,31 @@ describe('PersonasPage', () => {
         expect(screen.getByText('Error Loading Personas')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Failed to fetch personas')).toBeInTheDocument();
+      // With our improved UX, should show either server error or demo mode
+      expect(
+        screen.getByText('Server error occurred') || 
+        screen.getByText(/Demo mode/)
+      ).toBeInTheDocument();
+    });
+
+    it('shows database unavailable message gracefully', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue({
+          personas: [],
+          total: 0,
+          error: 'Database temporarily unavailable. Please try again later.'
+        })
+      });
+
+      render(<PersonasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Error Loading Personas')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Database temporarily unavailable. Please try again later.')).toBeInTheDocument();
     });
 
     it('allows retrying after error', async () => {

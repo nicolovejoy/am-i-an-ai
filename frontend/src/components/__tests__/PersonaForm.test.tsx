@@ -260,8 +260,6 @@ describe('PersonaForm', () => {
     });
 
     it('allows adjusting personality trait values', async () => {
-      const user = userEvent.setup();
-      
       render(
         <PersonaForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />
       );

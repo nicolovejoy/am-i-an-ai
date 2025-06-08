@@ -23,22 +23,63 @@ export default function PersonasPage() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/personas?public=true');
-      if (!response.ok) {
-        throw new Error('Failed to fetch personas');
-      }
+      // Add timeout for better UX
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      
+      const response = await fetch('/api/personas?public=true', {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
       
       const data = await response.json();
+      
+      if (!response.ok) {
+        // Handle specific database unavailable case
+        if (data.error && data.error.includes('Database temporarily unavailable')) {
+          setError(data.error);
+          setPersonas([]); // Show empty state with database message
+          return;
+        }
+        throw new Error(data.error || 'Failed to fetch personas');
+      }
+      
       setPersonas(data.personas || []);
       
+      // Show warning if database returned an error but still gave us data
+      if (data.error) {
+        setError(data.error);
+      }
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load personas');
+      // If database is completely unavailable, fall back to mock data
+      if (err instanceof Error && (
+        err.name === 'AbortError' || 
+        err.message.includes('Database temporarily unavailable') ||
+        err.message.includes('Failed to fetch')
+      )) {
+        // Database unavailable, loading mock data
+        const { getMockPersonas } = await import('@/lib/mockData');
+        const mockPersonas = await getMockPersonas();
+        setPersonas(mockPersonas);
+        setError('Demo mode: Showing sample personas. Database connection will be restored soon.');
+        return;
+      }
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          setError('Request timed out. The database may be experiencing issues. Please try again.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Failed to load personas');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreatePersona = async (personaData: any) => {
+  const handleCreatePersona = async (personaData: unknown) => {
     try {
       const response = await fetch('/api/personas', {
         method: 'POST',
@@ -86,7 +127,11 @@ export default function PersonasPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
-        <LoadingSpinner />
+        <div className="text-center">
+          <LoadingSpinner size="xl" />
+          <p className="mt-4 text-gray-600">Loading personas...</p>
+          <p className="mt-2 text-sm text-gray-500">This may take a moment while we connect to the database</p>
+        </div>
       </div>
     );
   }
@@ -95,14 +140,42 @@ export default function PersonasPage() {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Personas</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadPersonas}
-            className="px-4 py-2 bg-[#8B6B4A] text-white rounded-lg hover:bg-[#7A5D42] transition-colors"
-          >
-            Try Again
-          </button>
+          {error?.includes('Demo mode') ? (
+            <>
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Demo Mode Active</h2>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={loadPersonas}
+                  className="px-4 py-2 bg-[#8B6B4A] text-white rounded-lg hover:bg-[#7A5D42] transition-colors"
+                >
+                  Retry Connection
+                </button>
+                <button
+                  onClick={() => setError(null)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Continue with Demo
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Personas</h2>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <button
+                onClick={loadPersonas}
+                className="px-4 py-2 bg-[#8B6B4A] text-white rounded-lg hover:bg-[#7A5D42] transition-colors"
+              >
+                Try Again
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -112,6 +185,29 @@ export default function PersonasPage() {
     <ErrorBoundary>
       <main className="min-h-screen bg-[#F8F6F3]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Demo Mode Banner */}
+          {personas.length > 0 && personas[0]?.id?.startsWith('mock-') && (
+            <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-blue-900">Demo Mode Active</h3>
+                  <p className="text-xs text-blue-700">You're viewing sample personas. Database connection will be restored soon.</p>
+                </div>
+                <button
+                  onClick={loadPersonas}
+                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
