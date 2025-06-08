@@ -17,6 +17,10 @@ const NavMenu: React.FC = () => {
   };
 
   const isActive = (path: string) => {
+    // Handle conversations route specially - active for /, /conversations, /conversations/*
+    if (path === '/') {
+      return pathname === '/' || pathname.startsWith('/conversations');
+    }
     return pathname === path;
   };
 
