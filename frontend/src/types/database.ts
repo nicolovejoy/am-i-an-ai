@@ -276,16 +276,3 @@ export interface DatabaseTransaction {
   rollback(): Promise<void>;
 }
 
-// Migration types
-export interface DatabaseMigration {
-  version: string;
-  description: string;
-  up: (connection: DatabaseConnection) => Promise<void>;
-  down: (connection: DatabaseConnection) => Promise<void>;
-}
-
-export interface MigrationRunner {
-  run(): Promise<void>;
-  rollback(version?: string): Promise<void>;
-  status(): Promise<{ version: string; appliedAt: Date }[]>;
-}
