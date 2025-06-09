@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { useRouter } from 'next/navigation';
 import NewConversationPage from '../page';
@@ -53,7 +53,9 @@ describe('NewConversationPage - Simplified Tests', () => {
   });
   
   afterEach(() => {
-    jest.runOnlyPendingTimers();
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
     jest.useRealTimers();
   });
 
@@ -67,7 +69,9 @@ describe('NewConversationPage - Simplified Tests', () => {
       render(<NewConversationPage />);
       
       // Fast-forward loading timers
-      jest.advanceTimersByTime(700);
+      await act(async () => {
+        jest.advanceTimersByTime(700);
+      });
       
       // Wait for loading to complete
       await waitFor(() => {
@@ -96,7 +100,9 @@ describe('NewConversationPage - Simplified Tests', () => {
       render(<NewConversationPage />);
       
       // Fast-forward loading timers
-      jest.advanceTimersByTime(700);
+      await act(async () => {
+        jest.advanceTimersByTime(700);
+      });
       
       // Wait for loading to complete
       await waitFor(() => {
@@ -114,11 +120,18 @@ describe('NewConversationPage - Simplified Tests', () => {
     });
 
     it('renders personas for selection', () => {
-      expect(screen.getByText('The Philosopher')).toBeInTheDocument();
-      expect(screen.getByText('Deep Thinker')).toBeInTheDocument();
-      expect(screen.getByText('Creative Writer')).toBeInTheDocument();
-      expect(screen.getByText('Story Weaver')).toBeInTheDocument();
-      expect(screen.getByText('Tech Enthusiast')).toBeInTheDocument();
+      // Check that persona selection section exists
+      expect(screen.getByRole('heading', { level: 2, name: 'Select Participants' })).toBeInTheDocument();
+      
+      // Check for persona descriptions which are unique
+      expect(screen.getByText(/thoughtful individual who enjoys deep discussions/)).toBeInTheDocument();
+      expect(screen.getByText(/AI with sophisticated reasoning capabilities/)).toBeInTheDocument();
+      expect(screen.getByText(/loves crafting stories and exploring/)).toBeInTheDocument();
+      expect(screen.getByText(/specialized in collaborative storytelling/)).toBeInTheDocument();
+      expect(screen.getByText(/technology-focused individual passionate/)).toBeInTheDocument();
+      
+      // Check that suggested pairs section appears
+      expect(screen.getByText('💡 Suggested Compatible Pairs')).toBeInTheDocument();
     });
 
     it('renders persona checkboxes', () => {
@@ -137,7 +150,9 @@ describe('NewConversationPage - Simplified Tests', () => {
       render(<NewConversationPage />);
       
       // Fast-forward loading timers
-      jest.advanceTimersByTime(700);
+      await act(async () => {
+        jest.advanceTimersByTime(700);
+      });
       
       // Wait for loading to complete
       await waitFor(() => {
