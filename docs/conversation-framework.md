@@ -18,13 +18,12 @@ The "Am I an AI?" project is building an interactive portal that creates meaning
   - Query builder with type safety
   - Transaction support for complex operations
 
-#### 2. Database Migrations System
-- **File**: `src/lib/migrations.ts`
+#### 2. Database Setup System
+- **File**: `src/lib/schema.ts`
 - **Features**:
   - Complete schema creation for all core entities
-  - Migration rollback capabilities
-  - Database initialization and setup scripts
-  - **npm scripts**: `db:migrate`, `db:rollback`
+  - Direct database initialization and setup scripts
+  - **npm scripts**: `db:setup`, `db:reset`
 
 #### 3. Database Seed Data
 - **File**: `src/lib/seedData.ts`
@@ -138,7 +137,7 @@ export async function POST(request: Request) {
 
 ```bash
 # Database operations
-npm run db:migrate    # Run migrations
+npm run db:setup     # Set up schema
 npm run db:seed      # Seed with test data
 npm run db:reset     # Reset and reseed
 
@@ -155,7 +154,7 @@ npm run lint         # ESLint checking
 src/
 ├── lib/
 │   ├── database.ts       # ✅ DB connection & query builder
-│   ├── migrations.ts     # ✅ Schema management
+│   ├── schema.ts        # ✅ Schema management
 │   └── seedData.ts       # ✅ Test data utilities
 ├── repositories/
 │   ├── UserRepository.ts         # ✅ User data access

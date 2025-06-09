@@ -272,7 +272,7 @@ jobs:
 - [ ] All 7 API endpoints working in production
 - [ ] Frontend successfully creates real conversations
 - [ ] AI responses generated and stored
-- [ ] Zero data loss during migration
+- [ ] Zero data loss during deployment
 
 ### Performance
 - [ ] API response time < 500ms (95th percentile)

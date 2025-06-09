@@ -126,7 +126,7 @@ npm run package || { log_error "Lambda packaging failed!"; exit 1; }
 
 # Deploy Lambda function
 log_info "Deploying Lambda function..."
-LAMBDA_FUNCTION_NAME=$(terraform output -raw lambda_function_name -state=../infrastructure/terraform.tfstate)
+LAMBDA_FUNCTION_NAME=$(terraform output -state=../../infrastructure/terraform.tfstate -raw lambda_function_name)
 if [ -n "$LAMBDA_FUNCTION_NAME" ]; then
     aws lambda update-function-code \
         --function-name "$LAMBDA_FUNCTION_NAME" \

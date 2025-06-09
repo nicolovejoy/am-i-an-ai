@@ -498,6 +498,22 @@ resource "aws_secretsmanager_secret_version" "db_password" {
   })
 }
 
+# Store OpenAI API key in AWS Secrets Manager
+resource "aws_secretsmanager_secret" "openai_api_key" {
+  name                    = "${var.project_name}-openai-api-key"
+  description             = "OpenAI API key for AI persona responses"
+  recovery_window_in_days = 0  # Allow immediate deletion for dev
+
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "openai_api_key" {
+  secret_id     = aws_secretsmanager_secret.openai_api_key.id
+  secret_string = jsonencode({
+    api_key = var.openai_api_key
+  })
+}
+
 # RDS PostgreSQL instance
 resource "aws_db_instance" "main" {
   identifier = "${var.project_name}-postgres"
@@ -781,7 +797,10 @@ resource "aws_iam_policy" "lambda_policy" {
         Action = [
           "secretsmanager:GetSecretValue"
         ]
-        Resource = aws_secretsmanager_secret.db_password.arn
+        Resource = [
+          aws_secretsmanager_secret.db_password.arn,
+          aws_secretsmanager_secret.openai_api_key.arn
+        ]
       },
       {
         Effect = "Allow"
@@ -834,6 +853,7 @@ resource "aws_lambda_function" "api" {
       DB_PORT       = "5432"
       DB_NAME       = aws_db_instance.main.db_name
       NODE_ENV      = "production"
+      OPENAI_SECRET_ARN = aws_secretsmanager_secret.openai_api_key.arn
     }
   }
 

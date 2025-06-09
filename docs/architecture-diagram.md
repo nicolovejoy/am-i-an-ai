@@ -157,6 +157,6 @@ graph TB
 
 - **Fast iteration** - local development with real data
 - **Environment consistency** - single production database
-- **Simplified deployment** - no database migration complexity
+- **Simplified deployment** - direct database setup and seeding
 - **Real data testing** - authentic development experience
 - **Infrastructure automation** - Terraform-managed resources

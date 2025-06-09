@@ -35,4 +35,10 @@ variable "project_name" {
   description = "The name of the project, used for resource naming"
   type        = string
   default     = "eeyore"
-} 
+}
+
+variable "openai_api_key" {
+  description = "OpenAI API key for AI persona responses"
+  type        = string
+  sensitive   = true
+}
