@@ -7,37 +7,25 @@ import { MessageInput } from './MessageInput';
 import { FullPageLoader } from './LoadingSpinner';
 import { aiOrchestrator } from '@/services/aiOrchestrator';
 import type { Message } from '@/types/messages';
+import type { Conversation, PersonaInstance } from '@/types/conversations';
 
 interface ConversationViewProps {
   conversationId: string;
 }
 
-interface ConversationParticipant {
-  personaId: string;
+interface ConversationParticipant extends PersonaInstance {
   personaName: string;
   personaType: 'human' | 'ai_agent';
-  isRevealed: boolean;
-  role: 'initiator' | 'responder';
-  joinedAt: Date;
-  lastActiveAt: Date;
 }
 
-interface ConversationData {
-  id: string;
-  title: string;
-  topic: string;
-  description?: string;
-  status: 'active' | 'paused' | 'completed' | 'terminated';
+interface ConversationData extends Omit<Conversation, 'participants'> {
   participants: ConversationParticipant[];
   messageCount: number;
   currentTurn: number;
-  createdAt: Date;
-  startedAt?: Date;
   topicTags: string[];
   totalCharacters: number;
   averageResponseTime: number;
   qualityScore?: number;
-  createdBy: string;
 }
 
 export function ConversationView({ conversationId }: ConversationViewProps) {
@@ -94,7 +82,13 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         totalCharacters: 2847,
         averageResponseTime: 180000,
         qualityScore: 4.2,
-        createdBy: 'user123'
+        createdBy: 'user123',
+        constraints: {
+          maxMessages: undefined,
+          maxDuration: undefined,
+          allowedTopics: ['philosophy', 'consciousness', 'ethics'],
+          endConditions: []
+        }
       };
 
       // Mock messages data

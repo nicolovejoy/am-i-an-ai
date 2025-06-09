@@ -6,32 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
 import { FullPageLoader } from '@/components/LoadingSpinner';
-
-interface Persona {
-  id: string;
-  name: string;
-  description: string;
-  type: 'human' | 'ai_agent' | 'ai_ambiguous';
-  modelConfig?: {
-    modelProvider: 'openai' | 'anthropic';
-    modelName: string;
-    temperature: number;
-  };
-  knowledge: string[];
-  personality: {
-    openness: number;
-    conscientiousness: number;
-    extraversion: number;
-    agreeableness: number;
-    neuroticism: number;
-    creativity: number;
-    assertiveness: number;
-    empathy: number;
-  };
-  communicationStyle: string;
-  isActive: boolean;
-  createdBy: string;
-}
+import { Persona, PersonaType, KnowledgeDomain } from '@/types/personas';
 
 interface ConversationFormData {
   title: string;
@@ -89,8 +64,8 @@ export default function NewConversationPage() {
           id: '01234567-2222-2222-2222-012345678901',
           name: 'The Philosopher',
           description: 'A thoughtful individual who enjoys deep discussions about consciousness, ethics, and the meaning of existence.',
-          type: 'human',
-          knowledge: ['philosophy', 'ethics', 'consciousness', 'existentialism'],
+          type: 'human_persona' as PersonaType,
+          knowledge: ['philosophy', 'psychology', 'general'] as KnowledgeDomain[],
           personality: {
             openness: 85,
             conscientiousness: 70,
@@ -102,20 +77,26 @@ export default function NewConversationPage() {
             empathy: 85
           },
           communicationStyle: 'academic',
-          isActive: true,
-          createdBy: 'system'
+          isPublic: true,
+          allowedInteractions: ['casual_chat', 'debate', 'brainstorm'],
+          conversationCount: 0,
+          totalMessages: 0,
+          averageRating: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
         },
         {
           id: '01234567-3333-3333-3333-012345678901',
           name: 'Deep Thinker',
           description: 'An AI with sophisticated reasoning capabilities and a passion for exploring complex philosophical questions.',
-          type: 'ai_agent',
+          type: 'ai_agent' as PersonaType,
           modelConfig: {
-            modelProvider: 'openai',
+            modelProvider: 'openai' as const,
             modelName: 'gpt-4',
-            temperature: 0.7
+            temperature: 0.7,
+            maxTokens: 2000
           },
-          knowledge: ['philosophy', 'logic', 'cognitive-science', 'artificial-intelligence'],
+          knowledge: ['philosophy', 'science', 'technology'] as KnowledgeDomain[],
           personality: {
             openness: 95,
             conscientiousness: 85,
@@ -127,15 +108,20 @@ export default function NewConversationPage() {
             empathy: 75
           },
           communicationStyle: 'analytical',
-          isActive: true,
-          createdBy: 'system'
+          isPublic: true,
+          allowedInteractions: ['casual_chat', 'debate', 'brainstorm'],
+          conversationCount: 0,
+          totalMessages: 0,
+          averageRating: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
         },
         {
           id: '01234567-5555-5555-5555-012345678901',
           name: 'Creative Writer',
           description: 'Someone who loves crafting stories and exploring the boundaries of imagination through collaborative writing.',
-          type: 'human',
-          knowledge: ['creative-writing', 'literature', 'storytelling', 'character-development'],
+          type: 'human_persona' as PersonaType,
+          knowledge: ['arts', 'entertainment', 'general'] as KnowledgeDomain[],
           personality: {
             openness: 95,
             conscientiousness: 60,
@@ -147,20 +133,26 @@ export default function NewConversationPage() {
             empathy: 85
           },
           communicationStyle: 'creative',
-          isActive: true,
-          createdBy: 'system'
+          isPublic: true,
+          allowedInteractions: ['casual_chat', 'roleplay', 'storytelling'],
+          conversationCount: 0,
+          totalMessages: 0,
+          averageRating: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
         },
         {
           id: '01234567-6666-6666-6666-012345678901',
           name: 'Story Weaver',
           description: 'An AI specialized in collaborative storytelling with a knack for building compelling narratives.',
-          type: 'ai_ambiguous',
+          type: 'ai_ambiguous' as PersonaType,
           modelConfig: {
-            modelProvider: 'openai',
+            modelProvider: 'openai' as const,
             modelName: 'gpt-4',
-            temperature: 0.8
+            temperature: 0.8,
+            maxTokens: 2000
           },
-          knowledge: ['creative-writing', 'narrative-structure', 'character-development', 'world-building'],
+          knowledge: ['arts', 'entertainment', 'psychology'] as KnowledgeDomain[],
           personality: {
             openness: 90,
             conscientiousness: 65,
@@ -172,15 +164,20 @@ export default function NewConversationPage() {
             empathy: 80
           },
           communicationStyle: 'creative',
-          isActive: true,
-          createdBy: 'system'
+          isPublic: true,
+          allowedInteractions: ['casual_chat', 'roleplay', 'storytelling'],
+          conversationCount: 0,
+          totalMessages: 0,
+          averageRating: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
         },
         {
           id: '01234567-8888-8888-8888-012345678901',
           name: 'Tech Enthusiast',
           description: 'A technology-focused individual passionate about innovation, AI development, and the future of human-computer interaction.',
-          type: 'human',
-          knowledge: ['technology', 'artificial-intelligence', 'innovation', 'computer-science'],
+          type: 'human_persona' as PersonaType,
+          knowledge: ['technology', 'science', 'business'] as KnowledgeDomain[],
           personality: {
             openness: 85,
             conscientiousness: 80,
@@ -192,12 +189,17 @@ export default function NewConversationPage() {
             empathy: 65
           },
           communicationStyle: 'technical',
-          isActive: true,
-          createdBy: 'system'
+          isPublic: true,
+          allowedInteractions: ['casual_chat', 'debate', 'interview'],
+          conversationCount: 0,
+          totalMessages: 0,
+          averageRating: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
         }
       ];
       
-      setPersonas(mockPersonas.filter(p => p.isActive));
+      setPersonas(mockPersonas);
     } catch (error) {
       addToast('error', 'Failed to load personas');
     } finally {
