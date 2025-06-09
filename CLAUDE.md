@@ -68,16 +68,24 @@ npm run build
 **MANDATORY: Before any git commit, ALWAYS run these commands in parallel:**
 
 ```bash
-npm run lint
-npm run test
-npm run build  # This includes TypeScript compilation check
+npm run lint          # ESLint code quality check
+npm run test          # Full test suite execution
+npm run build         # Production build with TypeScript compilation
+npx tsc --noEmit      # Explicit TypeScript type checking
 ```
 
-- All linting errors must be fixed. warnings are okay though
-- All tests must pass
-- TypeScript compilation must succeed
-- Only commit if ALL checks pass
-- If any check fails, fix issues before committing
+**CRITICAL REQUIREMENTS:**
+- ✅ **All linting errors must be fixed** (warnings are okay)
+- ✅ **All tests must pass** (no failing tests allowed)
+- ✅ **TypeScript compilation must succeed** (no type errors)
+- ✅ **Production build must complete successfully**
+- ❌ **NEVER commit if ANY check fails**
+
+**Workflow:**
+1. Run all four commands in parallel using multiple tool calls
+2. Fix any errors found in linting, tests, or TypeScript
+3. Re-run checks until ALL pass
+4. Only then proceed with git commit
 
 ## Current Status
 
