@@ -16,7 +16,7 @@ We're building an ecosystem designed to nurture meaningful interactions built on
 
 ### Infrastructure
 
-- AWS (S3, CloudFront, Lambda)
+- AWS (S3, CloudFront, Lambda, API Gateway, RDS PostgreSQL)
 - Terraform for IaC
 - GitHub Actions for CI/CD
 
@@ -24,7 +24,7 @@ We're building an ecosystem designed to nurture meaningful interactions built on
 
 ### Prerequisites
 
-- Node.js >= 16 and npm
+- Node.js >= 20 and npm
 - AWS CLI configured with appropriate permissions
 - Terraform >= 1.0.0
 
@@ -68,8 +68,10 @@ We follow these key principles:
 
 ## 📚 Documentation
 
-- [Design System](docs/design-system.md): Our clean, modern design system
+- [Lambda Implementation Plan](docs/lambda-implementation-plan.md): Complete serverless API architecture
 - [Infrastructure](docs/infrastructure.md): AWS infrastructure and deployment details
+- [Next Steps](NEXT_STEPS.md): Current development phase and roadmap
+- [Project Summary](PROJECT_SUMMARY.md): Complete platform status overview
 
 ## 🤝 Contributing
 
@@ -91,18 +93,19 @@ The setup script handles the complete infrastructure deployment:
 
 ```bash
 cd infrastructure
-./scripts/setup.sh
+DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/setup.sh
 ```
 
 This script:
 
 - Initializes Terraform
-- Creates all AWS resources (S3, CloudFront, etc.)
-- Configures DNS settings
-- Sets up SSL certificates
-- Creates initial deployment paths
+- Creates all AWS resources (VPC, RDS PostgreSQL, Lambda, API Gateway, S3, CloudFront)
+- Configures DNS settings and SSL certificates
+- Sets up Lambda functions with VPC connectivity
+- Deploys database schema and sample data
+- Creates API endpoints for full database integration
 
-Expected duration: 15-30 minutes
+Expected duration: 20-40 minutes
 
 ### Teardown Script (`destroy.sh`)
 
@@ -110,7 +113,7 @@ The destroy script handles complete cleanup:
 
 ```bash
 cd infrastructure
-./scripts/destroy.sh
+DOMAIN_NAME=amianai.com ./scripts/destroy.sh
 ```
 
 This script:
