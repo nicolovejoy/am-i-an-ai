@@ -93,7 +93,8 @@ ENABLE_DB_ADMIN=true
 NODE_ENV=production
 
 # API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:3000
+API_GATEWAY_URL=$(terraform output -raw api_gateway_url)
+NEXT_PUBLIC_API_URL=${API_GATEWAY_URL}
 
 # Cognito Configuration
 NEXT_PUBLIC_COGNITO_REGION=$(terraform output -raw cognito_region)
@@ -102,6 +103,44 @@ NEXT_PUBLIC_COGNITO_CLIENT_ID=$(terraform output -raw cognito_client_id)
 EOF
 
 log_info "Environment file updated successfully!"
+
+# Build and deploy Lambda function
+log_info "Building Lambda function..."
+cd ../backend/lambda || exit 1
+
+# Check if node_modules exists for Lambda
+if [ ! -d "node_modules" ]; then
+    log_info "Installing Lambda dependencies..."
+    npm ci
+else
+    log_info "Lambda dependencies already installed, skipping npm ci"
+fi
+
+# Build Lambda function
+log_info "Building Lambda TypeScript..."
+npm run build || { log_error "Lambda build failed!"; exit 1; }
+
+# Package Lambda function
+log_info "Packaging Lambda function..."
+npm run package || { log_error "Lambda packaging failed!"; exit 1; }
+
+# Deploy Lambda function
+log_info "Deploying Lambda function..."
+LAMBDA_FUNCTION_NAME=$(terraform output -raw lambda_function_name -state=../infrastructure/terraform.tfstate)
+if [ -n "$LAMBDA_FUNCTION_NAME" ]; then
+    aws lambda update-function-code \
+        --function-name "$LAMBDA_FUNCTION_NAME" \
+        --zip-file fileb://lambda-function.zip || {
+        log_error "Lambda deployment failed!"
+        exit 1
+    }
+    log_info "Lambda function deployed successfully!"
+else
+    log_warn "Lambda function name not found in Terraform output. Skipping Lambda deployment."
+fi
+
+# Return to infrastructure directory
+cd ../infrastructure || exit 1
 
 # Build and deploy frontend
 log_info "Building frontend..."
@@ -152,18 +191,25 @@ echo ""
 log_info "🎉 Setup complete!"
 echo ""
 echo "✅ Infrastructure deployed successfully"
+echo "✅ Lambda API function deployed"
 echo "✅ Frontend built and deployed"
 echo "✅ Environment variables configured"
 echo ""
+echo "API endpoints are now available:"
+echo "- API Gateway URL: $(terraform output -raw api_gateway_url 2>/dev/null || echo 'Not available')"
+echo ""
 echo "Next steps:"
-echo "1. Test database connection:"
-echo "   curl http://localhost:3000/api/admin/database-status/"
+echo "1. Test API health:"
+echo "   curl $(terraform output -raw api_gateway_url 2>/dev/null || echo 'API_URL')/api/health"
 echo ""
-echo "2. Setup database schema and seed data:"
-echo "   curl -X POST http://localhost:3000/api/admin/setup-database/"
-echo "   curl -X POST http://localhost:3000/api/admin/seed-database/"
+echo "2. Test database connection:"
+echo "   curl $(terraform output -raw api_gateway_url 2>/dev/null || echo 'API_URL')/api/admin/database-status"
 echo ""
-echo "3. Your website is available at: https://${DOMAIN_NAME}"
+echo "3. Setup database schema and seed data:"
+echo "   curl -X POST $(terraform output -raw api_gateway_url 2>/dev/null || echo 'API_URL')/api/admin/setup-database"
+echo "   curl -X POST $(terraform output -raw api_gateway_url 2>/dev/null || echo 'API_URL')/api/admin/seed-database"
+echo ""
+echo "4. Your website is available at: https://${DOMAIN_NAME}"
 echo ""
 echo "Database connection details:"
 echo "- Endpoint: ${DB_ENDPOINT}"

@@ -64,12 +64,20 @@ else
     echo "No CloudFront distribution found, skipping disable step..."
 fi
 
-# No Lambda functions to build in new architecture
+# Cleanup Lambda deployment packages
+echo "Cleaning up Lambda deployment packages..."
+if [ -f "../backend/lambda/lambda-function.zip" ]; then
+    rm "../backend/lambda/lambda-function.zip"
+    echo "Lambda deployment package cleaned up"
+fi
+
+if [ -f "lambda-placeholder.zip" ]; then
+    rm "lambda-placeholder.zip"
+    echo "Lambda placeholder package cleaned up"
+fi
 
 # Destroy infrastructure
 echo "Destroying infrastructure..."
 terraform destroy -auto-approve
-
-# No Lambda deployment packages to clean up
 
 echo "Infrastructure destroyed successfully!" 

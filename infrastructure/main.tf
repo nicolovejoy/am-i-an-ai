@@ -145,6 +145,7 @@ resource "aws_s3_bucket_policy" "website" {
 # SSL Certificate
 resource "aws_acm_certificate" "website" {
   domain_name       = var.domain_name
+  subject_alternative_names = ["api.${var.domain_name}"]
   validation_method = "DNS"
 
   lifecycle {
@@ -175,6 +176,12 @@ resource "aws_route53_record" "cert_validation" {
   ttl             = 60
   type            = each.value.type
   zone_id         = data.aws_route53_zone.website.zone_id
+}
+
+# Certificate validation
+resource "aws_acm_certificate_validation" "website" {
+  certificate_arn         = aws_acm_certificate.website.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
 # Website DNS record
@@ -484,6 +491,10 @@ resource "aws_secretsmanager_secret_version" "db_password" {
   secret_string = jsonencode({
     username = "amianai_admin"
     password = random_password.db_password.result
+    engine   = "postgres"
+    host     = aws_db_instance.main.address
+    port     = aws_db_instance.main.port
+    dbname   = aws_db_instance.main.db_name
   })
 }
 
@@ -687,4 +698,300 @@ output "database_name" {
 output "database_secret_arn" {
   description = "ARN of the secret containing database credentials"
   value       = aws_secretsmanager_secret.db_password.arn
+}
+
+############################
+# Lambda & API Gateway
+############################
+
+# Security group for Lambda functions
+resource "aws_security_group" "lambda" {
+  name_prefix = "${var.project_name}-lambda-"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS inbound"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "All outbound traffic"
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-lambda-sg"
+  })
+}
+
+# IAM role for Lambda execution
+resource "aws_iam_role" "lambda_execution" {
+  name_prefix = "${var.project_name}-lambda-execution-"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+# IAM policy for Lambda to access VPC, RDS, and Secrets Manager
+resource "aws_iam_policy" "lambda_policy" {
+  name_prefix = "${var.project_name}-lambda-policy-"
+  description = "IAM policy for Lambda function"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateNetworkInterface",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DeleteNetworkInterface"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = aws_secretsmanager_secret.db_password.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "rds:DescribeDBInstances",
+          "rds:DescribeDBClusters"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+# Attach policy to Lambda execution role
+resource "aws_iam_role_policy_attachment" "lambda_policy" {
+  role       = aws_iam_role.lambda_execution.name
+  policy_arn = aws_iam_policy.lambda_policy.arn
+}
+
+# Attach AWS managed VPC execution policy
+resource "aws_iam_role_policy_attachment" "lambda_vpc_execution" {
+  role       = aws_iam_role.lambda_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+# Lambda function placeholder (will be deployed by script)
+resource "aws_lambda_function" "api" {
+  function_name = "${var.project_name}-api"
+  role         = aws_iam_role.lambda_execution.arn
+  handler      = "index.handler"
+  runtime      = "nodejs20.x"
+  timeout      = 30
+  memory_size  = 512
+
+  # Placeholder code - will be replaced by deployment script
+  filename      = "lambda-placeholder.zip"
+  source_code_hash = data.archive_file.lambda_placeholder.output_base64sha256
+
+  vpc_config {
+    subnet_ids         = aws_subnet.private[*].id
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  environment {
+    variables = {
+      DB_SECRET_ARN = aws_secretsmanager_secret.db_password.arn
+      DB_HOST       = aws_db_instance.main.address
+      DB_PORT       = "5432"
+      DB_NAME       = aws_db_instance.main.db_name
+      NODE_ENV      = "production"
+    }
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_policy,
+    aws_iam_role_policy_attachment.lambda_vpc_execution,
+    aws_cloudwatch_log_group.lambda_logs,
+  ]
+
+  tags = var.tags
+}
+
+# Create placeholder Lambda deployment package
+data "archive_file" "lambda_placeholder" {
+  type        = "zip"
+  output_path = "lambda-placeholder.zip"
+  
+  source {
+    content = jsonencode({
+      exports = {
+        handler = "async (event) => ({ statusCode: 200, body: JSON.stringify({ message: 'Placeholder Lambda' }) })"
+      }
+    })
+    filename = "index.js"
+  }
+}
+
+# CloudWatch Log Group for Lambda
+resource "aws_cloudwatch_log_group" "lambda_logs" {
+  name              = "/aws/lambda/${var.project_name}-api"
+  retention_in_days = 14
+  tags              = var.tags
+}
+
+# API Gateway REST API
+resource "aws_api_gateway_rest_api" "main" {
+  name        = "${var.project_name}-api"
+  description = "AmIAnAI API Gateway"
+  
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+
+  tags = var.tags
+}
+
+# API Gateway resource for proxy integration
+resource "aws_api_gateway_resource" "proxy" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "{proxy+}"
+}
+
+# API Gateway method for ANY requests
+resource "aws_api_gateway_method" "proxy" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.proxy.id
+  http_method   = "ANY"
+  authorization = "NONE"
+}
+
+# API Gateway method for root path
+resource "aws_api_gateway_method" "proxy_root" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_rest_api.main.root_resource_id
+  http_method   = "ANY"
+  authorization = "NONE"
+}
+
+# API Gateway integration with Lambda
+resource "aws_api_gateway_integration" "lambda" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_method.proxy.resource_id
+  http_method = aws_api_gateway_method.proxy.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.api.invoke_arn
+}
+
+# API Gateway integration for root path
+resource "aws_api_gateway_integration" "lambda_root" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_method.proxy_root.resource_id
+  http_method = aws_api_gateway_method.proxy_root.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.api.invoke_arn
+}
+
+# Lambda permission for API Gateway
+resource "aws_lambda_permission" "api_gw" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+# API Gateway deployment
+resource "aws_api_gateway_deployment" "main" {
+  depends_on = [
+    aws_api_gateway_integration.lambda,
+    aws_api_gateway_integration.lambda_root,
+  ]
+
+  rest_api_id = aws_api_gateway_rest_api.main.id
+
+  # Force new deployment on changes
+  triggers = {
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_resource.proxy.id,
+      aws_api_gateway_method.proxy.id,
+      aws_api_gateway_method.proxy_root.id,
+      aws_api_gateway_integration.lambda.id,
+      aws_api_gateway_integration.lambda_root.id,
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# API Gateway stage
+resource "aws_api_gateway_stage" "prod" {
+  deployment_id = aws_api_gateway_deployment.main.id
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  stage_name    = "prod"
+
+  tags = var.tags
+}
+
+# Note: Custom domain temporarily disabled due to certificate conflicts
+# Using default API Gateway URL for now
+
+############################
+# Lambda & API Gateway Outputs
+############################
+
+output "api_gateway_url" {
+  description = "The URL of the API Gateway"
+  value       = aws_api_gateway_stage.prod.invoke_url
+}
+
+output "api_custom_domain_url" {
+  description = "The custom domain URL for the API (disabled)"
+  value       = "Custom domain disabled - using default API Gateway URL"
+}
+
+output "lambda_function_name" {
+  description = "Name of the Lambda function"
+  value       = aws_lambda_function.api.function_name
+}
+
+output "lambda_function_arn" {
+  description = "ARN of the Lambda function"
+  value       = aws_lambda_function.api.arn
 }
