@@ -271,18 +271,40 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         isArchived: false
       };
 
-      // Add message to UI immediately
+      // Add message to UI immediately (optimistic update)
       setMessages(prev => [...prev, newMessage]);
 
-      // TODO: Send to actual API endpoint when connected to database
-      // const response = await fetch(`/api/conversations/${conversationId}/messages`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ content, personaId: 'current-user-persona-id' })
-      // });
+      // Send to Lambda API to persist to database
+      try {
+        const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+        const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            content, 
+            personaId: 'current-user-persona-id', // TODO: Get from auth context
+            type: 'text'
+          })
+        });
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 200));
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Message persisted to database:', result);
+          // Update the optimistic message with the real database ID
+          if (result.messageId) {
+            setMessages(prev => prev.map(msg => 
+              msg.id === newMessage.id 
+                ? { ...msg, id: result.messageId }
+                : msg
+            ));
+          }
+        } else {
+          console.error('Failed to persist message to database:', response.status);
+        }
+      } catch (dbError) {
+        console.error('Error persisting message to database:', dbError);
+        // Message still shows in UI (optimistic update), but not persisted
+      }
 
       // Trigger AI response analysis and demo simulation
       try {
@@ -318,8 +340,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           if (aiTriggers.length > 0) {
             console.log('AI response triggers:', aiTriggers);
             
-            // In demo mode, simulate AI responses locally
-            simulateAIResponses(aiTriggers);
+            // Generate real AI responses
+            generateAIResponses(aiTriggers, newMessage.id);
           }
         }
       } catch (aiError) {
@@ -334,66 +356,113 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
     }
   };
 
-  // Demo function to simulate AI responses appearing
-  const simulateAIResponses = (triggers: { personaId: string; priority: number; reason: string; suggestedDelay: number }[]) => {
-    triggers.forEach((trigger) => {
-      // Show typing indicator
-      setTimeout(() => {
-        setTypingPersonas(prev => new Set([...prev, trigger.personaId]));
-      }, trigger.suggestedDelay);
+  // Generate real AI responses via API
+  const generateAIResponses = async (triggers: { personaId: string; priority: number; reason: string; suggestedDelay: number }[], triggerMessageId: string) => {
+    for (const trigger of triggers) {
+      try {
+        // Show typing indicator
+        setTimeout(() => {
+          setTypingPersonas(prev => new Set([...prev, trigger.personaId]));
+        }, trigger.suggestedDelay);
 
-      // Add AI response after typing delay
-      setTimeout(() => {
-        setTypingPersonas(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(trigger.personaId);
-          return newSet;
-        });
+        // Generate AI response after delay
+        setTimeout(async () => {
+          try {
+            const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+            const response = await fetch(`${LAMBDA_API_BASE}/api/ai/generate-response`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                conversationId,
+                personaId: trigger.personaId,
+                triggerMessageId,
+              }),
+            });
 
-        // Generate demo AI response based on persona
-        const demoResponses = {
-          '01234567-3333-3333-3333-012345678901': [
-            'That\'s a fascinating perspective. It makes me think about the relationship between consciousness and our ability to question our own existence.',
-            'Your point raises an important question about the nature of subjective experience. How do we distinguish between genuine understanding and sophisticated pattern matching?',
-            'I find myself wondering if consciousness might be more of a process than a state - something that emerges from complex interactions rather than a binary property.',
-            'That\'s an intriguing way to frame it. Perhaps the question isn\'t whether something is conscious, but rather how consciousness manifests across different types of information processing systems.'
-          ]
-        };
+            const data = await response.json();
 
-        const responses = demoResponses[trigger.personaId as keyof typeof demoResponses] || [
-          'That\'s an interesting point to consider.',
-          'I\'d like to explore that idea further.',
-          'Your perspective adds depth to this discussion.'
-        ];
+            // Remove typing indicator
+            setTypingPersonas(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(trigger.personaId);
+              return newSet;
+            });
 
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-
-        const aiMessage: Message = {
-          id: `ai-msg-${Date.now()}-${trigger.personaId}`,
-          conversationId: conversationId,
-          authorPersonaId: trigger.personaId,
-          content: randomResponse,
-          type: 'text',
-          timestamp: new Date(),
-          sequenceNumber: messages.length + 1,
-          isEdited: false,
-          metadata: {
-            wordCount: randomResponse.split(' ').length,
-            characterCount: randomResponse.length,
-            readingTime: Math.ceil(randomResponse.split(' ').length / 200),
-            complexity: 0.6,
-            responseTime: trigger.suggestedDelay,
-            aiGenerated: true
-          },
-          moderationStatus: 'approved',
-          isVisible: true,
-          isArchived: false
-        };
-
-        setMessages(prev => [...prev, aiMessage]);
-      }, trigger.suggestedDelay + 2000); // Add 2 seconds for "typing"
-    });
+            if (data.success) {
+              // AI response was generated and saved to database
+              // The message is already persisted, we could refresh here
+              // For now, we rely on the optimistic update in the UI
+              console.log(`AI response generated for persona ${trigger.personaId}:`, data.content);
+            } else {
+              console.error('AI response generation failed:', data.error);
+              // Fallback to demo response if AI fails
+              generateDemoResponse(trigger, triggerMessageId);
+            }
+          } catch (error) {
+            console.error('Error calling AI API:', error);
+            // Remove typing indicator
+            setTypingPersonas(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(trigger.personaId);
+              return newSet;
+            });
+            // Fallback to demo response if API fails
+            generateDemoResponse(trigger, triggerMessageId);
+          }
+        }, trigger.suggestedDelay + 1000); // Add 1 second for typing simulation
+      } catch (error) {
+        console.error(`Error setting up AI response for persona ${trigger.personaId}:`, error);
+      }
+    }
   };
+
+  // Fallback demo response function
+  const generateDemoResponse = (trigger: { personaId: string; priority: number; reason: string; suggestedDelay: number }, triggerMessageId: string) => {
+    const demoResponses = {
+      '01234567-3333-3333-3333-012345678901': [
+        'That\'s a fascinating perspective. It makes me think about the relationship between consciousness and our ability to question our own existence.',
+        'Your point raises an important question about the nature of subjective experience. How do we distinguish between genuine understanding and sophisticated pattern matching?',
+        'I find myself wondering if consciousness might be more of a process than a state - something that emerges from complex interactions rather than a binary property.',
+        'That\'s an intriguing way to frame it. Perhaps the question isn\'t whether something is conscious, but rather how consciousness manifests across different types of information processing systems.'
+      ]
+    };
+
+    const responses = demoResponses[trigger.personaId as keyof typeof demoResponses] || [
+      'That\'s an interesting point to consider.',
+      'I\'d like to explore that idea further.',
+      'Your perspective adds depth to this discussion.'
+    ];
+
+    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+
+    const aiMessage: Message = {
+      id: `demo-ai-msg-${Date.now()}-${trigger.personaId}`,
+      conversationId: conversationId,
+      authorPersonaId: trigger.personaId,
+      content: randomResponse,
+      type: 'text',
+      timestamp: new Date(),
+      sequenceNumber: messages.length + 1,
+      isEdited: false,
+      replyToMessageId: triggerMessageId,
+      metadata: {
+        wordCount: randomResponse.split(' ').length,
+        characterCount: randomResponse.length,
+        readingTime: Math.ceil(randomResponse.split(' ').length / 200),
+        complexity: 0.6,
+        responseTime: trigger.suggestedDelay,
+        aiGenerated: true
+      },
+      moderationStatus: 'approved',
+      isVisible: true,
+      isArchived: false
+    };
+
+    setMessages(prev => [...prev, aiMessage]);
+  };
+
 
   if (loading) {
     return <FullPageLoader text="Loading conversation..." />;

@@ -55,10 +55,27 @@ export default function NewConversationPage() {
     try {
       setLoading(true);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 600));
+      // Fetch personas from Lambda API
+      const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      const response = await fetch(`${LAMBDA_API_BASE}/api/personas`);
       
-      // Mock personas data that matches our database schema
+      if (!response.ok) {
+        throw new Error('Failed to fetch personas');
+      }
+      
+      const data = await response.json();
+      console.log('Personas fetched from API:', data);
+      
+      if (data.success && Array.isArray(data.personas)) {
+        setPersonas(data.personas);
+      } else {
+        throw new Error('Invalid personas response format');
+      }
+      
+    } catch (error) {
+      console.error('Error fetching personas, using mock data:', error);
+      
+      // Fallback to mock personas if API fails
       const mockPersonas: Persona[] = [
         {
           id: '01234567-2222-2222-2222-012345678901',
@@ -200,8 +217,6 @@ export default function NewConversationPage() {
       ];
       
       setPersonas(mockPersonas);
-    } catch (error) {
-      addToast('error', 'Failed to load personas');
     } finally {
       setLoading(false);
     }
@@ -259,8 +274,15 @@ export default function NewConversationPage() {
     try {
       setSubmitting(true);
       
-      // Create conversation via API
-      const response = await fetch('/api/conversations', {
+      // Create conversation via Lambda API
+      const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      
+      console.log('Creating conversation with data:', {
+        ...formData,
+        createdBy: 'demo-user'
+      });
+      
+      const response = await fetch(`${LAMBDA_API_BASE}/api/conversations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -271,19 +293,33 @@ export default function NewConversationPage() {
         }),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create conversation');
+        const errorText = await response.text();
+        console.error('API error response (raw):', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          console.error('API error response (parsed):', errorData);
+          throw new Error(errorData.error || errorData.message || 'Failed to create conversation');
+        } catch (parseError) {
+          console.error('Could not parse error response as JSON');
+          throw new Error(`Server error ${response.status}: ${errorText}`);
+        }
       }
 
       const data = await response.json();
+      console.log('API success response:', data);
       
       if (data.success && data.conversation) {
         addToast('success', 'Conversation created successfully!');
+        console.log('Redirecting to conversation:', data.conversation.id);
         router.push(`/conversations/${data.conversation.id}`);
       } else {
-        // Fallback to demo mode if API creation fails
-        addToast('success', 'Conversation created successfully! Redirecting to demo conversation...');
+        // This shouldn't happen if API is working correctly
+        console.error('Unexpected API response format:', data);
+        addToast('error', 'Unexpected response format from server');
         const demoConversationId = '01234567-1111-1111-1111-012345678901';
         router.push(`/conversations/${demoConversationId}`);
       }

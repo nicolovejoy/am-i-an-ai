@@ -4,16 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run build:static",
-    "build:static": "mv src/app/api ../api-backup 2>/dev/null || true && next build && mv ../api-backup src/app/api 2>/dev/null || true",
+    "build": "next build",
+    "build:static": "next build",
     "build:dev": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "jest --coverage",
-    "db:setup": "npx tsx scripts/setup-schema.ts",
-    "db:seed": "npx tsx scripts/seed-database.ts",
-    "db:show": "npx tsx scripts/show-data.ts",
-    "db:reset": "npm run db:setup && npm run db:seed"
+    "test": "jest --coverage"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "3.826.0",
