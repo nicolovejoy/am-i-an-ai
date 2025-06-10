@@ -148,8 +148,8 @@ describe('PersonasPage', () => {
         expect(mockFetch).toHaveBeenCalledWith('/api/personas?public=true', {
           signal: expect.any(AbortSignal)
         });
-      }, { timeout: 10000 });
-    });
+      });
+    }, 10000);
   });
 
   describe('Error Handling', () => {
@@ -325,7 +325,7 @@ describe('PersonasPage', () => {
       // Should reload personas
       expect(mockFetch).toHaveBeenCalledTimes(3);
       expect(screen.queryByTestId('persona-form')).not.toBeInTheDocument();
-    });
+    }, 10000);
 
     it('handles create persona error', async () => {
       const user = userEvent.setup();
@@ -448,7 +448,7 @@ describe('PersonasPage', () => {
 
       // Should reload personas
       expect(mockFetch).toHaveBeenCalledTimes(3);
-    });
+    }, 10000);
 
     it('handles delete persona error', async () => {
       const user = userEvent.setup();

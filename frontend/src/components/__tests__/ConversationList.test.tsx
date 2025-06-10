@@ -115,11 +115,15 @@ describe('ConversationList', () => {
       
       render(<ConversationList />);
       
+      // Wait for loading to complete and error to be handled
       await waitFor(() => {
         // After error, component should still render the header
         expect(screen.getByText('Your Conversations')).toBeInTheDocument();
-      }, { timeout: 10000 });
-    });
+      });
+      
+      // The component should handle the error gracefully
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+    }, 10000);
 
     it('handles retry functionality', async () => {
       render(<ConversationList />);
