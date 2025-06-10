@@ -37,7 +37,7 @@ export default function PersonasPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
-      const response = await fetch('/api/personas?public=true', {
+      const response = await fetch('https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -98,7 +98,7 @@ export default function PersonasPage() {
         return;
       }
       
-      const response = await fetch('/api/personas', {
+      const response = await fetch('https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export default function PersonasPage() {
         return;
       }
       
-      const response = await fetch(`/api/personas/${personaId}`, {
+      const response = await fetch(`https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/personas/${personaId}`, {
         method: 'DELETE',
       });
 

@@ -1,5 +1,5 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { queryDatabase } from '../lib/database';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { queryDatabase } from "../lib/database";
 
 export async function handlePersonas(
   event: APIGatewayProxyEvent,
@@ -14,7 +14,7 @@ export async function handlePersonas(
     const personaId = pathMatch ? pathMatch[1] : null;
 
     switch (method) {
-      case 'GET':
+      case "GET":
         if (personaId) {
           // GET /api/personas/:id
           return await getPersona(personaId, corsHeaders);
@@ -23,11 +23,11 @@ export async function handlePersonas(
           return await getPersonas(corsHeaders);
         }
 
-      case 'POST':
+      case "POST":
         // POST /api/personas
         return await createPersona(event, corsHeaders);
 
-      case 'PUT':
+      case "PUT":
         if (personaId) {
           // PUT /api/personas/:id
           return await updatePersona(personaId, event, corsHeaders);
@@ -35,11 +35,13 @@ export async function handlePersonas(
           return {
             statusCode: 400,
             headers: corsHeaders,
-            body: JSON.stringify({ error: 'Persona ID is required for updates' }),
+            body: JSON.stringify({
+              error: "Persona ID is required for updates",
+            }),
           };
         }
 
-      case 'DELETE':
+      case "DELETE":
         if (personaId) {
           // DELETE /api/personas/:id
           return await deletePersona(personaId, corsHeaders);
@@ -47,7 +49,9 @@ export async function handlePersonas(
           return {
             statusCode: 400,
             headers: corsHeaders,
-            body: JSON.stringify({ error: 'Persona ID is required for deletion' }),
+            body: JSON.stringify({
+              error: "Persona ID is required for deletion",
+            }),
           };
         }
 
@@ -55,16 +59,16 @@ export async function handlePersonas(
         return {
           statusCode: 405,
           headers: corsHeaders,
-          body: JSON.stringify({ error: 'Method Not Allowed' }),
+          body: JSON.stringify({ error: "Method Not Allowed" }),
         };
     }
   } catch (error) {
-    console.error('Personas handler error:', error);
+    console.error("Personas handler error:", error);
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
-        error: 'Internal Server Error',
+        error: "Internal Server Error",
         message: String(error),
       }),
     };
@@ -75,31 +79,31 @@ async function getPersonas(
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   try {
-    // Query all personas (no is_active column in schema)
+    // Query all personas with proper field mapping
     const personasQuery = `
-      SELECT p.*, 
-             COUNT(cp.conversation_id) as active_conversation_count
+      SELECT p.*
       FROM personas p
-      LEFT JOIN conversation_participants cp ON p.id = cp.persona_id
-      GROUP BY p.id
       ORDER BY p.created_at DESC
     `;
-    
+
     const result = await queryDatabase(personasQuery);
-    
+
     const personas = result.rows.map((row: any) => ({
       id: row.id,
       name: row.name,
       description: row.description,
       type: row.type,
+      ownerId: row.owner_id || null,
       personality: row.personality || {},
       knowledge: row.knowledge || [],
       communicationStyle: row.communication_style,
       modelConfig: row.model_config || null,
       systemPrompt: row.system_prompt || null,
+      responseTimeRange: row.response_time_range || null,
+      typingSpeed: row.typing_speed || null,
       isPublic: row.is_public,
       allowedInteractions: row.allowed_interactions || [],
-      conversationCount: parseInt(row.active_conversation_count) || 0,
+      conversationCount: row.conversation_count || 0,
       totalMessages: row.total_messages || 0,
       averageRating: parseFloat(row.average_rating) || 0,
       createdAt: row.created_at,
@@ -114,16 +118,15 @@ async function getPersonas(
         personas,
       }),
     };
-    
   } catch (error) {
-    console.error('Error fetching personas:', error);
+    console.error("Error fetching personas:", error);
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
         success: false,
-        error: 'Failed to fetch personas',
-        message: String(error)
+        error: "Failed to fetch personas",
+        message: String(error),
       }),
     };
   }
@@ -135,41 +138,41 @@ async function getPersona(
 ): Promise<APIGatewayProxyResult> {
   try {
     const personaQuery = `
-      SELECT p.*, 
-             COUNT(cp.conversation_id) as active_conversation_count
+      SELECT p.*
       FROM personas p
-      LEFT JOIN conversation_participants cp ON p.id = cp.persona_id
       WHERE p.id = $1
-      GROUP BY p.id
     `;
-    
+
     const result = await queryDatabase(personaQuery, [personaId]);
-    
+
     if (result.rows.length === 0) {
       return {
         statusCode: 404,
         headers: corsHeaders,
         body: JSON.stringify({
           success: false,
-          error: 'Persona not found'
+          error: "Persona not found",
         }),
       };
     }
-    
+
     const row = result.rows[0];
     const persona = {
       id: row.id,
       name: row.name,
       description: row.description,
       type: row.type,
+      ownerId: row.owner_id || null,
       personality: row.personality || {},
       knowledge: row.knowledge || [],
       communicationStyle: row.communication_style,
       modelConfig: row.model_config || null,
       systemPrompt: row.system_prompt || null,
+      responseTimeRange: row.response_time_range || null,
+      typingSpeed: row.typing_speed || null,
       isPublic: row.is_public,
       allowedInteractions: row.allowed_interactions || [],
-      conversationCount: parseInt(row.active_conversation_count) || 0,
+      conversationCount: row.conversation_count || 0,
       totalMessages: row.total_messages || 0,
       averageRating: parseFloat(row.average_rating) || 0,
       createdAt: row.created_at,
@@ -184,16 +187,15 @@ async function getPersona(
         persona,
       }),
     };
-    
   } catch (error) {
-    console.error('Error fetching persona:', error);
+    console.error("Error fetching persona:", error);
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
         success: false,
-        error: 'Failed to fetch persona',
-        message: String(error)
+        error: "Failed to fetch persona",
+        message: String(error),
       }),
     };
   }
@@ -207,7 +209,7 @@ async function createPersona(
   return {
     statusCode: 501,
     headers: corsHeaders,
-    body: JSON.stringify({ error: 'Persona creation not implemented yet' }),
+    body: JSON.stringify({ error: "Persona creation not implemented yet" }),
   };
 }
 
@@ -220,7 +222,7 @@ async function updatePersona(
   return {
     statusCode: 501,
     headers: corsHeaders,
-    body: JSON.stringify({ error: 'Persona update not implemented yet' }),
+    body: JSON.stringify({ error: "Persona update not implemented yet" }),
   };
 }
 
@@ -232,6 +234,6 @@ async function deletePersona(
   return {
     statusCode: 501,
     headers: corsHeaders,
-    body: JSON.stringify({ error: 'Persona deletion not implemented yet' }),
+    body: JSON.stringify({ error: "Persona deletion not implemented yet" }),
   };
 }

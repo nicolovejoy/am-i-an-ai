@@ -44,199 +44,106 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       setLoading(true);
       setError(null);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 600));
+      const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
       
-      // Mock conversation data - this matches our first conversation from the list
-      const mockConversation: ConversationData = {
-        id: conversationId,
-        title: 'Philosophical Discussion on Consciousness',
-        topic: 'What defines consciousness?',
-        description: 'A deep dive into the nature of consciousness and self-awareness',
-        status: 'active',
-        participants: [
-          {
-            personaId: '01234567-2222-2222-2222-012345678901',
-            personaName: 'The Philosopher',
-            personaType: 'human',
-            isRevealed: false,
-            role: 'initiator',
-            joinedAt: new Date('2024-12-06T10:00:00Z'),
-            lastActiveAt: new Date('2024-12-06T14:30:00Z'),
-          },
-          {
-            personaId: '01234567-3333-3333-3333-012345678901',
-            personaName: 'Deep Thinker',
-            personaType: 'ai_agent',
-            isRevealed: false,
-            role: 'responder',
-            joinedAt: new Date('2024-12-06T10:05:00Z'),
-            lastActiveAt: new Date('2024-12-06T14:32:00Z'),
-          },
-        ],
-        messageCount: 7,
-        currentTurn: 7,
-        createdAt: new Date('2024-12-06T10:00:00Z'),
-        startedAt: new Date('2024-12-06T10:05:00Z'),
-        topicTags: ['philosophy', 'consciousness', 'ethics'],
-        totalCharacters: 2847,
-        averageResponseTime: 180000,
-        qualityScore: 4.2,
-        createdBy: 'user123',
-        constraints: {
+      // Fetch conversation details
+      const conversationResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}`);
+      
+      if (!conversationResponse.ok) {
+        throw new Error('Failed to fetch conversation');
+      }
+      
+      const conversationData = await conversationResponse.json();
+      
+      if (!conversationData.success) {
+        throw new Error(conversationData.error || 'Failed to load conversation');
+      }
+      
+      // Fetch conversation participants with persona details
+      const participantPromises = conversationData.conversation.participants.map(async (participant: any) => {
+        const personaResponse = await fetch(`${LAMBDA_API_BASE}/api/personas/${participant.personaId}`);
+        if (personaResponse.ok) {
+          const personaData = await personaResponse.json();
+          if (personaData.success) {
+            return {
+              ...participant,
+              personaName: personaData.persona.name,
+              personaType: personaData.persona.type === 'ai_agent' ? 'ai_agent' : 'human'
+            };
+          }
+        }
+        // Fallback if persona fetch fails
+        return {
+          ...participant,
+          personaName: 'Unknown Persona',
+          personaType: 'human'
+        };
+      });
+      
+      const participants = await Promise.all(participantPromises);
+      
+      // Transform to ConversationData format
+      const conversation: ConversationData = {
+        id: conversationData.conversation.id,
+        title: conversationData.conversation.title,
+        topic: conversationData.conversation.topic,
+        description: conversationData.conversation.description,
+        status: conversationData.conversation.status,
+        participants: participants,
+        messageCount: conversationData.conversation.messageCount || 0,
+        currentTurn: conversationData.conversation.messageCount || 0,
+        createdAt: new Date(conversationData.conversation.createdAt),
+        startedAt: conversationData.conversation.startedAt ? new Date(conversationData.conversation.startedAt) : undefined,
+        topicTags: conversationData.conversation.topicTags || [],
+        totalCharacters: conversationData.conversation.totalCharacters || 0,
+        averageResponseTime: conversationData.conversation.averageResponseTime || 0,
+        qualityScore: conversationData.conversation.qualityScore,
+        createdBy: conversationData.conversation.createdBy || 'unknown',
+        constraints: conversationData.conversation.constraints || {
           maxMessages: undefined,
           maxDuration: undefined,
-          allowedTopics: ['philosophy', 'consciousness', 'ethics'],
+          allowedTopics: conversationData.conversation.topicTags || [],
           endConditions: []
         }
       };
-
-      // Mock messages data
-      const mockMessages: Message[] = [
-        {
-          id: 'msg-1',
-          conversationId: conversationId,
-          authorPersonaId: '01234567-2222-2222-2222-012345678901',
-          content: 'I\'ve been pondering lately about what truly defines consciousness. Is it simply awareness, or something deeper?',
-          type: 'text',
-          timestamp: new Date('2024-12-06T10:05:00Z'),
-          sequenceNumber: 1,
-          isEdited: false,
-          metadata: {
-            wordCount: 18,
-            characterCount: 108,
-            readingTime: 5,
-            complexity: 0.6,
-            responseTime: 300000
-          },
-          moderationStatus: 'approved',
-          isVisible: true,
-          isArchived: false
-        },
-        {
-          id: 'msg-2',
-          conversationId: conversationId,
-          authorPersonaId: '01234567-3333-3333-3333-012345678901',
-          content: 'That\'s a fascinating question. I think consciousness involves not just awareness, but self-awareness - the ability to recognize oneself as a thinking entity distinct from the environment.',
-          type: 'text',
-          timestamp: new Date('2024-12-06T10:08:00Z'),
-          sequenceNumber: 2,
-          isEdited: false,
-          metadata: {
-            wordCount: 29,
-            characterCount: 186,
-            readingTime: 8,
-            complexity: 0.7,
-            responseTime: 180000
-          },
-          moderationStatus: 'approved',
-          isVisible: true,
-          isArchived: false
-        },
-        {
-          id: 'msg-3',
-          conversationId: conversationId,
-          authorPersonaId: '01234567-2222-2222-2222-012345678901',
-          content: 'Interesting perspective! But doesn\'t that raise the question of whether self-awareness can exist without language? How would we recognize our own thoughts without the structure that language provides?',
-          type: 'text',
-          timestamp: new Date('2024-12-06T10:12:00Z'),
-          sequenceNumber: 3,
-          isEdited: false,
-          metadata: {
-            wordCount: 31,
-            characterCount: 202,
-            readingTime: 9,
-            complexity: 0.8,
-            responseTime: 240000
-          },
-          moderationStatus: 'approved',
-          isVisible: true,
-          isArchived: false
-        },
-        {
-          id: 'msg-4',
-          conversationId: conversationId,
-          authorPersonaId: '01234567-3333-3333-3333-012345678901',
-          content: 'You raise an excellent point about language. Perhaps consciousness exists on a spectrum - from basic awareness in animals without complex language, to the rich self-reflective consciousness that language enables in humans.',
-          type: 'text',
-          timestamp: new Date('2024-12-06T10:15:00Z'),
-          sequenceNumber: 4,
-          isEdited: false,
-          metadata: {
-            wordCount: 33,
-            characterCount: 214,
-            readingTime: 10,
-            complexity: 0.7,
-            responseTime: 180000
-          },
-          moderationStatus: 'approved',
-          isVisible: true,
-          isArchived: false
-        },
-        {
-          id: 'msg-5',
-          conversationId: conversationId,
-          authorPersonaId: '01234567-2222-2222-2222-012345678901',
-          content: 'That spectrum idea resonates with me. It makes me wonder - where would artificial intelligence fit on such a spectrum? Could an AI system ever achieve genuine consciousness, or would it always be simulation?',
-          type: 'text',
-          timestamp: new Date('2024-12-06T14:20:00Z'),
-          sequenceNumber: 5,
-          isEdited: false,
-          metadata: {
-            wordCount: 33,
-            characterCount: 209,
-            readingTime: 9,
-            complexity: 0.7,
-            responseTime: 14700000
-          },
-          moderationStatus: 'approved',
-          isVisible: true,
-          isArchived: false
-        },
-        {
-          id: 'msg-6',
-          conversationId: conversationId,
-          authorPersonaId: '01234567-3333-3333-3333-012345678901',
-          content: 'That\'s perhaps the most profound question of our time. If consciousness is about information processing and self-awareness, then theoretically an AI could achieve it. But how would we ever know the difference between genuine consciousness and a very convincing simulation?',
-          type: 'text',
-          timestamp: new Date('2024-12-06T14:25:00Z'),
-          sequenceNumber: 6,
-          isEdited: false,
-          metadata: {
-            wordCount: 40,
-            characterCount: 252,
-            readingTime: 11,
-            complexity: 0.8,
-            responseTime: 300000
-          },
-          moderationStatus: 'approved',
-          isVisible: true,
-          isArchived: false
-        },
-        {
-          id: 'msg-7',
-          conversationId: conversationId,
-          authorPersonaId: '01234567-2222-2222-2222-012345678901',
-          content: 'Exactly! We might be facing a version of the philosophical zombie problem - something that acts conscious but isn\'t truly conscious. It\'s both exciting and unsettling to think about.',
-          type: 'text',
-          timestamp: new Date('2024-12-06T14:30:00Z'),
-          sequenceNumber: 7,
-          isEdited: false,
-          metadata: {
-            wordCount: 29,
-            characterCount: 180,
-            readingTime: 8,
-            complexity: 0.7,
-            responseTime: 300000
-          },
-          moderationStatus: 'approved',
-          isVisible: true,
-          isArchived: false
-        }
-      ];
       
-      setConversation(mockConversation);
-      setMessages(mockMessages);
+      setConversation(conversation);
+      
+      // Fetch messages from API
+      const messagesResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`);
+      
+      if (messagesResponse.ok) {
+        const messagesData = await messagesResponse.json();
+        
+        if (messagesData.success && messagesData.messages) {
+          // Transform messages to frontend format
+          const messages: Message[] = messagesData.messages.map((msg: any) => ({
+            id: msg.id,
+            conversationId: msg.conversationId,
+            authorPersonaId: msg.authorPersonaId,
+            content: msg.content,
+            type: msg.type || 'text',
+            timestamp: new Date(msg.timestamp),
+            sequenceNumber: msg.sequenceNumber,
+            isEdited: msg.isEdited || false,
+            editedAt: msg.editedAt ? new Date(msg.editedAt) : undefined,
+            replyToMessageId: msg.replyToMessageId,
+            metadata: msg.metadata || {},
+            moderationStatus: msg.moderationStatus || 'approved',
+            isVisible: msg.isVisible !== false,
+            isArchived: msg.isArchived || false
+          }));
+          
+          setMessages(messages);
+        } else {
+          // No messages yet
+          setMessages([]);
+        }
+      } else {
+        // Fallback to empty messages if API fails
+        console.error('Failed to fetch messages');
+        setMessages([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -249,11 +156,15 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       // For demo mode, we'll simulate message sending
       // In production, this would call the actual API endpoint
       
+      // For demo, use first human participant as current user
+      // In production, this would come from auth context
+      const currentUserPersonaId = conversation?.participants.find(p => p.personaType === 'human')?.personaId || '660e8400-e29b-41d4-a716-446655440001';
+      
       // Create new message optimistically
       const newMessage: Message = {
         id: `msg-${Date.now()}`,
         conversationId: conversationId,
-        authorPersonaId: 'current-user-persona-id', // This would come from auth context
+        authorPersonaId: currentUserPersonaId,
         content: content,
         type: 'text',
         timestamp: new Date(),
@@ -282,7 +193,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             content, 
-            personaId: 'current-user-persona-id', // TODO: Get from auth context
+            personaId: currentUserPersonaId,
             type: 'text'
           })
         });
@@ -390,11 +301,27 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
               return newSet;
             });
 
-            if (data.success) {
+            if (data.success && data.message) {
               // AI response was generated and saved to database
-              // The message is already persisted, we could refresh here
-              // For now, we rely on the optimistic update in the UI
-              console.log(`AI response generated for persona ${trigger.personaId}:`, data.content);
+              // Add the AI message to the UI
+              const aiMessage: Message = {
+                id: data.message.id,
+                conversationId: conversationId,
+                authorPersonaId: trigger.personaId,
+                content: data.message.content,
+                type: 'text',
+                timestamp: new Date(data.message.timestamp),
+                sequenceNumber: data.message.sequenceNumber,
+                isEdited: false,
+                replyToMessageId: triggerMessageId,
+                metadata: data.message.metadata || {},
+                moderationStatus: 'approved',
+                isVisible: true,
+                isArchived: false
+              };
+              
+              setMessages(prev => [...prev, aiMessage]);
+              console.log(`AI response generated for persona ${trigger.personaId}`);
             } else {
               console.error('AI response generation failed:', data.error);
               // Fallback to demo response if AI fails

@@ -12,6 +12,9 @@ jest.mock('@/components/ConversationView', () => ({
   ),
 }));
 
+// Mock fetch for generateStaticParams
+global.fetch = jest.fn();
+
 describe('ConversationPage', () => {
   describe('Component Rendering', () => {
     it('renders ConversationView with correct conversationId', () => {
@@ -41,11 +44,18 @@ describe('ConversationPage', () => {
   });
 
   describe('Static Generation', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
     it('exports generateStaticParams function', () => {
       expect(typeof generateStaticParams).toBe('function');
     });
 
-    it('returns correct static params for pre-rendering', async () => {
+    it('returns correct static params when API call fails', async () => {
+      // Mock fetch to fail
+      (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+      
       const params = await generateStaticParams();
       
       expect(params).toEqual([
@@ -55,17 +65,45 @@ describe('ConversationPage', () => {
       ]);
     });
 
-    it('returns array of objects with id property', async () => {
+    it('returns real conversation IDs when API succeeds', async () => {
+      // Mock successful API response
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          conversations: [
+            { id: 'real-conversation-1' },
+            { id: 'real-conversation-2' },
+            { id: 'real-conversation-3' },
+          ]
+        })
+      });
+      
       const params = await generateStaticParams();
       
-      expect(Array.isArray(params)).toBe(true);
-      expect(params.length).toBe(3);
-      
-      params.forEach(param => {
-        expect(param).toHaveProperty('id');
-        expect(typeof param.id).toBe('string');
-        expect(param.id).toMatch(/^[0-9a-f-]+$/); // UUID pattern
+      expect(params).toEqual([
+        { id: 'real-conversation-1' },
+        { id: 'real-conversation-2' },
+        { id: 'real-conversation-3' },
+      ]);
+    });
+
+    it('returns fallback when API returns invalid data', async () => {
+      // Mock API response with invalid data
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: false,
+        })
       });
+      
+      const params = await generateStaticParams();
+      
+      expect(params).toEqual([
+        { id: '01234567-1111-1111-1111-012345678901' },
+        { id: '01234567-4444-4444-4444-012345678901' },
+        { id: '01234567-7777-7777-7777-012345678901' },
+      ]);
     });
   });
 

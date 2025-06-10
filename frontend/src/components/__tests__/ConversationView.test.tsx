@@ -44,6 +44,80 @@ jest.mock('../LoadingSpinner', () => {
   };
 });
 
+// Mock fetch globally
+global.fetch = jest.fn();
+
+// Mock conversation data to match what the component expects
+const mockConversationData = {
+  success: true,
+  conversation: {
+    id: '01234567-1111-1111-1111-012345678901',
+    title: 'Philosophical Discussion on Consciousness',
+    topic: 'What defines consciousness?',
+    description: 'A deep dive into the nature of consciousness and self-awareness',
+    status: 'active',
+    participants: [
+      {
+        personaId: '01234567-2222-2222-2222-012345678901',
+        role: 'initiator',
+        isRevealed: false,
+        joinedAt: new Date('2024-12-06T10:00:00Z').toISOString(),
+        lastActiveAt: new Date('2024-12-06T14:30:00Z').toISOString(),
+      },
+      {
+        personaId: '01234567-3333-3333-3333-012345678901',
+        role: 'responder',
+        isRevealed: false,
+        joinedAt: new Date('2024-12-06T10:05:00Z').toISOString(),
+        lastActiveAt: new Date('2024-12-06T14:32:00Z').toISOString(),
+      },
+    ],
+    messageCount: 7,
+    totalCharacters: 2847,
+    topicTags: ['philosophy', 'consciousness', 'ethics'],
+    createdAt: new Date('2024-12-06T10:00:00Z').toISOString(),
+    startedAt: new Date('2024-12-06T10:05:00Z').toISOString(),
+  }
+};
+
+const mockPersonaData = {
+  success: true,
+  persona: {
+    id: '01234567-2222-2222-2222-012345678901',
+    name: 'The Philosopher',
+    type: 'human',
+  }
+};
+
+const mockPersonaData2 = {
+  success: true,
+  persona: {
+    id: '01234567-3333-3333-3333-012345678901',
+    name: 'Deep Thinker',
+    type: 'ai_agent',
+  }
+};
+
+const mockMessagesData = {
+  success: true,
+  messages: [
+    {
+      id: 'msg-1',
+      conversationId: '01234567-1111-1111-1111-012345678901',
+      authorPersonaId: '01234567-2222-2222-2222-012345678901',
+      content: 'I\'ve been pondering lately about what truly defines consciousness.',
+      type: 'text',
+      timestamp: new Date('2024-12-06T10:05:00Z').toISOString(),
+      sequenceNumber: 1,
+      isEdited: false,
+      metadata: {},
+      moderationStatus: 'approved',
+      isVisible: true,
+      isArchived: false
+    }
+  ]
+};
+
 describe('ConversationView', () => {
   const mockConversationId = '01234567-1111-1111-1111-012345678901';
 
@@ -51,6 +125,25 @@ describe('ConversationView', () => {
     jest.clearAllMocks();
     jest.clearAllTimers();
     jest.useFakeTimers();
+    
+    // Mock all API calls used by ConversationView
+    (global.fetch as jest.Mock)
+      .mockImplementationOnce(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockConversationData)
+      }))
+      .mockImplementationOnce(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockPersonaData)
+      }))
+      .mockImplementationOnce(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockPersonaData2)
+      }))
+      .mockImplementationOnce(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockMessagesData)
+      }));
   });
 
   afterEach(() => {
@@ -69,13 +162,10 @@ describe('ConversationView', () => {
     it('shows loading for correct duration', async () => {
       render(<ConversationView conversationId={mockConversationId} />);
       
-      // Should still be loading before 600ms
-      jest.advanceTimersByTime(500);
+      // Should show loading initially
       expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
       
-      // Should be loaded after 600ms
-      jest.advanceTimersByTime(200);
-      
+      // Wait for async data loading
       await waitFor(() => {
         expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
       });
@@ -85,7 +175,6 @@ describe('ConversationView', () => {
   describe('Conversation Header', () => {
     beforeEach(async () => {
       render(<ConversationView conversationId={mockConversationId} />);
-      jest.advanceTimersByTime(600);
       await waitFor(() => {
         expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
       });
@@ -151,7 +240,7 @@ describe('ConversationView', () => {
     it('renders MessageList component with correct props', () => {
       const messageList = screen.getByTestId('message-list');
       expect(messageList).toBeInTheDocument();
-      expect(messageList).toHaveTextContent('MessageList with 7 messages and 2 participants');
+      expect(messageList).toHaveTextContent('MessageList with 1 messages and 2 participants');
     });
 
     it('renders MessageInput component with correct status', () => {

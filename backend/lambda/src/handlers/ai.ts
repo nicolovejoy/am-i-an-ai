@@ -264,29 +264,96 @@ async function generateResponse(
       throw new Error('No response generated from OpenAI');
     }
     
+    // Save the AI response to the database
+    const { randomUUID } = await import('crypto');
+    const messageId = randomUUID();
+    
+    // Get the next sequence number
+    const sequenceQuery = `
+      SELECT COALESCE(MAX(sequence_number), 0) + 1 as next_sequence
+      FROM messages
+      WHERE conversation_id = $1
+    `;
+    
+    const sequenceResult = await queryDatabase(sequenceQuery, [conversationId]);
+    const nextSequence = sequenceResult.rows[0].next_sequence;
+    
+    // Calculate metadata
+    const wordCount = aiContent.trim().split(/\s+/).length;
+    const characterCount = aiContent.length;
+    const readingTime = Math.ceil(wordCount / 200);
+    
+    const metadata = {
+      wordCount,
+      characterCount,
+      readingTime,
+      complexity: 0.7,
+      model: completion.model,
+      temperature: modelConfig.temperature,
+      tokensUsed: completion.usage?.total_tokens || 0,
+      processingTime,
+      finishReason: completion.choices[0]?.finish_reason,
+      aiGenerated: true
+    };
+    
+    // Insert message
+    const insertMessageQuery = `
+      INSERT INTO messages (
+        id, conversation_id, author_persona_id, content, type,
+        sequence_number, metadata, timestamp
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING *
+    `;
+    
+    const messageResult = await queryDatabase(insertMessageQuery, [
+      messageId,
+      conversationId,
+      personaId,
+      aiContent.trim(),
+      'text',
+      nextSequence,
+      JSON.stringify(metadata)
+    ]);
+    
+    // Update conversation statistics
+    const updateConversationQuery = `
+      UPDATE conversations 
+      SET message_count = message_count + 1,
+          total_characters = total_characters + $1
+      WHERE id = $2
+    `;
+    
+    await queryDatabase(updateConversationQuery, [characterCount, conversationId]);
+    
+    // Update participant last active
+    const updateParticipantQuery = `
+      UPDATE conversation_participants
+      SET last_active_at = NOW()
+      WHERE conversation_id = $1 AND persona_id = $2
+    `;
+    
+    await queryDatabase(updateParticipantQuery, [conversationId, personaId]);
+    
+    const message = messageResult.rows[0];
+    
     const response = {
-      id: `ai-response-${Date.now()}`,
+      id: message.id,
       content: aiContent,
       personaId,
       conversationId,
-      timestamp: new Date().toISOString(),
-      metadata: {
-        model: completion.model,
-        temperature: modelConfig.temperature,
-        tokensUsed: completion.usage?.total_tokens || 0,
-        processingTime,
-        finishReason: completion.choices[0]?.finish_reason
-      }
+      timestamp: message.timestamp,
+      sequenceNumber: message.sequence_number,
+      metadata: message.metadata
     };
 
-    console.log('AI response generated:', { personaId, conversationId, tokensUsed: response.metadata.tokensUsed });
+    console.log('AI response generated and saved:', { messageId, personaId, conversationId, tokensUsed: metadata.tokensUsed });
 
     return {
       statusCode: 200,
       headers: corsHeaders,
       body: JSON.stringify({
         success: true,
-        response,
+        message: response,
       }),
     };
 

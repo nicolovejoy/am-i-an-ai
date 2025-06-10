@@ -11,14 +11,21 @@ export async function handleConversations(
 
   try {
     // Extract conversation ID from path if present
-    const pathMatch = path.match(/^\/api\/conversations\/([^\/]+)$/);
+    const pathMatch = path.match(/^\/api\/conversations\/([^\/]+)/);
     const conversationId = pathMatch ? pathMatch[1] : null;
 
     switch (method) {
       case 'GET':
         if (conversationId) {
-          // GET /api/conversations/:id
-          return await getConversation(conversationId, corsHeaders);
+          // Check if this is a messages endpoint
+          const messagesMatch = path.match(/^\/api\/conversations\/([^\/]+)\/messages$/);
+          if (messagesMatch) {
+            // GET /api/conversations/:id/messages
+            return await getMessages(conversationId, corsHeaders);
+          } else {
+            // GET /api/conversations/:id
+            return await getConversation(conversationId, corsHeaders);
+          }
         } else {
           // GET /api/conversations
           return await getConversations(corsHeaders);
@@ -26,12 +33,18 @@ export async function handleConversations(
 
       case 'POST':
         if (conversationId) {
-          // POST /api/conversations/:id/messages (handle in future)
-          return {
-            statusCode: 501,
-            headers: corsHeaders,
-            body: JSON.stringify({ error: 'Messages endpoint not implemented yet' }),
-          };
+          // Handle messages endpoint
+          const messagesMatch = path.match(/^\/api\/conversations\/([^\/]+)\/messages$/);
+          if (messagesMatch) {
+            // POST /api/conversations/:id/messages
+            return await createMessage(conversationId, event, corsHeaders);
+          } else {
+            return {
+              statusCode: 404,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: 'Not Found' }),
+            };
+          }
         } else {
           // POST /api/conversations
           return await createConversation(event, corsHeaders);
@@ -291,6 +304,197 @@ async function createConversation(
       headers: corsHeaders,
       body: JSON.stringify({
         error: 'Failed to create conversation',
+        message: String(error),
+      }),
+    };
+  }
+}
+
+async function getMessages(
+  conversationId: string,
+  corsHeaders: Record<string, string>
+): Promise<APIGatewayProxyResult> {
+  try {
+    // Query messages with persona information
+    const messagesQuery = `
+      SELECT m.*, 
+             p.name as author_name,
+             p.type as author_type
+      FROM messages m
+      JOIN personas p ON m.author_persona_id = p.id
+      WHERE m.conversation_id = $1
+      ORDER BY m.sequence_number ASC
+    `;
+    
+    const result = await queryDatabase(messagesQuery, [conversationId]);
+    
+    const messages = result.rows.map((row: any) => ({
+      id: row.id,
+      conversationId: row.conversation_id,
+      authorPersonaId: row.author_persona_id,
+      authorName: row.author_name,
+      authorType: row.author_type,
+      content: row.content,
+      type: row.type,
+      timestamp: row.timestamp,
+      sequenceNumber: row.sequence_number,
+      isEdited: row.is_edited,
+      editedAt: row.edited_at,
+      replyToMessageId: row.reply_to_message_id,
+      metadata: row.metadata,
+      moderationStatus: row.moderation_status,
+      isVisible: row.is_visible,
+      isArchived: row.is_archived,
+    }));
+    
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        messages,
+      }),
+    };
+    
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: false,
+        error: 'Failed to fetch messages',
+        message: String(error)
+      }),
+    };
+  }
+}
+
+async function createMessage(
+  conversationId: string,
+  event: APIGatewayProxyEvent,
+  corsHeaders: Record<string, string>
+): Promise<APIGatewayProxyResult> {
+  try {
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Request body is required' }),
+      };
+    }
+
+    const body = JSON.parse(event.body);
+    const { content, personaId, type = 'text' } = body;
+
+    // Basic validation
+    if (!content?.trim()) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Content is required' }),
+      };
+    }
+
+    if (!personaId) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Persona ID is required' }),
+      };
+    }
+
+    // Get the next sequence number
+    const sequenceQuery = `
+      SELECT COALESCE(MAX(sequence_number), 0) + 1 as next_sequence
+      FROM messages
+      WHERE conversation_id = $1
+    `;
+    
+    const sequenceResult = await queryDatabase(sequenceQuery, [conversationId]);
+    const nextSequence = sequenceResult.rows[0].next_sequence;
+
+    // Calculate metadata
+    const wordCount = content.trim().split(/\s+/).length;
+    const characterCount = content.length;
+    const readingTime = Math.ceil(wordCount / 200); // 200 WPM average
+
+    // Insert message
+    const messageId = randomUUID();
+    const insertMessageQuery = `
+      INSERT INTO messages (
+        id, conversation_id, author_persona_id, content, type,
+        sequence_number, metadata, timestamp
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING *
+    `;
+    
+    const metadata = {
+      wordCount,
+      characterCount,
+      readingTime,
+      complexity: 0.5, // Default complexity, could be calculated
+    };
+    
+    const result = await queryDatabase(insertMessageQuery, [
+      messageId,
+      conversationId,
+      personaId,
+      content.trim(),
+      type,
+      nextSequence,
+      JSON.stringify(metadata)
+    ]);
+    
+    const message = result.rows[0];
+    
+    // Update conversation statistics
+    const updateConversationQuery = `
+      UPDATE conversations 
+      SET message_count = message_count + 1,
+          total_characters = total_characters + $1
+      WHERE id = $2
+    `;
+    
+    await queryDatabase(updateConversationQuery, [characterCount, conversationId]);
+    
+    // Update participant last active
+    const updateParticipantQuery = `
+      UPDATE conversation_participants
+      SET last_active_at = NOW()
+      WHERE conversation_id = $1 AND persona_id = $2
+    `;
+    
+    await queryDatabase(updateParticipantQuery, [conversationId, personaId]);
+    
+    console.log('Message created successfully:', messageId);
+
+    return {
+      statusCode: 201,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        messageId: message.id,
+        message: {
+          id: message.id,
+          conversationId: message.conversation_id,
+          authorPersonaId: message.author_persona_id,
+          content: message.content,
+          type: message.type,
+          timestamp: message.timestamp,
+          sequenceNumber: message.sequence_number,
+          metadata: message.metadata,
+        },
+      }),
+    };
+
+  } catch (error) {
+    console.error('Error creating message:', error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: 'Failed to create message',
         message: String(error),
       }),
     };

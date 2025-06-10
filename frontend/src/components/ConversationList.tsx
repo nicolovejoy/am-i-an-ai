@@ -45,113 +45,42 @@ export default function ConversationList() {
       setLoading(true);
       setError(null);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Add timeout for better UX
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       
-      // Mock conversation data that matches our database schema
-      const mockConversations: ConversationSummary[] = [
-        {
-          id: '01234567-1111-1111-1111-012345678901',
-          title: 'Philosophical Discussion on Consciousness',
-          topic: 'What defines consciousness?',
-          description: 'A deep dive into the nature of consciousness and self-awareness',
-          status: 'active',
-          participants: [
-            {
-              personaId: '01234567-2222-2222-2222-012345678901',
-              personaName: 'The Philosopher',
-              personaType: 'human',
-              isRevealed: false,
-              role: 'initiator',
-              joinedAt: new Date('2024-12-06T10:00:00Z'),
-              lastActiveAt: new Date('2024-12-06T14:30:00Z'),
-            },
-            {
-              personaId: '01234567-3333-3333-3333-012345678901',
-              personaName: 'Deep Thinker',
-              personaType: 'ai_agent',
-              isRevealed: false,
-              role: 'responder',
-              joinedAt: new Date('2024-12-06T10:05:00Z'),
-              lastActiveAt: new Date('2024-12-06T14:32:00Z'),
-            },
-          ],
-          messageCount: 15,
-          createdAt: new Date('2024-12-06T10:00:00Z'),
-          startedAt: new Date('2024-12-06T10:05:00Z'),
-          qualityScore: 4.2,
-          topicTags: ['philosophy', 'consciousness', 'ethics'],
-        },
-        {
-          id: '01234567-4444-4444-4444-012345678901',
-          title: 'Creative Writing Challenge',
-          topic: 'Collaborative storytelling',
-          description: 'Building a story together, one paragraph at a time',
-          status: 'paused',
-          participants: [
-            {
-              personaId: '01234567-5555-5555-5555-012345678901',
-              personaName: 'Creative Writer',
-              personaType: 'human',
-              isRevealed: true,
-              role: 'initiator',
-              joinedAt: new Date('2024-12-05T16:00:00Z'),
-              lastActiveAt: new Date('2024-12-05T18:45:00Z'),
-            },
-            {
-              personaId: '01234567-6666-6666-6666-012345678901',
-              personaName: 'Story Weaver',
-              personaType: 'ai_agent',
-              isRevealed: false,
-              role: 'responder',
-              joinedAt: new Date('2024-12-05T16:02:00Z'),
-              lastActiveAt: new Date('2024-12-05T18:47:00Z'),
-            },
-          ],
-          messageCount: 8,
-          createdAt: new Date('2024-12-05T16:00:00Z'),
-          startedAt: new Date('2024-12-05T16:02:00Z'),
-          qualityScore: 3.8,
-          topicTags: ['creative-writing', 'fiction', 'collaboration'],
-        },
-        {
-          id: '01234567-7777-7777-7777-012345678901',
-          title: 'Tech Innovation Discussion',
-          topic: 'The future of AI and human collaboration',
-          status: 'completed',
-          participants: [
-            {
-              personaId: '01234567-8888-8888-8888-012345678901',
-              personaName: 'Tech Enthusiast',
-              personaType: 'human',
-              isRevealed: true,
-              role: 'initiator',
-              joinedAt: new Date('2024-12-04T09:00:00Z'),
-              lastActiveAt: new Date('2024-12-04T11:30:00Z'),
-            },
-            {
-              personaId: '01234567-9999-9999-9999-012345678901',
-              personaName: 'Innovation Bot',
-              personaType: 'ai_agent',
-              isRevealed: true,
-              role: 'responder',
-              joinedAt: new Date('2024-12-04T09:03:00Z'),
-              lastActiveAt: new Date('2024-12-04T11:28:00Z'),
-            },
-          ],
-          messageCount: 24,
-          createdAt: new Date('2024-12-04T09:00:00Z'),
-          startedAt: new Date('2024-12-04T09:03:00Z'),
-          endedAt: new Date('2024-12-04T11:30:00Z'),
-          qualityScore: 4.7,
-          topicTags: ['technology', 'ai', 'innovation', 'future'],
-        },
-      ];
+      const response = await fetch('https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/conversations', {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch conversations');
+      }
+      
+      // Transform the API response to match our component interface
+      const apiConversations = data.conversations || [];
+      const transformedConversations: ConversationSummary[] = apiConversations.map((conv: any) => ({
+        id: conv.id,
+        title: conv.title,
+        topic: conv.topic,
+        description: conv.description || '',
+        status: conv.status,
+        participants: [], // We'll fetch this separately if needed
+        messageCount: conv.messageCount || 0,
+        createdAt: new Date(conv.createdAt),
+        startedAt: conv.startedAt ? new Date(conv.startedAt) : undefined,
+        endedAt: conv.endedAt ? new Date(conv.endedAt) : undefined,
+        qualityScore: conv.qualityScore || undefined,
+        topicTags: conv.topicTags || [],
+      }));
       
       // Filter by status if needed
-      let filteredConversations = mockConversations;
+      let filteredConversations = transformedConversations;
       if (selectedStatus !== 'all') {
-        filteredConversations = mockConversations.filter(
+        filteredConversations = transformedConversations.filter(
           conv => conv.status === selectedStatus
         );
       }
@@ -294,30 +223,34 @@ export default function ConversationList() {
               <div className="flex items-center space-x-4 mb-3">
                 <div className="text-sm text-gray-600">Participants:</div>
                 <div className="flex space-x-3">
-                  {conversation.participants.map((participant) => (
-                    <div
-                      key={participant.personaId}
-                      className="flex items-center space-x-1"
-                    >
+                  {conversation.participants.length > 0 ? (
+                    conversation.participants.map((participant) => (
                       <div
-                        className={`w-2 h-2 rounded-full ${
-                          participant.personaType === 'human'
-                            ? 'bg-blue-500'
-                            : participant.personaType === 'ai_agent'
-                            ? 'bg-green-500'
-                            : 'bg-gray-400'
-                        }`}
-                      />
-                      <span className="text-sm text-gray-700">
-                        {participant.personaName}
-                        {participant.isRevealed && (
-                          <span className="text-xs text-gray-500 ml-1">
-                            ({participant.personaType})
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  ))}
+                        key={participant.personaId}
+                        className="flex items-center space-x-1"
+                      >
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            participant.personaType === 'human'
+                              ? 'bg-blue-500'
+                              : participant.personaType === 'ai_agent'
+                              ? 'bg-green-500'
+                              : 'bg-gray-400'
+                          }`}
+                        />
+                        <span className="text-sm text-gray-700">
+                          {participant.personaName}
+                          {participant.isRevealed && (
+                            <span className="text-xs text-gray-500 ml-1">
+                              ({participant.personaType})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-sm text-gray-500">Loading participants...</span>
+                  )}
                 </div>
               </div>
 

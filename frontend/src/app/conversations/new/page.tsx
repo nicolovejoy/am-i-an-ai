@@ -57,10 +57,19 @@ export default function NewConversationPage() {
       
       // Fetch personas from Lambda API
       const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
-      const response = await fetch(`${LAMBDA_API_BASE}/api/personas`);
+      
+      // Add timeout for better UX
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      const response = await fetch(`${LAMBDA_API_BASE}/api/personas`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch personas');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch personas');
       }
       
       const data = await response.json();
@@ -362,15 +371,33 @@ export default function NewConversationPage() {
   };
 
   const calculatePersonalityDistance = (persona1: Persona, persona2: Persona): number => {
+    // Check if both personas have personality data
+    if (!persona1.personality || !persona2.personality) {
+      return 50; // Default moderate distance if personality data is missing
+    }
+
     const traits = ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism', 'creativity', 'assertiveness', 'empathy'] as const;
     let totalDistance = 0;
+    let validTraits = 0;
     
     traits.forEach(trait => {
-      const diff = Math.abs(persona1.personality[trait] - persona2.personality[trait]);
-      totalDistance += diff;
+      const value1 = persona1.personality[trait];
+      const value2 = persona2.personality[trait];
+      
+      // Only calculate if both values exist and are numbers
+      if (typeof value1 === 'number' && typeof value2 === 'number') {
+        const diff = Math.abs(value1 - value2);
+        totalDistance += diff;
+        validTraits++;
+      }
     });
     
-    return totalDistance / traits.length;
+    // If no valid traits found, return default moderate distance
+    if (validTraits === 0) {
+      return 50;
+    }
+    
+    return totalDistance / validTraits;
   };
 
   const getCompatibilityScore = (persona1: Persona, persona2: Persona): number => {
@@ -787,8 +814,13 @@ export default function NewConversationPage() {
                     <input
                       type="checkbox"
                       checked={isSelected}
-                      onChange={() => handlePersonaToggle(persona.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handlePersonaToggle(persona.id);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
                       className="text-[#8B6B4A] focus:ring-[#8B6B4A]"
+                      aria-label={`Select ${persona.name}`}
                     />
                   </div>
                   
