@@ -2,11 +2,26 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import OpenAI from 'openai';
 import { queryDatabase } from '../lib/database';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import { PersonaData } from '@shared/types/personas';
-import { MessageData } from '@shared/types/messages';
-import { ConversationContext } from '@shared/types/ai';
-import { COMMUNICATION_STYLE_DESCRIPTIONS, PROMPT_TEMPLATES } from '@shared/constants/ai';
-import { personaDataToPersona, messageDataToMessage } from '@shared/utils/dataTransform';
+// Simple interfaces for Lambda use
+interface PersonaData {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  personality: any;
+  knowledge: string[];
+  communicationStyle: string;
+  system_prompt?: string;
+  model_config?: any;
+}
+
+interface MessageData {
+  id: string;
+  content: string;
+  author_persona_id: string;
+  timestamp: string;
+  sequence_number: number;
+}
 
 export async function handleAI(
   event: APIGatewayProxyEvent,
@@ -106,7 +121,7 @@ async function getOpenAI(): Promise<OpenAI> {
 
 
 function createSystemPrompt(persona: PersonaData): string {
-  const { personality, communication_style, knowledge, description } = persona;
+  const { personality, communicationStyle, knowledge, description } = persona;
   
   // Map personality traits to prompt characteristics
   const traits = [];
@@ -123,7 +138,7 @@ function createSystemPrompt(persona: PersonaData): string {
   
   let basePrompt = `You are ${persona.name}, ${description}.\n\n`;
   basePrompt += `Your personality is ${personalityString}.\n`;
-  basePrompt += `Your communication style is ${communication_style}.\n`;
+  basePrompt += `Your communication style is ${communicationStyle}.\n`;
   
   if (knowledge && knowledge.length > 0) {
     basePrompt += `You have expertise in: ${knowledge.join(', ')}.\n`;

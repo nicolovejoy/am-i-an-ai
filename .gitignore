@@ -38,3 +38,5 @@ backend/.env
 # Lambda deployment packages
 *.zip
 
+shared/**/*.js
+infrastructure/tfplan
