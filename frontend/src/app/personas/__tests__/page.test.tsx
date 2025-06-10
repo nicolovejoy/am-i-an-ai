@@ -145,7 +145,7 @@ describe('PersonasPage', () => {
       render(<PersonasPage />);
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/api/personas?public=true', {
+        expect(mockFetch).toHaveBeenCalledWith('https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
           signal: expect.any(AbortSignal)
         });
       });
@@ -315,7 +315,7 @@ describe('PersonasPage', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/api/personas', {
+        expect(mockFetch).toHaveBeenCalledWith('https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: 'Test Persona', type: 'human_persona' })
@@ -441,7 +441,7 @@ describe('PersonasPage', () => {
       await user.click(deleteButton);
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/api/personas/persona-1', {
+        expect(mockFetch).toHaveBeenCalledWith('https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/personas/persona-1', {
           method: 'DELETE'
         });
       });

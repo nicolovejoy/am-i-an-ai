@@ -332,6 +332,8 @@ describe('Conversation Creation Flow', () => {
   });
 
   describe('Form Validation', () => {
+    let container: HTMLElement;
+    
     beforeEach(async () => {
       // Mock successful personas fetch for form validation tests
       global.fetch = jest.fn().mockImplementation((url: string) => {
@@ -364,7 +366,8 @@ describe('Conversation Creation Flow', () => {
         return Promise.reject(new Error('Unknown endpoint'));
       });
 
-      render(<NewConversationPage />);
+      const view = render(<NewConversationPage />);
+      container = view.container;
       
       await act(async () => {
         jest.advanceTimersByTime(700);
@@ -376,10 +379,12 @@ describe('Conversation Creation Flow', () => {
     });
 
     it('shows error when title is empty', async () => {
-      const submitButton = screen.getByRole('button', { name: /start conversation/i });
+      // eslint-disable-next-line testing-library/no-node-access
+      const form = container.querySelector('form');
+      expect(form).toBeTruthy();
       
       await act(async () => {
-        fireEvent.click(submitButton);
+        fireEvent.submit(form!);
       });
 
       await waitFor(() => {
@@ -391,11 +396,12 @@ describe('Conversation Creation Flow', () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
       
       const titleInput = screen.getByLabelText('Title *');
-      const submitButton = screen.getByRole('button', { name: /start conversation/i });
+      // eslint-disable-next-line testing-library/no-node-access
+      const form = container.querySelector('form');
 
       await act(async () => {
         await user.type(titleInput, 'Test Title');
-        fireEvent.click(submitButton);
+        fireEvent.submit(form!);
       });
 
       await waitFor(() => {

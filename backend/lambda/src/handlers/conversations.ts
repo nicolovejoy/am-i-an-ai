@@ -11,14 +11,14 @@ export async function handleConversations(
 
   try {
     // Extract conversation ID from path if present
-    const pathMatch = path.match(/^\/api\/conversations\/([^\/]+)/);
+    const pathMatch = path.match(/^\/api\/conversations\/([^/]+)/);
     const conversationId = pathMatch ? pathMatch[1] : null;
 
     switch (method) {
       case 'GET':
         if (conversationId) {
           // Check if this is a messages endpoint
-          const messagesMatch = path.match(/^\/api\/conversations\/([^\/]+)\/messages$/);
+          const messagesMatch = path.match(/^\/api\/conversations\/([^/]+)\/messages$/);
           if (messagesMatch) {
             // GET /api/conversations/:id/messages
             return await getMessages(conversationId, corsHeaders);
@@ -34,7 +34,7 @@ export async function handleConversations(
       case 'POST':
         if (conversationId) {
           // Handle messages endpoint
-          const messagesMatch = path.match(/^\/api\/conversations\/([^\/]+)\/messages$/);
+          const messagesMatch = path.match(/^\/api\/conversations\/([^/]+)\/messages$/);
           if (messagesMatch) {
             // POST /api/conversations/:id/messages
             return await createMessage(conversationId, event, corsHeaders);

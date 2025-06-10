@@ -16,8 +16,9 @@
   },
   "scripts": {
     "prepare": "husky",
-    "test": "echo \"No tests specified\" && exit 0",
-    "lint": "cd backend && npm run lint && cd ../frontend && npm run lint"
+    "test": "cd frontend && npm run test",
+    "lint": "cd backend/lambda && npm run lint && cd ../../frontend && npm run lint",
+    "build": "cd frontend && npm run build"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

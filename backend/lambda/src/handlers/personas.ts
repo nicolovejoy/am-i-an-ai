@@ -10,7 +10,7 @@ export async function handlePersonas(
 
   try {
     // Extract persona ID from path if present
-    const pathMatch = path.match(/^\/api\/personas\/([^\/]+)$/);
+    const pathMatch = path.match(/^\/api\/personas\/([^/]+)$/);
     const personaId = pathMatch ? pathMatch[1] : null;
 
     switch (method) {
