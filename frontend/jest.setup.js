@@ -8,6 +8,27 @@ import { toHaveNoViolations } from "jest-axe";
 // Extend expect with axe matchers
 expect.extend(toHaveNoViolations);
 
+// Mock fetch globally for all tests
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({ 
+      success: true, 
+      personas: [
+        {
+          id: 'test-persona-1',
+          name: 'Test Persona',
+          type: 'human_persona',
+          description: 'A test persona',
+          personality: {},
+          knowledge: ['general'],
+          communicationStyle: 'friendly'
+        }
+      ]
+    }),
+  })
+);
+
 // Configure testing-library
 configure({
   asyncUtilTimeout: 5000,
@@ -57,6 +78,8 @@ process.env = {
 afterEach(() => {
   jest.clearAllMocks();
   localStorage.clear();
+  // Reset fetch mock
+  fetch.mockClear();
 });
 
 // Don't mock these globally - let individual tests handle their own mocking
