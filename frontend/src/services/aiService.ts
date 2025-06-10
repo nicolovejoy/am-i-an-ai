@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
 import { Persona, PersonalityTraits } from '@/types/personas';
 import { Message } from '@/types/messages';
+import { ConversationContext } from '@/shared/types/ai';
+import { COMMUNICATION_STYLE_DESCRIPTIONS } from '@/shared/constants/ai';
 
 export interface AIServiceConfig {
   openaiApiKey?: string;
@@ -16,13 +18,6 @@ export interface AIResponse {
     completionTokens: number;
     totalTokens: number;
   };
-}
-
-export interface ConversationContext {
-  conversationId: string;
-  messages: Message[];
-  participants: Persona[];
-  currentTopic?: string;
 }
 
 export class AIService {
@@ -237,18 +232,7 @@ ${persona.systemPrompt}`;
    * Build communication style prompt
    */
   private buildCommunicationStylePrompt(style: string): string {
-    const styleDescriptions = {
-      formal: 'Use formal, professional language with proper grammar and structure',
-      casual: 'Use relaxed, informal language with contractions and casual expressions',
-      academic: 'Use scholarly language with precise terminology and structured arguments',
-      creative: 'Use imaginative, expressive language with metaphors and artistic flair',
-      technical: 'Use precise, technical language with specific terminology and detailed explanations',
-      empathetic: 'Use warm, understanding language that acknowledges emotions and feelings',
-      analytical: 'Use logical, structured language focused on facts and reasoning',
-      humorous: 'Use witty, light-hearted language with appropriate humor and playfulness'
-    };
-
-    return styleDescriptions[style as keyof typeof styleDescriptions] || 'Use natural, conversational language';
+    return COMMUNICATION_STYLE_DESCRIPTIONS[style as keyof typeof COMMUNICATION_STYLE_DESCRIPTIONS] || 'Use natural, conversational language';
   }
 
   /**

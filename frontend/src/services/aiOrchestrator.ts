@@ -1,6 +1,7 @@
 import { Persona } from '@/types/personas';
 import { Message } from '@/types/messages';
 import { Conversation } from '@/types/conversations';
+import { KNOWLEDGE_DOMAIN_KEYWORDS } from '@/shared/constants/ai';
 
 export interface AIResponseTrigger {
   personaId: string;
@@ -195,20 +196,11 @@ export class AIOrchestrator {
     const messageContent = context.newMessage.content.toLowerCase();
     const personaKnowledge = persona.knowledge || [];
     
-    // Simple keyword matching for knowledge domains
-    const knowledgeKeywords = {
-      technology: ['tech', 'software', 'programming', 'computer', 'ai', 'digital'],
-      science: ['research', 'study', 'experiment', 'theory', 'data', 'analysis'],
-      arts: ['art', 'creative', 'design', 'music', 'poetry', 'painting'],
-      business: ['business', 'marketing', 'sales', 'management', 'strategy'],
-      philosophy: ['think', 'meaning', 'ethics', 'moral', 'question', 'wisdom'],
-      health: ['health', 'medical', 'wellness', 'fitness', 'nutrition'],
-      psychology: ['emotion', 'behavior', 'mind', 'feeling', 'mental', 'therapy'],
-    };
+    // Use shared knowledge domain keywords
 
     let relevanceScore = 0;
     for (const domain of personaKnowledge) {
-      const keywords = knowledgeKeywords[domain as keyof typeof knowledgeKeywords] || [];
+      const keywords = KNOWLEDGE_DOMAIN_KEYWORDS[domain as keyof typeof KNOWLEDGE_DOMAIN_KEYWORDS] || [];
       const matches = keywords.filter(keyword => messageContent.includes(keyword));
       if (matches.length > 0) {
         relevanceScore += 0.2 * matches.length;

@@ -2,6 +2,11 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import OpenAI from 'openai';
 import { queryDatabase } from '../lib/database';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { PersonaData } from '@shared/types/personas';
+import { MessageData } from '@shared/types/messages';
+import { ConversationContext } from '@shared/types/ai';
+import { COMMUNICATION_STYLE_DESCRIPTIONS, PROMPT_TEMPLATES } from '@shared/constants/ai';
+import { personaDataToPersona, messageDataToMessage } from '@shared/utils/dataTransform';
 
 export async function handleAI(
   event: APIGatewayProxyEvent,
@@ -99,25 +104,6 @@ async function getOpenAI(): Promise<OpenAI> {
   return openai;
 }
 
-interface PersonaData {
-  id: string;
-  name: string;
-  type: string;
-  description: string;
-  personality: any;
-  communication_style: string;
-  knowledge: string[];
-  model_config: any;
-  system_prompt?: string;
-}
-
-interface MessageData {
-  id: string;
-  content: string;
-  author_persona_id: string;
-  timestamp: string;
-  sequence_number: number;
-}
 
 function createSystemPrompt(persona: PersonaData): string {
   const { personality, communication_style, knowledge, description } = persona;

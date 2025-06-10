@@ -2,6 +2,7 @@ import { User, UserUpdate, UserProfile, UserNotification } from './users';
 import { Persona, PersonaCreate, PersonaUpdate, PersonaStats, PersonalityTraits } from './personas';
 import { Conversation, ConversationCreate, ConversationUpdate, ConversationSummary, ConversationAnalytics } from './conversations';
 import { Message, MessageCreate, MessageUpdate, ConversationHistory, MessageSearch, MessageSearchResult } from './messages';
+import { ConversationContext } from '@/shared/types/ai';
 
 // Common types for all services
 export interface ServiceResponse<T> {
@@ -183,14 +184,6 @@ export interface BehaviorUpdate {
   learningEnabled?: boolean;
 }
 
-export interface ConversationContext {
-  conversationId: string;
-  messageHistory: Message[];
-  participants: Persona[];
-  currentTopic: string;
-  conversationGoal?: string;
-  timeElapsed: number;
-}
 
 export interface InteractionHistory {
   totalInteractions: number;
