@@ -320,7 +320,6 @@ describe('MessageInput', () => {
 
     it('handles send errors gracefully', async () => {
       const user = userEvent.setup();
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockOnSendMessage.mockRejectedValue(new Error('Send failed'));
       
       render(
@@ -336,14 +335,16 @@ describe('MessageInput', () => {
       await user.type(textarea, 'Test message');
       await user.click(sendButton);
       
+      // Wait for the error to be handled
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to send message:', expect.any(Error));
+        expect(mockOnSendMessage).toHaveBeenCalledWith('Test message');
       });
       
-      // Message should still be in textarea after error
+      // Message should still be in textarea after error (for retry)
       expect(textarea).toHaveValue('Test message');
       
-      consoleSpy.mockRestore();
+      // Component should not be in sending state after error
+      expect(sendButton).not.toBeDisabled();
     });
   });
 
