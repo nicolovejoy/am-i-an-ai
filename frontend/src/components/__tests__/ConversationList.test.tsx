@@ -117,8 +117,9 @@ describe('ConversationList', () => {
       
       // Wait for loading to complete and error to be handled
       await waitFor(() => {
-        // After error, component should still render the header
-        expect(screen.getByText('Your Conversations')).toBeInTheDocument();
+        // After error, component should show error message
+        expect(screen.getByText('Error Loading Conversations')).toBeInTheDocument();
+        expect(screen.getByText('Network error')).toBeInTheDocument();
       });
       
       // The component should handle the error gracefully
