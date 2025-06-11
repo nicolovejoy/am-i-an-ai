@@ -356,7 +356,8 @@ export default function NewConversationPage() {
       if (data.success && data.conversation) {
         addToast('success', 'Conversation created successfully!');
         console.log('Redirecting to conversation:', data.conversation.id);
-        router.push(`/conversations/${data.conversation.id}`);
+        // For static export compatibility, use query parameter instead of dynamic route
+        router.push(`/conversations?id=${data.conversation.id}`);
       } else {
         // This shouldn't happen if API is working correctly
         console.error('Unexpected API response format:', data);
