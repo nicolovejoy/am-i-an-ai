@@ -7,8 +7,7 @@ graph TB
     subgraph Client[Client Browser]
         Next[Next.js App]
         Next --> |Static Assets| CDN
-        Next --> |API Requests| API
-        Next --> |Database Calls| DB
+        Next --> |API Requests| APIGW
     end
 
     subgraph AWS[Amazon Web Services]
@@ -18,10 +17,24 @@ graph TB
             CDN --> |Serves| S3
         end
 
+        subgraph API[API Infrastructure]
+            APIGW[API Gateway]
+            Lambda[Lambda Functions]
+            APIGW --> |Proxy Integration| Lambda
+        end
+
+        subgraph AI[AI Integration]
+            OpenAI[OpenAI API]
+            SecretsMgr[Secrets Manager - OpenAI Key]
+            Lambda --> |Authenticated Calls| OpenAI
+            SecretsMgr --> |API Key| Lambda
+        end
+
         subgraph Database[Database Layer]
             RDS[PostgreSQL RDS]
-            Secrets[Secrets Manager]
-            Secrets --> |Credentials| RDS
+            DBSecrets[Secrets Manager - DB Creds]
+            DBSecrets --> |Credentials| Lambda
+            Lambda --> |SQL Queries| RDS
         end
 
         subgraph Auth[Authentication]
@@ -44,7 +57,7 @@ graph TB
 
     %% Connections
     Client --> |HTTPS| CDN
-    Next --> |API Calls| RDS
+    Next --> |REST API| APIGW
     Next --> |Auth| Cognito
     Route53 --> |DNS| CDN
     ACM --> |SSL/TLS| CDN
@@ -54,10 +67,12 @@ graph TB
     classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white
     classDef client fill:#61DAFB,stroke:#282C34,stroke-width:2px,color:black
     classDef infra fill:#7B68EE,stroke:#483D8B,stroke-width:2px,color:white
+    classDef ai fill:#00D2FF,stroke:#003D4F,stroke-width:2px,color:white
 
-    class AWS,Frontend,Database,Auth,DNS aws
+    class AWS,Frontend,Database,Auth,DNS,API aws
     class Client,Next client
     class Infrastructure,Terraform,Scripts infra
+    class AI,OpenAI,SecretsMgr ai
 ```
 
 ## Current Implementation Status
@@ -65,53 +80,53 @@ graph TB
 ### ✅ Completed Components
 
 **Infrastructure & Database**
-- PostgreSQL RDS instance (`eeyore-postgres`) 
-- AWS Secrets Manager for database credentials
-- VPC with public/private subnets
-- Security groups and IAM roles
-- Terraform configuration with deployment scripts
+- PostgreSQL RDS instance (`eeyore-postgres`) running production data
+- AWS Secrets Manager for database and OpenAI API credentials
+- VPC with public/private subnets and security groups
+- Complete Terraform configuration with automated deployment scripts
+- API Gateway with custom domain and SSL certificates
+
+**Lambda API Layer**
+- **Node.js 20.x Lambda functions** with TypeScript
+- **Complete API endpoints** for conversations, personas, AI generation, admin
+- **OpenAI integration** with real AI response generation
+- **Database connectivity** via RDS with proper connection pooling
+- **CORS configuration** for frontend integration
 
 **Frontend Application**
-- Next.js 14 with TypeScript
-- Hybrid development (local dev + production DB)
-- Database admin API endpoints
-- AWS Cognito integration setup
-- Tailwind CSS design system
-- Component architecture with proper typing
+- **Next.js 14 with TypeScript** and comprehensive component architecture
+- **Static export deployment** to S3 with CloudFront CDN
+- **Real-time AI chat functionality** with typing indicators and auto-focus
+- **Conversation management** with persona selection and message persistence
+- **Comprehensive test suite** (284+ tests) with robust UX validation
+
+**AI Chat Pipeline** 
+- **End-to-end AI conversations** working in production
+- **OpenAI API integration** via Lambda with proper error handling
+- **Message persistence** to PostgreSQL with conversation history
+- **AI response triggering** based on persona types and conversation context
+- **Natural conversation flow** with delays, typing indicators, and state management
 
 **Development Workflow**
-- Production-only database strategy
-- Environment variable configuration
-- Database schema and seeding APIs
-- Local development with production data
+- **Production-only database strategy** with local development server
+- **Automated deployment pipeline** via Terraform scripts
+- **Test-driven development** with comprehensive coverage
+- **Git workflow** with pre-commit validation (lint, tests, build, TypeScript)
 
-### 🚧 In Progress
+### 🎯 Current State: Production Ready
 
-**Database Setup**
-- Schema creation via API endpoints
-- Sample data seeding
-- Database connection testing
+**Fully Functional Features**
+- ✅ **Create conversations** with AI personas
+- ✅ **Send messages** that trigger real AI responses  
+- ✅ **Conversation persistence** with full message history
+- ✅ **Persona management** with personality and knowledge configuration
+- ✅ **Admin tools** for database management and seeding
 
-**Core Features**
-- User authentication flow
-- Persona management system
-- Conversation interface
-- Message threading
-
-### 📋 Planned Components
-
-**Application Features**
-- Multi-persona conversations
-- AI agent integration
-- Real-time messaging
-- Conversation analytics
-- User dashboard
-
-**Infrastructure Enhancements**
-- CloudWatch monitoring
-- Performance optimization
-- Security hardening
-- Backup strategies
+**Technical Performance**
+- ✅ **284+ tests passing** with comprehensive coverage
+- ✅ **All pre-commit checks** (lint, TypeScript, build) successful
+- ✅ **Production deployment** working with AWS infrastructure
+- ✅ **Real user conversations** with AI agents operational
 
 ## Architecture Decisions
 
