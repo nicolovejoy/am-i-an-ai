@@ -18,9 +18,9 @@ jest.mock('next/link', () => {
 jest.mock('../MessageList', () => ({
   MessageList: ({ messages }: { messages: unknown[] }) => (
     <div data-testid="message-list">
-      {messages.map((msg: any) => (
-        <div key={msg.id} data-testid={`message-${msg.id}`}>
-          {msg.content}
+      {(messages as Record<string, unknown>[]).map((msg: Record<string, unknown>) => (
+        <div key={msg.id as string} data-testid={`message-${msg.id}`}>
+          {msg.content as string}
         </div>
       ))}
     </div>

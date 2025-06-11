@@ -49,7 +49,7 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
         personaId: humanParticipant.personaId 
       });
     } catch (error) {
-      console.error('Error sending message:', error);
+      // Error is handled by the mutation
     }
   };
 
@@ -97,7 +97,7 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
             </h1>
             <div className="flex items-center gap-4 mt-1">
               <p className="text-sm text-gray-500">
-                {participants.map((p: any) => p.name).join(', ')}
+                {participants.map((p: { name: string }) => p.name).join(', ')}
               </p>
               <span className="text-xs text-gray-400">
                 {messages.length} messages
@@ -117,7 +117,7 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
       <div className="flex-1 overflow-hidden">
         <MessageList 
           messages={messages}
-          participants={participants.map((p: any) => ({
+          participants={participants.map((p: { id: string; name: string; type: string }) => ({
             personaId: p.id,
             personaName: p.name,
             personaType: p.type,

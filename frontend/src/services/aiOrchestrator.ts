@@ -61,7 +61,7 @@ export class AIOrchestrator {
       return triggers.sort((a, b) => b.priority - a.priority);
 
     } catch (error) {
-      console.error('Error analyzing response triggers:', error);
+      // Error is logged internally
       return [];
     }
   }

@@ -54,13 +54,22 @@ export function useConversationsList() {
         
         const data = await response.json();
         if (data.success && data.conversations) {
-          const transformedConversations: Conversation[] = data.conversations.map((conv: any) => ({
+          const transformedConversations: Conversation[] = data.conversations.map((conv: {
+            id: string;
+            title: string;
+            participants?: unknown[];
+            status: string;
+            createdAt: string;
+            updatedAt?: string;
+            lastMessageAt?: string;
+            metadata?: Record<string, unknown>;
+          }) => ({
             id: conv.id,
             title: conv.title,
             participants: conv.participants || [],
             status: conv.status,
             createdAt: new Date(conv.createdAt),
-            updatedAt: new Date(conv.updatedAt),
+            updatedAt: conv.updatedAt ? new Date(conv.updatedAt) : undefined,
             lastMessageAt: conv.lastMessageAt ? new Date(conv.lastMessageAt) : undefined,
             metadata: conv.metadata || {}
           }));

@@ -35,7 +35,23 @@ export function usePersonas() {
         
         const data = await response.json();
         if (data.success && data.personas) {
-          const transformedPersonas: Persona[] = data.personas.map((p: any) => ({
+          const transformedPersonas: Persona[] = data.personas.map((p: {
+            id: string;
+            name: string;
+            type: string;
+            isAnonymous?: boolean;
+            description?: string;
+            avatarUrl?: string;
+            traits?: string[];
+            interests?: string[];
+            conversationStyle?: Record<string, unknown>;
+            aiConfig?: Record<string, unknown> | null;
+            userId: string;
+            status?: string;
+            createdAt: string;
+            updatedAt: string;
+            metadata?: Record<string, unknown>;
+          }) => ({
             id: p.id,
             name: p.name,
             type: p.type,

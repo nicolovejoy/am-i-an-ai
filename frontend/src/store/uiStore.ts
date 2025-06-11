@@ -7,7 +7,7 @@ interface UIState {
   
   // Modal states
   activeModal: string | null;
-  modalData: any;
+  modalData: unknown;
   
   // General UI states
   isOnline: boolean;
@@ -21,7 +21,7 @@ interface UIState {
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
   
-  openModal: (modalId: string, data?: any) => void;
+  openModal: (modalId: string, data?: unknown) => void;
   closeModal: () => void;
   
   setOnlineStatus: (online: boolean) => void;

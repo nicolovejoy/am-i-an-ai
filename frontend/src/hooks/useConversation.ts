@@ -70,7 +70,22 @@ export function useConversation(conversationId: string | null) {
         
         const data = await response.json();
         if (data.success && data.messages) {
-          const transformedMessages: Message[] = data.messages.map((msg: any) => ({
+          const transformedMessages: Message[] = data.messages.map((msg: {
+            id: string;
+            conversationId: string;
+            authorPersonaId: string;
+            content: string;
+            type?: string;
+            timestamp: string;
+            sequenceNumber: number;
+            isEdited?: boolean;
+            editedAt?: string;
+            replyToMessageId?: string;
+            metadata?: Record<string, unknown>;
+            moderationStatus?: string;
+            isVisible?: boolean;
+            isArchived?: boolean;
+          }) => ({
             id: msg.id,
             conversationId: msg.conversationId,
             authorPersonaId: msg.authorPersonaId,

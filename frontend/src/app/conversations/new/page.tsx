@@ -74,7 +74,7 @@ export default function NewConversationPage() {
       }
       
       const data = await response.json();
-      console.log('Personas fetched from API:', data);
+      // API data fetched successfully
       
       if (data.success && Array.isArray(data.personas)) {
         setPersonas(data.personas);
@@ -92,7 +92,7 @@ export default function NewConversationPage() {
       }
       
     } catch (error) {
-      console.error('Error fetching personas, using mock data:', error);
+      // Fallback to mock data on API error
       
       // Fallback to mock personas if API fails
       const mockPersonas: Persona[] = [
@@ -284,7 +284,7 @@ export default function NewConversationPage() {
       // Check if required fields are filled
       if (formData.title.trim() && formData.topic.trim() && formData.selectedPersona) {
         e.preventDefault();
-        handleSubmit(e as any);
+        handleSubmit(e as React.FormEvent);
       }
     }
   };
@@ -314,10 +314,7 @@ export default function NewConversationPage() {
       // eslint-disable-next-line no-undef
       const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
       
-      console.log('Creating conversation with data:', {
-        ...formData,
-        createdBy: 'demo-user'
-      });
+      // Creating conversation with form data
       
       const response = await fetch(`${LAMBDA_API_BASE}/api/conversations`, {
         method: 'POST',
@@ -334,39 +331,38 @@ export default function NewConversationPage() {
         }),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
+      // Response received from API
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API error response (raw):', errorText);
+        // Handle API error response
         try {
           const errorData = JSON.parse(errorText);
-          console.error('API error response (parsed):', errorData);
+          // Parse error response
           throw new Error(errorData.error || errorData.message || 'Failed to create conversation');
         } catch (parseError) {
-          console.error('Could not parse error response as JSON');
+          // Could not parse error response
           throw new Error(`Server error ${response.status}: ${errorText}`);
         }
       }
 
       const data = await response.json();
-      console.log('API success response:', data);
+      // API response received successfully
       
       if (data.success && data.conversation) {
         addToast('success', 'Conversation created successfully!');
-        console.log('Redirecting to conversation:', data.conversation.id);
+        // Redirect to new conversation
         // For static export compatibility, use query parameter instead of dynamic route
         router.push(`/conversations?id=${data.conversation.id}`);
       } else {
         // This shouldn't happen if API is working correctly
-        console.error('Unexpected API response format:', data);
+        // Unexpected API response format
         addToast('error', 'Unexpected response format from server');
         const demoConversationId = '01234567-1111-1111-1111-012345678901';
         router.push(`/conversations/${demoConversationId}`);
       }
     } catch (error) {
-      console.error('Error creating conversation:', error);
+      // Error creating conversation
       
       // Fallback to demo mode
       addToast('info', 'Using demo mode. Redirecting to sample conversation...');

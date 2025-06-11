@@ -8,6 +8,7 @@ import { FullPageLoader } from './LoadingSpinner';
 import { aiOrchestrator } from '@/services/aiOrchestrator';
 import type { Message } from '@/types/messages';
 import type { Conversation, PersonaInstance } from '@/types/conversations';
+import type { Persona } from '@/types/personas';
 
 interface ConversationViewProps {
   conversationId: string;
@@ -60,28 +61,28 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
             const data = await response.json();
             if (data.success && data.messages) {
               // Transform and update messages
-              const newMessages: Message[] = data.messages.map((msg: any) => ({
-                id: msg.id,
-                conversationId: msg.conversationId,
-                authorPersonaId: msg.authorPersonaId,
-                content: msg.content,
-                type: msg.type || 'text',
-                timestamp: new Date(msg.timestamp),
-                sequenceNumber: msg.sequenceNumber,
-                isEdited: msg.isEdited || false,
-                editedAt: msg.editedAt ? new Date(msg.editedAt) : undefined,
-                replyToMessageId: msg.replyToMessageId,
-                metadata: msg.metadata || {},
-                moderationStatus: msg.moderationStatus || 'approved',
-                isVisible: msg.isVisible !== false,
-                isArchived: msg.isArchived || false
+              const newMessages: Message[] = data.messages.map((msg: Record<string, unknown>) => ({
+                id: msg.id as string,
+                conversationId: msg.conversationId as string,
+                authorPersonaId: msg.authorPersonaId as string,
+                content: msg.content as string,
+                type: (msg.type as string) || 'text',
+                timestamp: new Date(msg.timestamp as string),
+                sequenceNumber: msg.sequenceNumber as number,
+                isEdited: (msg.isEdited as boolean) || false,
+                editedAt: msg.editedAt ? new Date(msg.editedAt as string) : undefined,
+                replyToMessageId: msg.replyToMessageId as string,
+                metadata: (msg.metadata as Record<string, unknown>) || {},
+                moderationStatus: (msg.moderationStatus as string) || 'approved',
+                isVisible: (msg.isVisible as boolean) !== false,
+                isArchived: (msg.isArchived as boolean) || false
               }));
               
               setMessages(newMessages);
             }
           }
         } catch (error) {
-          console.error('Error polling for messages:', error);
+          // Error polling for messages
         }
       }, 5000);
 
@@ -121,7 +122,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       }
       
       // Fetch conversation participants with persona details
-      const participantPromises = conversationData.conversation.participants.map(async (participant: any) => {
+      const participantPromises = conversationData.conversation.participants.map(async (participant: Record<string, unknown>) => {
         const personaResponse = await fetch(`${LAMBDA_API_BASE}/api/personas/${participant.personaId}`, {
           method: 'GET',
           headers: {
@@ -188,21 +189,21 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         
         if (messagesData.success && messagesData.messages) {
           // Transform messages to frontend format
-          const messages: Message[] = messagesData.messages.map((msg: any) => ({
-            id: msg.id,
-            conversationId: msg.conversationId,
-            authorPersonaId: msg.authorPersonaId,
-            content: msg.content,
-            type: msg.type || 'text',
-            timestamp: new Date(msg.timestamp),
-            sequenceNumber: msg.sequenceNumber,
-            isEdited: msg.isEdited || false,
-            editedAt: msg.editedAt ? new Date(msg.editedAt) : undefined,
-            replyToMessageId: msg.replyToMessageId,
-            metadata: msg.metadata || {},
-            moderationStatus: msg.moderationStatus || 'approved',
-            isVisible: msg.isVisible !== false,
-            isArchived: msg.isArchived || false
+          const messages: Message[] = messagesData.messages.map((msg: Record<string, unknown>) => ({
+            id: msg.id as string,
+            conversationId: msg.conversationId as string,
+            authorPersonaId: msg.authorPersonaId as string,
+            content: msg.content as string,
+            type: (msg.type as string) || 'text',
+            timestamp: new Date(msg.timestamp as string),
+            sequenceNumber: msg.sequenceNumber as number,
+            isEdited: (msg.isEdited as boolean) || false,
+            editedAt: msg.editedAt ? new Date(msg.editedAt as string) : undefined,
+            replyToMessageId: msg.replyToMessageId as string,
+            metadata: (msg.metadata as Record<string, unknown>) || {},
+            moderationStatus: (msg.moderationStatus as string) || 'approved',
+            isVisible: (msg.isVisible as boolean) !== false,
+            isArchived: (msg.isArchived as boolean) || false
           }));
           
           setMessages(messages);
@@ -212,7 +213,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         }
       } else {
         // Fallback to empty messages if API fails
-        console.error('Failed to fetch messages');
+        // Failed to fetch messages
         setMessages([]);
       }
     } catch (err) {
@@ -265,9 +266,9 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           personaId: currentUserPersonaId,
           type: 'text'
         };
-        console.log('Sending message payload:', messagePayload);
-        console.log('conversationId:', conversationId);
-        console.log('currentUserPersonaId:', currentUserPersonaId);
+        // Sending message payload
+        // Using conversation ID
+        // Using current user persona ID
         
         const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
           method: 'POST',
@@ -277,7 +278,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
 
         if (response.ok) {
           const result = await response.json();
-          console.log('Message persisted to database:', result);
+          // Message persisted to database
           // Update the optimistic message with the real database ID
           if (result.messageId) {
             setMessages(prev => prev.map(msg => 
@@ -287,10 +288,10 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
             ));
           }
         } else {
-          console.error('Failed to persist message to database:', response.status);
+          // Failed to persist message to database
         }
       } catch (dbError) {
-        console.error('Error persisting message to database:', dbError);
+        // Error persisting message to database
         // Remove the optimistic message and show error
         setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
         setMessageError('Failed to send message');
@@ -302,7 +303,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       try {
         if (conversation) {
           // Create mock participant personas for AI analysis
-          const mockParticipants: any[] = conversation.participants.map(p => ({
+          const mockParticipants: Record<string, unknown>[] = conversation.participants.map(p => ({
             id: p.personaId,
             name: p.personaName,
             type: p.personaType === 'ai_agent' ? 'ai_agent' : 'human_persona',
@@ -323,26 +324,26 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           };
 
           const aiTriggers = await aiOrchestrator.analyzeResponseTriggers(
-            mockConversation as any,
+            mockConversation as unknown as Conversation,
             newMessage,
-            mockParticipants,
+            mockParticipants as unknown as Persona[],
             messages
           );
           
           if (aiTriggers.length > 0) {
-            console.log('AI response triggers:', aiTriggers);
+            // AI response triggers analyzed
             
             // Generate real AI responses
             generateAIResponses(aiTriggers, newMessage.id);
           }
         }
       } catch (aiError) {
-        console.error('Error triggering AI responses:', aiError);
+        // Error triggering AI responses
         // Continue normally even if AI analysis fails
       }
 
     } catch (error) {
-      console.error('Failed to send message:', error);
+      // Failed to send message
       // TODO: Show error toast to user
       throw error; // Re-throw so MessageInput can handle it
     }
@@ -382,7 +383,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
             }
 
             const data = await response.json();
-            console.log('AI API Response:', data);
+            // AI API response received
 
             // Remove typing indicator
             setTypingPersonas(prev => {
@@ -412,15 +413,15 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
               };
               
               setMessages(prev => [...prev, aiMessage]);
-              console.log(`AI response generated for persona ${trigger.personaId}`);
+              // AI response generated
             } else {
-              console.error('AI response generation failed. Full response:', data);
-              console.error('Error details:', data.error || data.message || 'No error details provided');
+              // AI response generation failed
+              // AI response error details available
               // Fallback to demo response if AI fails
               generateDemoResponse(trigger, triggerMessageId);
             }
           } catch (error) {
-            console.error('Error calling AI API:', error);
+            // Error calling AI API
             // Remove typing indicator
             setTypingPersonas(prev => {
               const newSet = new Set(prev);
@@ -435,7 +436,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           }
         }, trigger.suggestedDelay + 1000); // Add 1 second for typing simulation
       } catch (error) {
-        console.error(`Error setting up AI response for persona ${trigger.personaId}:`, error);
+        // Error setting up AI response
       }
     }
   };

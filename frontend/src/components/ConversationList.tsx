@@ -62,7 +62,20 @@ export default function ConversationList() {
       
       // Transform the API response to match our component interface
       const apiConversations = data.conversations || [];
-      const transformedConversations: ConversationSummary[] = apiConversations.map((conv: any) => ({
+      const transformedConversations: ConversationSummary[] = apiConversations.map((conv: {
+        id: string;
+        title: string;
+        topic: string;
+        description?: string;
+        status: string;
+        participants?: unknown[];
+        messageCount?: number;
+        createdAt: string;
+        startedAt?: string;
+        endedAt?: string;
+        qualityScore?: number;
+        topicTags?: string[];
+      }) => ({
         id: conv.id,
         title: conv.title,
         topic: conv.topic,

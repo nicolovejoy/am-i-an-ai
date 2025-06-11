@@ -7,14 +7,14 @@ import PersonasPage from '../page';
 // Mock the child components
 jest.mock('@/components/PersonaList', () => {
   return {
-    PersonaList: ({ personas, onEdit, onDelete }: any) => (
+    PersonaList: ({ personas, onEdit, onDelete }: { personas: unknown[]; onEdit: (persona: unknown) => void; onDelete: (id: string) => void }) => (
       <div data-testid="persona-list">
         <div>Personas: {personas.length}</div>
-        {personas.map((persona: any) => (
-          <div key={persona.id} data-testid={`persona-${persona.id}`}>
-            <span>{persona.name}</span>
-            <button onClick={() => onEdit(persona)}>Edit {persona.name}</button>
-            <button onClick={() => onDelete(persona.id)}>Delete {persona.name}</button>
+        {(personas as Record<string, unknown>[]).map((persona: Record<string, unknown>) => (
+          <div key={persona.id as string} data-testid={`persona-${persona.id}`}>
+            <span>{persona.name as string}</span>
+            <button onClick={() => onEdit(persona)}>Edit {persona.name as string}</button>
+            <button onClick={() => onDelete(persona.id as string)}>Delete {persona.name as string}</button>
           </div>
         ))}
       </div>
@@ -24,9 +24,9 @@ jest.mock('@/components/PersonaList', () => {
 
 jest.mock('@/components/PersonaForm', () => {
   return {
-    PersonaForm: ({ persona, onSubmit, onCancel }: any) => (
+    PersonaForm: ({ persona, onSubmit, onCancel }: { persona?: Record<string, unknown>; onSubmit: (data: unknown) => void; onCancel: () => void }) => (
       <div data-testid="persona-form">
-        <div>Form for: {persona ? persona.name : 'New Persona'}</div>
+        <div>Form for: {persona ? persona.name as string : 'New Persona'}</div>
         <button onClick={() => onSubmit({ name: 'Test Persona', type: 'human_persona' })}>
           Submit Form
         </button>
@@ -44,7 +44,7 @@ jest.mock('@/components/LoadingSpinner', () => {
 
 jest.mock('@/components/ErrorBoundary', () => {
   return {
-    ErrorBoundary: ({ children }: any) => <div data-testid="error-boundary">{children}</div>
+    ErrorBoundary: ({ children }: { children: React.ReactNode }) => <div data-testid="error-boundary">{children}</div>
   };
 });
 

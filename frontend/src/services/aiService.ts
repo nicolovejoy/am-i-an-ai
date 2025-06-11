@@ -28,7 +28,7 @@ export class AIService {
     this.config = config;
     
     // Initialize OpenAI client if API key is available
-    const apiKey = config.openaiApiKey || (typeof window === 'undefined' && typeof process !== 'undefined' && (process as any).env?.OPENAI_API_KEY); // eslint-disable-line no-undef
+    const apiKey = config.openaiApiKey;
     if (apiKey) {
       this.openai = new OpenAI({
         apiKey: apiKey,

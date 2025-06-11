@@ -20,14 +20,14 @@ export async function generateStaticParams() {
     const data = await response.json();
     
     if (data.success && Array.isArray(data.conversations)) {
-      return data.conversations.map((conv: any) => ({
+      return data.conversations.map((conv: { id: string }) => ({
         id: conv.id
       }));
     }
     
     throw new Error('Invalid conversations response format');
   } catch (error) {
-    console.warn('Failed to fetch conversations for static generation, using fallback:', error);
+    // Failed to fetch conversations, using fallback
     
     // Fallback to mock conversation IDs for static generation
     return [

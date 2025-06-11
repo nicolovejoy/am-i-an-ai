@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface ApiHealth {
   endpoint: string;
   status: 'healthy' | 'error' | 'loading';
   responseTime: number;
-  data?: any;
+  data?: unknown;
   error?: string;
 }
 
@@ -20,28 +20,25 @@ interface DatabaseStats {
 
 export default function AdminPage() {
   const [healthChecks, setHealthChecks] = useState<ApiHealth[]>([]);
-  const [personas, setPersonas] = useState<any[]>([]);
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [personas, setPersonas] = useState<Record<string, unknown>[]>([]);
+  const [conversations, setConversations] = useState<Record<string, unknown>[]>([]);
   const [dbStats, setDbStats] = useState<DatabaseStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'overview' | 'personas' | 'conversations' | 'raw'>('overview');
 
   const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
 
-  const endpoints = [
-    { name: 'Health Check', url: `${LAMBDA_API_BASE}/api/health` },
-    { name: 'Database Status', url: `${LAMBDA_API_BASE}/api/admin/database-status` },
-    { name: 'Personas', url: `${LAMBDA_API_BASE}/api/personas` },
-    { name: 'Conversations', url: `${LAMBDA_API_BASE}/api/conversations` },
-  ];
 
-  useEffect(() => {
-    runHealthChecks();
-  }, []);
-
-  const runHealthChecks = async () => {
+  const runHealthChecks = useCallback(async () => {
     setLoading(true);
     const results: ApiHealth[] = [];
+    
+    const endpoints = [
+      { name: 'Health Check', url: `${LAMBDA_API_BASE}/api/health` },
+      { name: 'Database Status', url: `${LAMBDA_API_BASE}/api/admin/database-status` },
+      { name: 'Personas', url: `${LAMBDA_API_BASE}/api/personas` },
+      { name: 'Conversations', url: `${LAMBDA_API_BASE}/api/conversations` },
+    ];
     
     for (const endpoint of endpoints) {
       const startTime = Date.now();
@@ -84,7 +81,11 @@ export default function AdminPage() {
     
     setHealthChecks(results);
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    runHealthChecks();
+  }, [runHealthChecks]);
 
   const testAIResponse = async () => {
     if (personas.length === 0) {
@@ -276,7 +277,7 @@ export default function AdminPage() {
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setSelectedTab(tab.id as any)}
+                  onClick={() => setSelectedTab(tab.id as 'overview' | 'personas' | 'conversations' | 'raw')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     selectedTab === tab.id
                       ? 'border-[#8B6B4A] text-[#8B6B4A]'
@@ -414,26 +415,26 @@ export default function AdminPage() {
             ) : (
               <div className="space-y-4">
                 {personas.map((persona) => (
-                  <div key={persona.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={persona.id as string} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center space-x-2">
-                        <span className="text-lg">{getPersonaTypeIcon(persona.type)}</span>
-                        <h3 className="font-medium text-gray-900">{persona.name}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPersonaTypeColor(persona.type)}`}>
-                          {persona.type.replace('_', ' ')}
+                        <span className="text-lg">{getPersonaTypeIcon(persona.type as string)}</span>
+                        <h3 className="font-medium text-gray-900">{persona.name as string}</h3>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPersonaTypeColor(persona.type as string)}`}>
+                          {(persona.type as string).replace('_', ' ')}
                         </span>
                       </div>
                       <div className="text-sm text-gray-500 font-mono">
-                        {persona.id}
+                        {persona.id as string}
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">{persona.description}</p>
+                    <p className="text-sm text-gray-600 mb-3">{persona.description as string}</p>
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       <div>
-                        Knowledge: {persona.knowledge.join(', ')}
+                        Knowledge: {(persona.knowledge as string[]).join(', ')}
                       </div>
                       <div>
-                        Style: {persona.communicationStyle} | Conversations: {persona.conversationCount}
+                        Style: {persona.communicationStyle as string} | Conversations: {persona.conversationCount as number}
                       </div>
                     </div>
                   </div>
@@ -451,25 +452,25 @@ export default function AdminPage() {
             ) : (
               <div className="space-y-4">
                 {conversations.map((conversation) => (
-                  <div key={conversation.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={conversation.id as string} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h3 className="font-medium text-gray-900">{conversation.title}</h3>
-                        <p className="text-sm text-gray-600">{conversation.topic}</p>
+                        <h3 className="font-medium text-gray-900">{conversation.title as string}</h3>
+                        <p className="text-sm text-gray-600">{conversation.topic as string}</p>
                       </div>
                       <div className="text-sm text-gray-500 font-mono">
-                        {conversation.id}
+                        {conversation.id as string}
                       </div>
                     </div>
-                    {conversation.description && (
-                      <p className="text-sm text-gray-600 mb-3">{conversation.description}</p>
+                    {(conversation.description as string) && (
+                      <p className="text-sm text-gray-600 mb-3">{conversation.description as string}</p>
                     )}
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       <div>
-                        Status: {conversation.status} | Messages: {conversation.messageCount || 0}
+                        Status: {conversation.status as string} | Messages: {(conversation.messageCount as number) || 0}
                       </div>
                       <div>
-                        Created: {new Date(conversation.createdAt).toLocaleDateString()}
+                        Created: {new Date(conversation.createdAt as string).toLocaleDateString()}
                       </div>
                     </div>
                   </div>

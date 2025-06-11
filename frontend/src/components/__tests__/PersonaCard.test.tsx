@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { PersonaCard } from '../PersonaCard';
-import type { Persona } from '@/types/personas';
+import type { Persona, KnowledgeDomain } from '@/types/personas';
 
 const mockPersona: Persona = {
   id: 'persona-1',
@@ -162,7 +162,7 @@ describe('PersonaCard', () => {
     it('shows overflow indicator for many domains', () => {
       const personaWithManyDomains = {
         ...mockPersona,
-        knowledge: ['arts', 'entertainment', 'general', 'technology', 'science'] as any
+        knowledge: ['arts', 'entertainment', 'general', 'technology', 'science'] as KnowledgeDomain[]
       };
 
       render(

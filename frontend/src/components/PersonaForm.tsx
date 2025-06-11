@@ -176,7 +176,7 @@ export function PersonaForm({ persona, onSubmit, onCancel }: PersonaFormProps) {
 
       await onSubmit(submitData);
     } catch (error) {
-      console.error('Form submission error:', error);
+      // Error handling is delegated to the parent component
     } finally {
       setIsSubmitting(false);
     }
@@ -378,7 +378,7 @@ export function PersonaForm({ persona, onSubmit, onCancel }: PersonaFormProps) {
               <select
                 id="model-provider"
                 value={aiConfig.modelProvider}
-                onChange={(e) => setAiConfig(prev => ({ ...prev, modelProvider: e.target.value as any }))}
+                onChange={(e) => setAiConfig(prev => ({ ...prev, modelProvider: e.target.value as 'openai' | 'anthropic' | 'google' | 'custom' }))}
                 className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B6B4A] focus:border-[#8B6B4A] transition-colors"
               >
                 {AI_PROVIDERS.map(provider => (

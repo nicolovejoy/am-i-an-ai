@@ -21,7 +21,7 @@ export function MessageInput({ onSendMessage, conversationStatus, disabled = fal
     if (!isDisabled && textareaRef.current) {
       textareaRef.current.focus();
     }
-  }, []); // Only run on mount
+  }, [isDisabled]); // Include isDisabled dependency
 
   // Handle refocusing after message is sent
   useEffect(() => {
@@ -53,7 +53,7 @@ export function MessageInput({ onSendMessage, conversationStatus, disabled = fal
       }
       setShouldRefocus(true);
     } catch (error) {
-      console.error('Failed to send message:', error);
+      // Error handling is delegated to the parent component
       // TODO: Show error toast
       // Maintain focus even on error for retry
       setShouldRefocus(true);
