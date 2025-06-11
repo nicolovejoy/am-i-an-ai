@@ -36,11 +36,16 @@ export function MessageList({ messages, participants, typingPersonas = new Set()
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="text-gray-500 mb-2">No messages yet</div>
-          <div className="text-sm text-gray-400">Start the conversation below</div>
+      <div className="flex-1 flex flex-col">
+        {/* Empty state positioned in upper portion */}
+        <div className="flex-1 flex items-center justify-center max-h-96 min-h-48">
+          <div className="text-center">
+            <div className="text-gray-500 mb-2">No messages yet</div>
+            <div className="text-sm text-gray-400">Start the conversation below</div>
+          </div>
         </div>
+        {/* Spacer to push content upward, making room for message input */}
+        <div className="flex-1"></div>
       </div>
     );
   }
@@ -92,7 +97,7 @@ export function MessageList({ messages, participants, typingPersonas = new Set()
                 </div>
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                {participant.personaName} is typing...
+                {participant.personaName} {participant.personaType === 'ai_agent' ? 'is thinking...' : 'is typing...'}
               </div>
             </div>
           </div>

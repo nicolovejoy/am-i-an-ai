@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => Promise<void>;
@@ -11,9 +11,30 @@ interface MessageInputProps {
 export function MessageInput({ onSendMessage, conversationStatus, disabled = false }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [shouldRefocus, setShouldRefocus] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isDisabled = disabled || sending || conversationStatus !== 'active';
+
+  // Auto-focus on mount when conversation is active
+  useEffect(() => {
+    if (!isDisabled && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []); // Only run on mount
+
+  // Handle refocusing after message is sent
+  useEffect(() => {
+    if (shouldRefocus && textareaRef.current) {
+      // Use setTimeout to ensure focus happens after DOM updates
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 0);
+      setShouldRefocus(false);
+    }
+  }, [shouldRefocus]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,13 +47,16 @@ export function MessageInput({ onSendMessage, conversationStatus, disabled = fal
       await onSendMessage(trimmedMessage);
       setMessage('');
       
-      // Reset textarea height
+      // Reset textarea height and schedule refocus
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
+      setShouldRefocus(true);
     } catch (error) {
       console.error('Failed to send message:', error);
       // TODO: Show error toast
+      // Maintain focus even on error for retry
+      setShouldRefocus(true);
     } finally {
       setSending(false);
     }
@@ -113,6 +137,11 @@ export function MessageInput({ onSendMessage, conversationStatus, disabled = fal
           <button
             type="submit"
             disabled={isDisabled || !message.trim()}
+            aria-label="Send message"
+            onClick={() => {
+              // Let the form submit handle the rest
+              // No need to call handleSubmit here since it's a submit button
+            }}
             className={`
               px-4 py-3 rounded-lg font-medium transition-all
               ${isDisabled || !message.trim()

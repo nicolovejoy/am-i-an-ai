@@ -34,22 +34,83 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [typingPersonas, setTypingPersonas] = useState<Set<string>>(new Set());
+  const [messageError, setMessageError] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchConversationData();
   }, [conversationId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // Poll for new messages every 5 seconds when conversation is active
+    if (conversation?.status === 'active' && !loading) {
+      const interval = setInterval(async () => {
+        try {
+          // eslint-disable-next-line no-undef
+          // eslint-disable-next-line no-undef
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+          const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.messages) {
+              // Transform and update messages
+              const newMessages: Message[] = data.messages.map((msg: any) => ({
+                id: msg.id,
+                conversationId: msg.conversationId,
+                authorPersonaId: msg.authorPersonaId,
+                content: msg.content,
+                type: msg.type || 'text',
+                timestamp: new Date(msg.timestamp),
+                sequenceNumber: msg.sequenceNumber,
+                isEdited: msg.isEdited || false,
+                editedAt: msg.editedAt ? new Date(msg.editedAt) : undefined,
+                replyToMessageId: msg.replyToMessageId,
+                metadata: msg.metadata || {},
+                moderationStatus: msg.moderationStatus || 'approved',
+                isVisible: msg.isVisible !== false,
+                isArchived: msg.isArchived || false
+              }));
+              
+              setMessages(newMessages);
+            }
+          }
+        } catch (error) {
+          console.error('Error polling for messages:', error);
+        }
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [conversation?.status, conversationId, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchConversationData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      // eslint-disable-next-line no-undef
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
       
       // Fetch conversation details
-      const conversationResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}`);
+      const conversationResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (!conversationResponse.ok) {
+        if (conversationResponse.status === 404) {
+          setConversation(null);
+          setLoading(false);
+          return;
+        }
         throw new Error('Failed to fetch conversation');
       }
       
@@ -61,7 +122,12 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       
       // Fetch conversation participants with persona details
       const participantPromises = conversationData.conversation.participants.map(async (participant: any) => {
-        const personaResponse = await fetch(`${LAMBDA_API_BASE}/api/personas/${participant.personaId}`);
+        const personaResponse = await fetch(`${LAMBDA_API_BASE}/api/personas/${participant.personaId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
         if (personaResponse.ok) {
           const personaData = await personaResponse.json();
           if (personaData.success) {
@@ -110,7 +176,12 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       setConversation(conversation);
       
       // Fetch messages from API
-      const messagesResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`);
+      const messagesResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (messagesResponse.ok) {
         const messagesData = await messagesResponse.json();
@@ -187,15 +258,21 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
 
       // Send to Lambda API to persist to database
       try {
-        const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+        // eslint-disable-next-line no-undef
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+        const messagePayload = { 
+          content, 
+          personaId: currentUserPersonaId,
+          type: 'text'
+        };
+        console.log('Sending message payload:', messagePayload);
+        console.log('conversationId:', conversationId);
+        console.log('currentUserPersonaId:', currentUserPersonaId);
+        
         const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            content, 
-            personaId: currentUserPersonaId,
-            type: 'text'
-          })
+          body: JSON.stringify(messagePayload)
         });
 
         if (response.ok) {
@@ -214,7 +291,11 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         }
       } catch (dbError) {
         console.error('Error persisting message to database:', dbError);
-        // Message still shows in UI (optimistic update), but not persisted
+        // Remove the optimistic message and show error
+        setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
+        setMessageError('Failed to send message');
+        setTimeout(() => setMessageError(null), 5000);
+        return;
       }
 
       // Trigger AI response analysis and demo simulation
@@ -279,7 +360,9 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         // Generate AI response after delay
         setTimeout(async () => {
           try {
-            const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+            // eslint-disable-next-line no-undef
+          // eslint-disable-next-line no-undef
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
             const response = await fetch(`${LAMBDA_API_BASE}/api/ai/generate-response`, {
               method: 'POST',
               headers: {
@@ -292,7 +375,14 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
               }),
             });
 
+            // Check response status first
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+            }
+
             const data = await response.json();
+            console.log('AI API Response:', data);
 
             // Remove typing indicator
             setTypingPersonas(prev => {
@@ -301,20 +391,21 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
               return newSet;
             });
 
-            if (data.success && data.message) {
+            if (data.success && (data.message || data.response)) {
+              const messageData = data.message || data.response;
               // AI response was generated and saved to database
               // Add the AI message to the UI
               const aiMessage: Message = {
-                id: data.message.id,
+                id: messageData.id,
                 conversationId: conversationId,
                 authorPersonaId: trigger.personaId,
-                content: data.message.content,
+                content: messageData.content,
                 type: 'text',
-                timestamp: new Date(data.message.timestamp),
-                sequenceNumber: data.message.sequenceNumber,
+                timestamp: new Date(messageData.timestamp),
+                sequenceNumber: messageData.sequenceNumber,
                 isEdited: false,
                 replyToMessageId: triggerMessageId,
-                metadata: data.message.metadata || {},
+                metadata: messageData.metadata || {},
                 moderationStatus: 'approved',
                 isVisible: true,
                 isArchived: false
@@ -323,7 +414,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
               setMessages(prev => [...prev, aiMessage]);
               console.log(`AI response generated for persona ${trigger.personaId}`);
             } else {
-              console.error('AI response generation failed:', data.error);
+              console.error('AI response generation failed. Full response:', data);
+              console.error('Error details:', data.error || data.message || 'No error details provided');
               // Fallback to demo response if AI fails
               generateDemoResponse(trigger, triggerMessageId);
             }
@@ -335,6 +427,9 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
               newSet.delete(trigger.personaId);
               return newSet;
             });
+            // Show error message
+            setAiError('AI response failed');
+            setTimeout(() => setAiError(null), 5000);
             // Fallback to demo response if API fails
             generateDemoResponse(trigger, triggerMessageId);
           }
@@ -518,11 +613,24 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           typingPersonas={typingPersonas}
         />
         
-        <MessageInput 
-          onSendMessage={handleSendMessage}
-          conversationStatus={conversation.status}
-        />
+        {messageError && (
+          <div className="px-4 py-2 bg-red-50 border-t border-red-200">
+            <p className="text-sm text-red-600">{messageError}</p>
+          </div>
+        )}
+        
+        {aiError && (
+          <div className="px-4 py-2 bg-yellow-50 border-t border-yellow-200">
+            <p className="text-sm text-yellow-600">{aiError}</p>
+          </div>
+        )}
       </div>
+      
+      {/* Message Input - positioned as a sticky footer */}
+      <MessageInput 
+        onSendMessage={handleSendMessage}
+        conversationStatus={conversation.status}
+      />
     </div>
   );
 }

@@ -13,7 +13,7 @@ interface ConversationFormData {
   topic: string;
   description: string;
   goals: string;
-  selectedPersonas: string[];
+  selectedPersona: string; // Changed to single persona
   isPrivate: boolean;
   topicTags: string[];
 }
@@ -28,7 +28,7 @@ export default function NewConversationPage() {
     topic: '',
     description: '',
     goals: '',
-    selectedPersonas: [],
+    selectedPersona: '', // Changed to single persona
     isPrivate: true,
     topicTags: []
   });
@@ -56,7 +56,8 @@ export default function NewConversationPage() {
       setLoading(true);
       
       // Fetch personas from Lambda API
-      const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      // eslint-disable-next-line no-undef
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
       
       // Add timeout for better UX
       const controller = new AbortController();
@@ -77,6 +78,15 @@ export default function NewConversationPage() {
       
       if (data.success && Array.isArray(data.personas)) {
         setPersonas(data.personas);
+        
+        // Set default AI persona selection (first AI persona)
+        const firstAiPersona = data.personas.find((p: Persona) => p.type !== 'human_persona');
+        if (firstAiPersona && !formData.selectedPersona) {
+          setFormData(prev => ({
+            ...prev,
+            selectedPersona: firstAiPersona.id
+          }));
+        }
       } else {
         throw new Error('Invalid personas response format');
       }
@@ -226,6 +236,15 @@ export default function NewConversationPage() {
       ];
       
       setPersonas(mockPersonas);
+      
+      // Set default AI persona selection (first AI persona)
+      const firstAiPersona = mockPersonas.find((p: Persona) => p.type !== 'human_persona');
+      if (firstAiPersona && !formData.selectedPersona) {
+        setFormData(prev => ({
+          ...prev,
+          selectedPersona: firstAiPersona.id
+        }));
+      }
     } finally {
       setLoading(false);
     }
@@ -238,12 +257,10 @@ export default function NewConversationPage() {
     }));
   };
 
-  const handlePersonaToggle = (personaId: string) => {
+  const handlePersonaSelect = (personaId: string) => {
     setFormData(prev => ({
       ...prev,
-      selectedPersonas: prev.selectedPersonas.includes(personaId)
-        ? prev.selectedPersonas.filter(id => id !== personaId)
-        : [...prev.selectedPersonas, personaId]
+      selectedPersona: personaId
     }));
   };
 
@@ -262,6 +279,16 @@ export default function NewConversationPage() {
     handleInputChange('topicTags', formData.topicTags.filter(tag => tag !== tagToRemove));
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      // Check if required fields are filled
+      if (formData.title.trim() && formData.topic.trim() && formData.selectedPersona) {
+        e.preventDefault();
+        handleSubmit(e as any);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -275,8 +302,8 @@ export default function NewConversationPage() {
       return;
     }
     
-    if (formData.selectedPersonas.length === 0) {
-      addToast('error', 'Please select at least one persona to participate');
+    if (!formData.selectedPersona) {
+      addToast('error', 'Please select a persona to chat with');
       return;
     }
     
@@ -284,7 +311,8 @@ export default function NewConversationPage() {
       setSubmitting(true);
       
       // Create conversation via Lambda API
-      const LAMBDA_API_BASE = 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      // eslint-disable-next-line no-undef
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
       
       console.log('Creating conversation with data:', {
         ...formData,
@@ -298,6 +326,10 @@ export default function NewConversationPage() {
         },
         body: JSON.stringify({
           ...formData,
+          selectedPersonas: [
+            personas.find(p => p.type === 'human_persona')?.id || '660e8400-e29b-41d4-a716-446655440001', // First human persona
+            formData.selectedPersona    // Selected AI persona
+          ],
           createdBy: 'demo-user' // In production, this would come from auth context
         }),
       });
@@ -370,99 +402,11 @@ export default function NewConversationPage() {
     }
   };
 
-  const calculatePersonalityDistance = (persona1: Persona, persona2: Persona): number => {
-    // Check if both personas have personality data
-    if (!persona1.personality || !persona2.personality) {
-      return 50; // Default moderate distance if personality data is missing
-    }
 
-    const traits = ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism', 'creativity', 'assertiveness', 'empathy'] as const;
-    let totalDistance = 0;
-    let validTraits = 0;
-    
-    traits.forEach(trait => {
-      const value1 = persona1.personality[trait];
-      const value2 = persona2.personality[trait];
-      
-      // Only calculate if both values exist and are numbers
-      if (typeof value1 === 'number' && typeof value2 === 'number') {
-        const diff = Math.abs(value1 - value2);
-        totalDistance += diff;
-        validTraits++;
-      }
-    });
-    
-    // If no valid traits found, return default moderate distance
-    if (validTraits === 0) {
-      return 50;
-    }
-    
-    return totalDistance / validTraits;
-  };
 
-  const getCompatibilityScore = (persona1: Persona, persona2: Persona): number => {
-    const personalityDistance = calculatePersonalityDistance(persona1, persona2);
-    const knowledgeOverlap = persona1.knowledge.filter(k => persona2.knowledge.includes(k)).length;
-    const maxKnowledge = Math.max(persona1.knowledge.length, persona2.knowledge.length);
-    const knowledgeScore = maxKnowledge > 0 ? (knowledgeOverlap / maxKnowledge) * 100 : 0;
-    
-    // Convert personality distance (0-100) to compatibility (100-0)
-    const personalityCompatibility = 100 - personalityDistance;
-    
-    // Weight: 70% personality, 30% knowledge overlap
-    return Math.round(personalityCompatibility * 0.7 + knowledgeScore * 0.3);
-  };
 
-  const getCompatibilityScores = (selectedPersonas: string[]): { [key: string]: number } => {
-    const scores: { [key: string]: number } = {};
-    
-    personas.forEach(persona => {
-      if (selectedPersonas.length === 0) {
-        scores[persona.id] = 0;
-        return;
-      }
-      
-      const selectedPersonaObjects = personas.filter(p => selectedPersonas.includes(p.id));
-      let totalScore = 0;
-      
-      selectedPersonaObjects.forEach(selectedPersona => {
-        if (persona.id !== selectedPersona.id) {
-          totalScore += getCompatibilityScore(persona, selectedPersona);
-        }
-      });
-      
-      scores[persona.id] = selectedPersonaObjects.length > 0 ? Math.round(totalScore / selectedPersonaObjects.length) : 0;
-    });
-    
-    return scores;
-  };
 
-  const getCompatibilityColor = (score: number): string => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    if (score >= 40) return 'text-orange-600';
-    return 'text-red-600';
-  };
 
-  const getCompatibilityLabel = (score: number): string => {
-    if (score >= 80) return 'Excellent';
-    if (score >= 60) return 'Good';
-    if (score >= 40) return 'Fair';
-    return 'Poor';
-  };
-
-  const getSuggestedPairs = (): Array<{ persona1: Persona; persona2: Persona; score: number }> => {
-    const pairs: Array<{ persona1: Persona; persona2: Persona; score: number }> = [];
-    
-    for (let i = 0; i < personas.length; i++) {
-      for (let j = i + 1; j < personas.length; j++) {
-        const score = getCompatibilityScore(personas[i], personas[j]);
-        pairs.push({ persona1: personas[i], persona2: personas[j], score });
-      }
-    }
-    
-    return pairs.sort((a, b) => b.score - a.score).slice(0, 3);
-  };
 
   const getTopicSuggestions = (): string[] => {
     const allSuggestions = [
@@ -483,20 +427,22 @@ export default function NewConversationPage() {
       'Learning from diverse perspectives'
     ];
 
-    // Filter suggestions based on selected personas' knowledge areas
-    if (formData.selectedPersonas.length > 0) {
-      const selectedPersonaObjects = personas.filter(p => formData.selectedPersonas.includes(p.id));
-      const combinedKnowledge = [...new Set(selectedPersonaObjects.flatMap(p => p.knowledge))];
-      
-      const relevantSuggestions = allSuggestions.filter(suggestion => {
-        const suggestionLower = suggestion.toLowerCase();
-        return combinedKnowledge.some(knowledge => 
-          suggestionLower.includes(knowledge.toLowerCase()) || 
-          knowledge.toLowerCase().includes(suggestionLower.split(' ')[0])
-        );
-      });
-      
-      return relevantSuggestions.length > 0 ? relevantSuggestions.slice(0, 6) : allSuggestions.slice(0, 6);
+    // Filter suggestions based on selected persona's knowledge areas
+    if (formData.selectedPersona) {
+      const selectedPersonaObject = personas.find(p => p.id === formData.selectedPersona);
+      if (selectedPersonaObject) {
+        const knowledge = selectedPersonaObject.knowledge;
+        
+        const relevantSuggestions = allSuggestions.filter(suggestion => {
+          const suggestionLower = suggestion.toLowerCase();
+          return knowledge.some(k => 
+            suggestionLower.includes(k.toLowerCase()) || 
+            k.toLowerCase().includes(suggestionLower.split(' ')[0])
+          );
+        });
+        
+        return relevantSuggestions.length > 0 ? relevantSuggestions.slice(0, 6) : allSuggestions.slice(0, 6);
+      }
     }
     
     return allSuggestions.slice(0, 6);
@@ -516,26 +462,24 @@ export default function NewConversationPage() {
       'Practice respectful debate and discussion'
     ];
 
-    // Customize based on selected personas
-    if (formData.selectedPersonas.length > 0) {
-      const selectedPersonaObjects = personas.filter(p => formData.selectedPersonas.includes(p.id));
-      const hasCreativePersona = selectedPersonaObjects.some(p => p.personality.creativity > 70);
-      const hasAnalyticalPersona = selectedPersonaObjects.some(p => p.personality.conscientiousness > 70);
-      const hasPhilosophicalPersona = selectedPersonaObjects.some(p => p.knowledge.includes('philosophy'));
-      
-      const customSuggestions = [];
-      
-      if (hasCreativePersona) {
-        customSuggestions.push('Collaborate on a creative project', 'Brainstorm innovative approaches');
+    // Customize based on selected persona
+    if (formData.selectedPersona) {
+      const selectedPersonaObject = personas.find(p => p.id === formData.selectedPersona);
+      if (selectedPersonaObject) {
+        const customSuggestions = [];
+        
+        if (selectedPersonaObject.personality.creativity > 70) {
+          customSuggestions.push('Collaborate on a creative project', 'Brainstorm innovative approaches');
+        }
+        if (selectedPersonaObject.personality.conscientiousness > 70) {
+          customSuggestions.push('Analyze the topic systematically', 'Break down complex concepts');
+        }
+        if (selectedPersonaObject.knowledge.includes('philosophy')) {
+          customSuggestions.push('Explore the philosophical implications', 'Question fundamental assumptions');
+        }
+        
+        return [...customSuggestions, ...baseSuggestions].slice(0, 8);
       }
-      if (hasAnalyticalPersona) {
-        customSuggestions.push('Analyze the topic systematically', 'Break down complex concepts');
-      }
-      if (hasPhilosophicalPersona) {
-        customSuggestions.push('Explore the philosophical implications', 'Question fundamental assumptions');
-      }
-      
-      return [...customSuggestions, ...baseSuggestions].slice(0, 8);
     }
     
     return baseSuggestions.slice(0, 6);
@@ -574,13 +518,14 @@ export default function NewConversationPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-[#2D3748] mb-2">
-                Title *
+                Conversation Title *
               </label>
               <input
                 type="text"
                 id="title"
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Give your conversation a descriptive title"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#8B6B4A] focus:border-transparent"
                 required
@@ -589,7 +534,7 @@ export default function NewConversationPage() {
 
             <div className="relative">
               <label htmlFor="topic" className="block text-sm font-medium text-[#2D3748] mb-2">
-                Main Topic *
+                Topic *
               </label>
               <div className="relative">
                 <input
@@ -597,6 +542,7 @@ export default function NewConversationPage() {
                   id="topic"
                   value={formData.topic}
                   onChange={(e) => handleInputChange('topic', e.target.value)}
+                  onKeyDown={handleKeyDown}
                   onFocus={() => setShowTopicSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowTopicSuggestions(false), 200)}
                   placeholder="What is the main focus of this conversation?"
@@ -615,7 +561,7 @@ export default function NewConversationPage() {
               {showTopicSuggestions && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   <div className="p-2 text-xs font-medium text-[#4A5568] border-b border-gray-100">
-                    {formData.selectedPersonas.length > 0 ? 'Suggestions based on selected personas:' : 'Popular conversation topics:'}
+                    {formData.selectedPersona ? 'Suggestions based on selected persona:' : 'Popular conversation topics:'}
                   </div>
                   {getTopicSuggestions().map((suggestion, index) => (
                     <button
@@ -675,7 +621,7 @@ export default function NewConversationPage() {
               {showGoalSuggestions && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   <div className="p-2 text-xs font-medium text-[#4A5568] border-b border-gray-100">
-                    {formData.selectedPersonas.length > 0 ? 'Goals tailored to your personas:' : 'Suggested conversation goals:'}
+                    {formData.selectedPersona ? 'Goals tailored to your selected persona:' : 'Suggested conversation goals:'}
                   </div>
                   {getGoalSuggestions().map((suggestion, index) => (
                     <button
@@ -736,135 +682,61 @@ export default function NewConversationPage() {
 
         {/* Persona Selection */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-xl font-medium text-[#2D3748] mb-4">Select Participants</h2>
+          <h2 className="text-xl font-medium text-[#2D3748] mb-4">Choose Your Chat Partner</h2>
           <p className="text-sm text-[#4A5568] mb-6">
-            Choose personas to participate in your conversation. Compatibility scores help identify personas that work well together.
+            You'll be chatting as <strong>"{personas.find(p => p.type === 'human_persona')?.name || 'Creative Writer Alice'}"</strong> - {personas.find(p => p.type === 'human_persona')?.description || 'a passionate creative writer who loves crafting stories'}. Select an AI persona to chat with:
           </p>
 
-          {/* Suggested Pairs */}
-          {formData.selectedPersonas.length === 0 && getSuggestedPairs().length > 0 && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h3 className="text-sm font-medium text-[#2D3748] mb-3">💡 Suggested Compatible Pairs</h3>
-              <div className="space-y-2">
-                {getSuggestedPairs().slice(0, 2).map((pair, index) => (
-                  <div key={index} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center space-x-2">
-                      <span>{getPersonaTypeIcon(pair.persona1.type)}</span>
-                      <span className="font-medium">{pair.persona1.name}</span>
-                      <span className="text-[#4A5568]">+</span>
-                      <span>{getPersonaTypeIcon(pair.persona2.type)}</span>
-                      <span className="font-medium">{pair.persona2.name}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`font-medium ${getCompatibilityColor(pair.score)}`}>
-                        {pair.score}% compatible
+          <div>
+            <label htmlFor="persona-select" className="block text-sm font-medium text-[#2D3748] mb-2">
+              AI Chat Partner
+            </label>
+            <select
+              id="persona-select"
+              value={formData.selectedPersona}
+              onChange={(e) => handlePersonaSelect(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#8B6B4A] focus:border-transparent"
+              required
+            >
+              <option value="">Select an AI persona to chat with...</option>
+              {personas.filter(p => p.type !== 'human_persona').map((persona) => (
+                <option key={persona.id} value={persona.id}>
+                  {getPersonaTypeIcon(persona.type)} {persona.name} - {persona.description.slice(0, 60)}...
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Show selected persona details */}
+          {formData.selectedPersona && (
+            <div className="mt-4 p-4 bg-[#8B6B4A]/5 border border-[#8B6B4A]/20 rounded-lg">
+              {(() => {
+                const selectedPersonaData = personas.find(p => p.id === formData.selectedPersona);
+                if (!selectedPersonaData) return null;
+                
+                return (
+                  <div>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className="text-lg">{getPersonaTypeIcon(selectedPersonaData.type)}</span>
+                      <h3 className="font-medium text-[#2D3748]">{selectedPersonaData.name}</h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPersonaTypeColor(selectedPersonaData.type)}`}>
+                        {selectedPersonaData.type.replace('_', ' ')}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            selectedPersonas: [pair.persona1.id, pair.persona2.id]
-                          }));
-                        }}
-                        className="text-xs px-2 py-1 bg-[#8B6B4A] text-white rounded hover:bg-[#7A5A3A] transition-colors"
-                      >
-                        Select Both
-                      </button>
+                    </div>
+                    <p className="text-sm text-[#4A5568] mb-2">{selectedPersonaData.description}</p>
+                    <div className="text-xs text-[#4A5568]">
+                      <strong>Expertise:</strong> {selectedPersonaData.knowledge.join(', ')}
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
           )}
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {personas.map((persona) => {
-              const compatibilityScores = getCompatibilityScores(formData.selectedPersonas);
-              const score = compatibilityScores[persona.id];
-              const isSelected = formData.selectedPersonas.includes(persona.id);
-              
-              return (
-                <div
-                  key={persona.id}
-                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                    isSelected
-                      ? 'border-[#8B6B4A] bg-[#8B6B4A]/5'
-                      : 'border-gray-200 hover:border-[#8B6B4A]/50'
-                  }`}
-                  onClick={() => handlePersonaToggle(persona.id)}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-lg">{getPersonaTypeIcon(persona.type)}</span>
-                      <h3 className="font-medium text-[#2D3748]">{persona.name}</h3>
-                      {formData.selectedPersonas.length > 0 && !isSelected && score > 0 && (
-                        <div className="flex items-center space-x-1">
-                          <div className={`w-2 h-2 rounded-full ${
-                            score >= 80 ? 'bg-green-500' : 
-                            score >= 60 ? 'bg-yellow-500' : 
-                            score >= 40 ? 'bg-orange-500' : 'bg-red-500'
-                          }`}></div>
-                          <span className={`text-xs font-medium ${getCompatibilityColor(score)}`}>
-                            {score}%
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handlePersonaToggle(persona.id);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-[#8B6B4A] focus:ring-[#8B6B4A]"
-                      aria-label={`Select ${persona.name}`}
-                    />
-                  </div>
-                  
-                  <p className="text-sm text-[#4A5568] mb-3">{persona.description}</p>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPersonaTypeColor(persona.type)}`}>
-                      {persona.type.replace('_', ' ')}
-                    </span>
-                    <div className="text-xs text-[#4A5568]">
-                      {persona.knowledge.slice(0, 2).join(', ')}
-                      {persona.knowledge.length > 2 && ' +more'}
-                    </div>
-                  </div>
-
-                  {formData.selectedPersonas.length > 0 && !isSelected && score > 0 && (
-                    <div className="mt-2 pt-2 border-t border-gray-100">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-[#4A5568]">Compatibility:</span>
-                        <span className={`font-medium ${getCompatibilityColor(score)}`}>
-                          {getCompatibilityLabel(score)} ({score}%)
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          
-          {formData.selectedPersonas.length > 0 && (
+          {formData.selectedPersona && (
             <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
               <p className="text-sm text-green-800">
-                {formData.selectedPersonas.length} persona{formData.selectedPersonas.length > 1 ? 's' : ''} selected
-                {formData.selectedPersonas.length > 1 && (
-                  <span className="ml-2">
-                    • Average compatibility: {Math.round(
-                      Object.values(getCompatibilityScores(formData.selectedPersonas))
-                        .filter(score => score > 0)
-                        .reduce((sum, score) => sum + score, 0) / 
-                      Math.max(1, Object.values(getCompatibilityScores(formData.selectedPersonas)).filter(score => score > 0).length)
-                    )}%
-                  </span>
-                )}
+                <strong>Conversation Setup:</strong> {personas.find(p => p.type === 'human_persona')?.name || 'Creative Writer Alice'} (you) will chat with {personas.find(p => p.id === formData.selectedPersona)?.name}
               </p>
             </div>
           )}

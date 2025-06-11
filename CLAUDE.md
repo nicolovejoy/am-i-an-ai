@@ -63,6 +63,24 @@ npm run build
 - **Infrastructure Scripts**: User runs all Terraform/infrastructure scripts manually
 - **Never run `terraform` or `./scripts/setup.sh` or `./scripts/destroy.sh`** - user manages infrastructure
 
+### Test-Driven Development (TDD)
+
+**MANDATORY: Always follow Test-Driven Development practices**
+
+- **Write tests FIRST**: Before implementing any new feature or fixing bugs
+- **Red-Green-Refactor cycle**: 
+  1. Write failing tests that define the expected behavior
+  2. Write minimal code to make tests pass
+  3. Refactor while keeping tests green
+- **Test at multiple levels**:
+  - Unit tests for individual functions/components
+  - Integration tests for API interactions
+  - End-to-end tests for critical user flows
+- **Mock external dependencies**: Use mocks for API calls in unit tests
+- **Test error cases**: Always test both success and failure scenarios
+- **Maintain high coverage**: Aim for >90% test coverage on new code
+- **Run tests frequently**: Before and after each implementation step
+
 ### Pre-Commit Requirements
 
 **MANDATORY: Before any git commit, ALWAYS run these commands in parallel:**

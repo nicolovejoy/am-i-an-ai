@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable static export for S3 deployment
-  output: "export",
+  // Enable static export only for production S3 deployment
+  ...(process.env.NODE_ENV === "production" && { output: "export" }),
   // Make sure the basePath matches your S3 website URL structure
   // basePath: '',
   // If you're hosting at a subdirectory, set trailing slash appropriately

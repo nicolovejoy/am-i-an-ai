@@ -40,7 +40,7 @@ jobs:
 
       - name: Run tests
         working-directory: frontend
-        run: npm test -- --watchAll=false --coverage
+        run: npm test -- --watchAll=false --coverage --maxWorkers=2 --verbose
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
