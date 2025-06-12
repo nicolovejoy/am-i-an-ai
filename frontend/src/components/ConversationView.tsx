@@ -49,7 +49,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         try {
           // eslint-disable-next-line no-undef
           // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
           const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
             method: 'GET',
             headers: {
@@ -96,7 +96,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       setError(null);
       
       // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
       
       // Fetch conversation details
       const conversationResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}`, {
@@ -260,7 +260,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       // Send to Lambda API to persist to database
       try {
         // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
         const messagePayload = { 
           content, 
           personaId: currentUserPersonaId,
@@ -363,7 +363,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           try {
             // eslint-disable-next-line no-undef
           // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
             const response = await fetch(`${LAMBDA_API_BASE}/api/ai/generate-response`, {
               method: 'POST',
               headers: {

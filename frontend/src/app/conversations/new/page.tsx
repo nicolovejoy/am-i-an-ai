@@ -57,7 +57,7 @@ export default function NewConversationPage() {
       
       // Fetch personas from Lambda API
       // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
       
       // Add timeout for better UX
       const controller = new AbortController();
@@ -312,7 +312,7 @@ export default function NewConversationPage() {
       
       // Create conversation via Lambda API
       // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
       
       // Creating conversation with form data
       

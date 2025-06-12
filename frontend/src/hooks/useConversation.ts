@@ -10,7 +10,7 @@ declare const process: {
   };
 };
 
-const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod';
+const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
 
 export function useConversation(conversationId: string | null) {
   const queryClient = useQueryClient();

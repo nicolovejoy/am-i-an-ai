@@ -19,9 +19,12 @@ const NavMenu: React.FC = () => {
   };
 
   const isActive = (path: string) => {
-    // Handle conversations route specially - active for /, /conversations, /conversations/*
+    // Handle exact path matching
     if (path === '/') {
-      return pathname === '/' || pathname.startsWith('/conversations');
+      return pathname === '/';
+    }
+    if (path === '/conversations') {
+      return pathname === '/conversations' || pathname.startsWith('/conversations');
     }
     return pathname === path;
   };
@@ -68,6 +71,16 @@ const NavMenu: React.FC = () => {
                     href="/"
                     className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
                       isActive("/")
+                        ? "text-[#8B6B4A] border-b-2 border-[#8B6B4A]"
+                        : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-b-2 hover:border-[#8B6B4A]"
+                    }`}
+                  >
+                    Home
+                  </Link>
+                  <Link
+                    href="/conversations"
+                    className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                      isActive("/conversations")
                         ? "text-[#8B6B4A] border-b-2 border-[#8B6B4A]"
                         : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-b-2 hover:border-[#8B6B4A]"
                     }`}
@@ -187,6 +200,17 @@ const NavMenu: React.FC = () => {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={`block px-3 py-2 text-base font-medium flex items-center ${
                     isActive("/")
+                      ? "text-[#8B6B4A] border-l-4 border-[#8B6B4A]"
+                      : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-l-4 hover:border-[#8B6B4A]"
+                  }`}
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/conversations"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`block px-3 py-2 text-base font-medium flex items-center ${
+                    isActive("/conversations")
                       ? "text-[#8B6B4A] border-l-4 border-[#8B6B4A]"
                       : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-l-4 hover:border-[#8B6B4A]"
                   }`}
