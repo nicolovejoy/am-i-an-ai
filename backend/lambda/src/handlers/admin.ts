@@ -22,6 +22,10 @@ export async function handleAdmin(
       return await seedDatabase(corsHeaders);
     }
 
+    if (path === '/api/admin/fix-message-counts' && method === 'POST') {
+      return await fixMessageCounts(corsHeaders);
+    }
+
     return {
       statusCode: 404,
       headers: corsHeaders,
@@ -350,5 +354,111 @@ async function seedDatabase(
     };
   } finally {
     client.release();
+  }
+}
+
+async function fixMessageCounts(
+  corsHeaders: Record<string, string>
+): Promise<APIGatewayProxyResult> {
+  try {
+    console.log('Starting message count recalculation...');
+
+    // Get conversations with incorrect message counts
+    const incorrectCountsQuery = `
+      SELECT 
+        c.id,
+        c.title,
+        c.message_count as current_count,
+        (
+          SELECT COUNT(*)
+          FROM messages m
+          WHERE m.conversation_id = c.id
+            AND m.is_visible = true
+            AND m.is_archived = false
+            AND m.moderation_status = 'approved'
+        ) as actual_count
+      FROM conversations c
+      WHERE c.message_count != (
+        SELECT COUNT(*)
+        FROM messages m
+        WHERE m.conversation_id = c.id
+          AND m.is_visible = true
+          AND m.is_archived = false
+          AND m.moderation_status = 'approved'
+      )
+      ORDER BY c.id
+    `;
+
+    const incorrectCounts = await queryDatabase(incorrectCountsQuery);
+    console.log(`Found ${incorrectCounts.rows.length} conversations with incorrect message counts`);
+
+    // Update all conversation message counts
+    const updateQuery = `
+      UPDATE conversations 
+      SET message_count = (
+        SELECT COUNT(*)
+        FROM messages m
+        WHERE m.conversation_id = conversations.id
+          AND m.is_visible = true
+          AND m.is_archived = false
+          AND m.moderation_status = 'approved'
+      )
+    `;
+
+    await queryDatabase(updateQuery);
+    console.log('Updated message counts for all conversations');
+
+    // Get final verification
+    const verificationQuery = `
+      SELECT 
+        COUNT(*) as total_conversations,
+        SUM(CASE 
+          WHEN c.message_count = (
+            SELECT COUNT(*)
+            FROM messages m
+            WHERE m.conversation_id = c.id
+              AND m.is_visible = true
+              AND m.is_archived = false
+              AND m.moderation_status = 'approved'
+          ) THEN 1 ELSE 0 
+        END) as correct_counts
+      FROM conversations c
+    `;
+
+    const verification = await queryDatabase(verificationQuery);
+    const stats = verification.rows[0];
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        message: 'Message counts recalculated successfully',
+        fixed: incorrectCounts.rows.length,
+        details: incorrectCounts.rows.map((row: any) => ({
+          conversationId: row.id,
+          title: row.title,
+          oldCount: parseInt(row.current_count),
+          newCount: parseInt(row.actual_count)
+        })),
+        verification: {
+          totalConversations: parseInt(stats.total_conversations),
+          correctCounts: parseInt(stats.correct_counts)
+        },
+        timestamp: new Date().toISOString(),
+      }),
+    };
+
+  } catch (error) {
+    console.error('Message count fix failed:', error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: false,
+        error: 'Message count fix failed',
+        message: String(error),
+      }),
+    };
   }
 }

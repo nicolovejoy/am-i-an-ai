@@ -316,13 +316,18 @@ async function getMessages(
 ): Promise<APIGatewayProxyResult> {
   try {
     // Query messages with persona information
+    // Use LEFT JOIN to include messages even if persona is missing/deleted
+    // Add filtering for visible, non-archived, approved messages
     const messagesQuery = `
       SELECT m.*, 
-             p.name as author_name,
-             p.type as author_type
+             COALESCE(p.name, 'Unknown User') as author_name,
+             COALESCE(p.type, 'human') as author_type
       FROM messages m
-      JOIN personas p ON m.author_persona_id = p.id
+      LEFT JOIN personas p ON m.author_persona_id = p.id
       WHERE m.conversation_id = $1
+        AND m.is_visible = true
+        AND m.is_archived = false
+        AND m.moderation_status = 'approved'
       ORDER BY m.sequence_number ASC
     `;
     
@@ -449,10 +454,18 @@ async function createMessage(
     const message = result.rows[0];
     
     // Update conversation statistics
+    // Calculate actual message count based on visible, non-archived, approved messages
     const updateConversationQuery = `
       UPDATE conversations 
-      SET message_count = message_count + 1,
-          total_characters = total_characters + $1
+      SET message_count = (
+        SELECT COUNT(*)
+        FROM messages m
+        WHERE m.conversation_id = $2
+          AND m.is_visible = true
+          AND m.is_archived = false
+          AND m.moderation_status = 'approved'
+      ),
+      total_characters = total_characters + $1
       WHERE id = $2
     `;
     

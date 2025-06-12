@@ -316,10 +316,18 @@ async function generateResponse(
     ]);
     
     // Update conversation statistics
+    // Calculate actual message count based on visible, non-archived, approved messages
     const updateConversationQuery = `
       UPDATE conversations 
-      SET message_count = message_count + 1,
-          total_characters = total_characters + $1
+      SET message_count = (
+        SELECT COUNT(*)
+        FROM messages m
+        WHERE m.conversation_id = $2
+          AND m.is_visible = true
+          AND m.is_archived = false
+          AND m.moderation_status = 'approved'
+      ),
+      total_characters = total_characters + $1
       WHERE id = $2
     `;
     
