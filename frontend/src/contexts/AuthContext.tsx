@@ -8,16 +8,12 @@ import React, {
   ReactNode,
 } from "react";
 import { cognitoService } from "../services/cognito";
-
-interface User {
-  email: string;
-  sub: string;
-}
+import { AuthUser } from "../types/auth";
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
-  user: User | null;
+  user: AuthUser | null;
   checkAuth: () => Promise<void>;
   signOut: () => void;
 }
@@ -27,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   const checkAuth = async () => {
     try {

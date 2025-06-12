@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface ApiHealth {
   endpoint: string;
@@ -18,7 +19,7 @@ interface DatabaseStats {
   users: number;
 }
 
-export default function AdminPage() {
+function AdminPageContent() {
   const [healthChecks, setHealthChecks] = useState<ApiHealth[]>([]);
   const [personas, setPersonas] = useState<Record<string, unknown>[]>([]);
   const [conversations, setConversations] = useState<Record<string, unknown>[]>([]);
@@ -505,5 +506,13 @@ export default function AdminPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <ProtectedRoute requireAdmin>
+      <AdminPageContent />
+    </ProtectedRoute>
   );
 }

@@ -14,12 +14,17 @@ export interface AuthError {
   message: string;
 }
 
+export interface AuthUser {
+  email: string;
+  sub: string;
+  role?: 'user' | 'moderator' | 'admin';
+  isFirstLogin?: boolean;
+  lastLoginAt?: string;
+}
+
 export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: AuthError | null;
-  user: {
-    email: string;
-    sub: string;
-  } | null;
+  user: AuthUser | null;
 }

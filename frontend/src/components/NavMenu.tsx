@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import { FaBars, FaTimes } from "react-icons/fa";
 import Image from "next/image";
 import { useAuth } from "../contexts/AuthContext";
+import { useRoleAccess } from "../hooks/useRoleAccess";
 
 const NavMenu: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { isAuthenticated, signOut } = useAuth();
+  const { canAccessAdmin } = useRoleAccess();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -92,16 +94,18 @@ const NavMenu: React.FC = () => {
                   >
                     Profile
                   </Link>
-                  <Link
-                    href="/admin"
-                    className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
-                      isActive("/admin")
-                        ? "text-[#8B6B4A] border-b-2 border-[#8B6B4A]"
-                        : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-b-2 hover:border-[#8B6B4A]"
-                    }`}
-                  >
-                    Admin
-                  </Link>
+                  {canAccessAdmin() && (
+                    <Link
+                      href="/admin"
+                      className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                        isActive("/admin")
+                          ? "text-[#8B6B4A] border-b-2 border-[#8B6B4A]"
+                          : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-b-2 hover:border-[#8B6B4A]"
+                      }`}
+                    >
+                      Admin
+                    </Link>
+                  )}
                 </>
               )}
             </div>
@@ -211,17 +215,19 @@ const NavMenu: React.FC = () => {
                 >
                   Profile
                 </Link>
-                <Link
-                  href="/admin"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`block px-3 py-2 text-base font-medium flex items-center ${
-                    isActive("/admin")
-                      ? "text-[#8B6B4A] border-l-4 border-[#8B6B4A]"
-                      : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-l-4 hover:border-[#8B6B4A]"
-                  }`}
-                >
-                  Admin
-                </Link>
+                {canAccessAdmin() && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`block px-3 py-2 text-base font-medium flex items-center ${
+                      isActive("/admin")
+                        ? "text-[#8B6B4A] border-l-4 border-[#8B6B4A]"
+                        : "text-[#4A5568] hover:text-[#8B6B4A] hover:border-l-4 hover:border-[#8B6B4A]"
+                    }`}
+                  >
+                    Admin
+                  </Link>
+                )}
               </>
             )}
             {isAuthenticated ? (
