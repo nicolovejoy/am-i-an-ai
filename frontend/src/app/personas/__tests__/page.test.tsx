@@ -4,6 +4,13 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import PersonasPage from '../page';
 
+// Mock cognito service
+jest.mock('@/services/cognito', () => ({
+  cognitoService: {
+    getIdToken: jest.fn().mockResolvedValue('mock-token'),
+  },
+}));
+
 // Mock the child components
 jest.mock('@/components/PersonaList', () => {
   return {

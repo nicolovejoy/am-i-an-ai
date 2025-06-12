@@ -3,6 +3,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ConversationList from '../ConversationList';
 
+// Mock cognito service
+jest.mock('@/services/cognito', () => ({
+  cognitoService: {
+    getIdToken: jest.fn().mockResolvedValue('mock-token'),
+  },
+}));
+
 // Mock Next.js Link component
 jest.mock('next/link', () => {
   return function MockLink({ href, children, ...props }: { href: string; children: React.ReactNode; [key: string]: unknown }) {

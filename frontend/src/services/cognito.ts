@@ -164,6 +164,28 @@ export const cognitoService = {
     });
   },
 
+  getIdToken: (): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const currentUser = userPool.getCurrentUser();
+      if (!currentUser) {
+        resolve(null);
+        return;
+      }
+
+      currentUser.getSession(
+        (err: Error | null, session: any) => {
+          if (err || !session || !session.isValid()) {
+            resolve(null);
+            return;
+          }
+
+          const idToken = session.getIdToken().getJwtToken();
+          resolve(idToken);
+        }
+      );
+    });
+  },
+
   updateUserAttributes: async (attributes: { [key: string]: string }): Promise<void> => {
     return new Promise((resolve, reject) => {
       const currentUser = userPool.getCurrentUser();

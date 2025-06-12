@@ -5,6 +5,7 @@ import { PersonaList } from '@/components/PersonaList';
 import { PersonaForm } from '@/components/PersonaForm';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { cognitoService } from '@/services/cognito';
 import type { Persona } from '@/types/personas';
 
 export default function PersonasPage() {
@@ -33,12 +34,22 @@ export default function PersonasPage() {
         return;
       }
       
+      // Get auth token
+      const token = await cognitoService.getIdToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+      
       // Add timeout for better UX
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
       const response = await fetch('https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
-        signal: controller.signal
+        signal: controller.signal,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       clearTimeout(timeoutId);
       
@@ -98,9 +109,16 @@ export default function PersonasPage() {
         return;
       }
       
+      // Get auth token
+      const token = await cognitoService.getIdToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+      
       const response = await fetch('https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(personaData),
@@ -132,8 +150,18 @@ export default function PersonasPage() {
         return;
       }
       
+      // Get auth token
+      const token = await cognitoService.getIdToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+      
       const response = await fetch(`https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/personas/${personaId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
