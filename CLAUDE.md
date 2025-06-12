@@ -130,7 +130,7 @@ The platform is ready for OpenAI integration. Complete infrastructure, database 
 
 ### **Production API Status**
 - **Lambda Functions**: Node.js 20.x with VPC connectivity to RDS
-- **API Gateway**: REST API with CORS at https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod
+- **API Gateway**: REST API with CORS at https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod
 - **Database Connectivity**: Full CRUD operations working with production data
 - **End-to-End Testing**: Conversation creation persists to database successfully
 
@@ -161,10 +161,10 @@ npm run build:static  # Creates frontend/out/ for S3 deployment
 
 ### **Database Management Options**
 1. **Production API Endpoints** - Working Lambda functions (recommended)
-   - Health: `GET https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/health`
-   - Database Status: `GET https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/admin/database-status`
-   - Personas: `GET https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/personas`
-   - Conversations: `GET https://rovxzccsl3.execute-api.us-east-1.amazonaws.com/prod/api/conversations`
+   - Health: `GET https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/health`
+   - Database Status: `GET https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/admin/database-status`
+   - Personas: `GET https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/personas`
+   - Conversations: `GET https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/conversations`
 2. **DBeaver GUI** - Visual database management
    - Host: `eeyore-postgres.cw92m20s8ece.us-east-1.rds.amazonaws.com:5432`
    - Database: `amianai`, User: `amianai_admin`

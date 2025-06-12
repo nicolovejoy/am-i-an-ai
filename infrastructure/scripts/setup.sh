@@ -170,15 +170,81 @@ npm run package || { log_error "Lambda packaging failed!"; exit 1; }
 
 # Deploy Lambda function
 log_info "Deploying Lambda function..."
-LAMBDA_FUNCTION_NAME=$(terraform output -state=../../infrastructure/terraform.tfstate -raw lambda_function_name)
+# Get Lambda function name from correct directory
+cd ../../infrastructure || exit 1
+LAMBDA_FUNCTION_NAME=$(terraform output -raw lambda_function_name 2>/dev/null || echo "")
+cd ../backend/lambda || exit 1
+
 if [ -n "$LAMBDA_FUNCTION_NAME" ]; then
-    aws lambda update-function-code \
-        --function-name "$LAMBDA_FUNCTION_NAME" \
-        --zip-file fileb://lambda-function.zip || {
-        log_error "Lambda deployment failed!"
+    log_info "Lambda function name: $LAMBDA_FUNCTION_NAME"
+    
+    # Check if Lambda exists
+    if ! aws lambda get-function --function-name "$LAMBDA_FUNCTION_NAME" --region us-east-1 >/dev/null 2>&1; then
+        log_warn "Lambda function $LAMBDA_FUNCTION_NAME does not exist yet. It may still be creating..."
+    fi
+    
+    # Wait for Lambda to be ready for update
+    log_info "Waiting for Lambda function to be ready..."
+    MAX_WAIT=60
+    WAIT_COUNT=0
+    while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+        # Get function state with better error handling
+        FUNCTION_INFO=$(aws lambda get-function --function-name "$LAMBDA_FUNCTION_NAME" --region us-east-1 2>/dev/null || echo "")
+        
+        if [ -z "$FUNCTION_INFO" ]; then
+            log_info "Lambda function not found yet, waiting..."
+            sleep 2
+            WAIT_COUNT=$((WAIT_COUNT + 2))
+            continue
+        fi
+        
+        STATE=$(echo "$FUNCTION_INFO" | jq -r '.Configuration.State // empty' 2>/dev/null || echo "")
+        UPDATE_STATUS=$(echo "$FUNCTION_INFO" | jq -r '.Configuration.LastUpdateStatus // empty' 2>/dev/null || echo "")
+        
+        if [ "$STATE" = "Active" ] && ([ "$UPDATE_STATUS" = "Successful" ] || [ -z "$UPDATE_STATUS" ]); then
+            log_info "Lambda function is ready for update (State: $STATE)"
+            break
+        fi
+        
+        log_info "Lambda state: ${STATE:-Unknown}, update status: ${UPDATE_STATUS:-None} - waiting..."
+        sleep 2
+        WAIT_COUNT=$((WAIT_COUNT + 2))
+    done
+    
+    if [ $WAIT_COUNT -ge $MAX_WAIT ]; then
+        log_error "Timeout waiting for Lambda to be ready"
         exit 1
-    }
-    log_info "Lambda function deployed successfully!"
+    fi
+    
+    # Try to update with retries
+    RETRY_COUNT=0
+    MAX_RETRIES=3
+    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        if aws lambda update-function-code \
+            --function-name "$LAMBDA_FUNCTION_NAME" \
+            --region us-east-1 \
+            --zip-file fileb://lambda-function.zip 2>/tmp/lambda-error.log; then
+            log_info "Lambda function deployed successfully!"
+            break
+        else
+            ERROR_MSG=$(cat /tmp/lambda-error.log)
+            if echo "$ERROR_MSG" | grep -q "421"; then
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                    log_warn "Lambda update failed with 421 error (attempt $RETRY_COUNT/$MAX_RETRIES), retrying in 5 seconds..."
+                    sleep 5
+                else
+                    log_error "Lambda deployment failed after $MAX_RETRIES attempts!"
+                    cat /tmp/lambda-error.log
+                    exit 1
+                fi
+            else
+                log_error "Lambda deployment failed!"
+                cat /tmp/lambda-error.log
+                exit 1
+            fi
+        fi
+    done
 else
     log_warn "Lambda function name not found in Terraform output. Skipping Lambda deployment."
 fi
