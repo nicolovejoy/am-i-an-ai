@@ -1,8 +1,9 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { queryDatabase } from "../lib/database";
+import { AuthenticatedEvent } from '../middleware/auth';
 
 export async function handlePersonas(
-  event: APIGatewayProxyEvent,
+  event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   const method = event.httpMethod;

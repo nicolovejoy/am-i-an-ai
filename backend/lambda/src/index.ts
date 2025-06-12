@@ -1,11 +1,13 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { handleConversations } from './handlers/conversations';
 import { handlePersonas } from './handlers/personas';
 import { handleAI } from './handlers/ai';
-import { handleAdmin } from './handlers/admin';
+import { requireAdminAccess, requireAuthentication } from './middleware/auth';
+import { handleSecureAdmin } from './handlers/secureAdmin';
 
 export const handler = async (
-  event: APIGatewayProxyEvent
+  event: APIGatewayProxyEvent,
+  context: Context
 ): Promise<APIGatewayProxyResult> => {
   // Enable CORS for all responses
   const corsHeaders = {
@@ -32,21 +34,29 @@ export const handler = async (
 
     const path = event.path;
 
-    // Route requests to appropriate handlers
+    // Route requests to appropriate handlers with middleware
     if (path.startsWith('/api/conversations')) {
-      return await handleConversations(event, corsHeaders);
+      return await requireAuthentication(event, context, async (authenticatedEvent) => {
+        return await handleConversations(authenticatedEvent, corsHeaders);
+      });
     }
     
     if (path.startsWith('/api/personas')) {
-      return await handlePersonas(event, corsHeaders);
+      return await requireAuthentication(event, context, async (authenticatedEvent) => {
+        return await handlePersonas(authenticatedEvent, corsHeaders);
+      });
     }
     
     if (path.startsWith('/api/ai')) {
-      return await handleAI(event, corsHeaders);
+      return await requireAuthentication(event, context, async (authenticatedEvent) => {
+        return await handleAI(authenticatedEvent, corsHeaders);
+      });
     }
     
     if (path.startsWith('/api/admin')) {
-      return await handleAdmin(event, corsHeaders);
+      return await requireAdminAccess(event, context, async (authenticatedEvent) => {
+        return await handleSecureAdmin(authenticatedEvent, corsHeaders);
+      });
     }
 
     // Health check endpoint

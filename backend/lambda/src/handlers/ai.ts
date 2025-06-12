@@ -2,6 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import OpenAI from 'openai';
 import { queryDatabase } from '../lib/database';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { AuthenticatedEvent } from '../middleware/auth';
 // Simple interfaces for Lambda use
 interface PersonaData {
   id: string;
@@ -24,7 +25,7 @@ interface MessageData {
 }
 
 export async function handleAI(
-  event: APIGatewayProxyEvent,
+  event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   const method = event.httpMethod;

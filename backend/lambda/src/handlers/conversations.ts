@@ -1,9 +1,10 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { APIGatewayProxyResult } from 'aws-lambda';
 import { queryDatabase } from '../lib/database';
 import { randomUUID } from 'crypto';
+import { AuthenticatedEvent } from '../middleware/auth';
 
 export async function handleConversations(
-  event: APIGatewayProxyEvent,
+  event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   const method = event.httpMethod;
@@ -196,7 +197,7 @@ async function getConversations(
 }
 
 async function createConversation(
-  event: APIGatewayProxyEvent,
+  event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   try {
@@ -238,7 +239,7 @@ async function createConversation(
 
     // Create conversation in database
     const conversationId = randomUUID();
-    const createdBy = '550e8400-e29b-41d4-a716-446655440001'; // Demo user Alice, in production this would come from auth context
+    const createdBy = event.user.id; // Use authenticated user ID
     
     // Insert conversation
     const insertConversationQuery = `
@@ -377,7 +378,7 @@ async function getMessages(
 
 async function createMessage(
   conversationId: string,
-  event: APIGatewayProxyEvent,
+  event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   try {
