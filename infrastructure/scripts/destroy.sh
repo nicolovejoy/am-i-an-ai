@@ -80,4 +80,39 @@ fi
 echo "Destroying infrastructure..."
 terraform destroy -auto-approve
 
+# Ask if user wants to clean up remote state backend resources
+echo ""
+echo "Do you want to also destroy the S3 remote state backend? (y/n)"
+echo "⚠️  This will remove the S3 bucket and DynamoDB table used for Terraform state"
+echo "⚠️  Only do this if you want to completely reset the remote state setup"
+read -r state_response
+
+if [ "$state_response" = "y" ]; then
+    echo "Cleaning up remote state backend..."
+    
+    # Empty and delete S3 bucket
+    if aws s3 ls "s3://amianai-terraform-state" > /dev/null 2>&1; then
+        echo "Emptying and deleting S3 state bucket..."
+        aws s3 rm s3://amianai-terraform-state --recursive
+        aws s3 rb s3://amianai-terraform-state
+        echo "S3 state bucket deleted"
+    else
+        echo "S3 state bucket doesn't exist"
+    fi
+    
+    # Delete DynamoDB table
+    if aws dynamodb describe-table --table-name terraform-state-lock --region us-east-1 > /dev/null 2>&1; then
+        echo "Deleting DynamoDB state lock table..."
+        aws dynamodb delete-table --table-name terraform-state-lock --region us-east-1
+        echo "DynamoDB state lock table deleted"
+    else
+        echo "DynamoDB state lock table doesn't exist"
+    fi
+    
+    echo "Remote state backend completely cleaned up!"
+else
+    echo "Remote state backend preserved for future use"
+fi
+
+echo ""
 echo "Infrastructure destroyed successfully!" 

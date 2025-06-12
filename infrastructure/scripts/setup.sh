@@ -44,8 +44,52 @@ fi
 log_info "Verifying AWS credentials..."
 aws sts get-caller-identity > /dev/null || { log_error "AWS credentials not configured properly"; exit 1; }
 
+# Setup S3 remote state backend
+log_info "Setting up S3 remote state backend..."
+
+# Create S3 bucket for Terraform state if it doesn't exist
+if ! aws s3 ls "s3://amianai-terraform-state" > /dev/null 2>&1; then
+    log_info "Creating S3 bucket for Terraform state..."
+    aws s3 mb s3://amianai-terraform-state --region us-east-1
+    
+    # Enable versioning
+    log_info "Enabling versioning on state bucket..."
+    aws s3api put-bucket-versioning --bucket amianai-terraform-state --versioning-configuration Status=Enabled
+    
+    # Enable encryption
+    log_info "Enabling encryption on state bucket..."
+    aws s3api put-bucket-encryption --bucket amianai-terraform-state --server-side-encryption-configuration '{
+      "Rules": [
+        {
+          "ApplyServerSideEncryptionByDefault": {
+            "SSEAlgorithm": "AES256"
+          }
+        }
+      ]
+    }'
+else
+    log_info "S3 bucket for Terraform state already exists"
+fi
+
+# Create DynamoDB table for state locking if it doesn't exist
+if ! aws dynamodb describe-table --table-name terraform-state-lock --region us-east-1 > /dev/null 2>&1; then
+    log_info "Creating DynamoDB table for state locking..."
+    aws dynamodb create-table \
+      --table-name terraform-state-lock \
+      --attribute-definitions AttributeName=LockID,AttributeType=S \
+      --key-schema AttributeName=LockID,KeyType=HASH \
+      --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
+      --region us-east-1
+    
+    # Wait for table to be active
+    log_info "Waiting for DynamoDB table to be active..."
+    aws dynamodb wait table-exists --table-name terraform-state-lock --region us-east-1
+else
+    log_info "DynamoDB table for state locking already exists"
+fi
+
 # Initialize Terraform
-log_info "Initializing Terraform..."
+log_info "Initializing Terraform with S3 backend..."
 terraform init
 
 # Plan first (safer)
