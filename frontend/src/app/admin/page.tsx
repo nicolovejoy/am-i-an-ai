@@ -35,19 +35,26 @@ function AdminPageContent() {
     setLoading(true);
     const results: ApiHealth[] = [];
     
+    // Get auth token for authenticated endpoints
+    const token = await cognitoService.getIdToken();
+    
     const endpoints = [
-      { name: 'Health Check', url: `${LAMBDA_API_BASE}/api/health` },
-      { name: 'Database Status', url: `${LAMBDA_API_BASE}/api/admin/database-status` },
-      { name: 'Personas', url: `${LAMBDA_API_BASE}/api/personas` },
-      { name: 'Conversations', url: `${LAMBDA_API_BASE}/api/conversations` },
+      { name: 'Health Check', url: `${LAMBDA_API_BASE}/api/health`, requiresAuth: false },
+      { name: 'Database Status', url: `${LAMBDA_API_BASE}/api/admin/database-status`, requiresAuth: true },
+      { name: 'Personas', url: `${LAMBDA_API_BASE}/api/personas`, requiresAuth: true },
+      { name: 'Conversations', url: `${LAMBDA_API_BASE}/api/conversations`, requiresAuth: true },
     ];
     
     for (const endpoint of endpoints) {
       const startTime = Date.now();
       try {
-        const response = await fetch(endpoint.url, {
-          headers: { 'Accept': 'application/json' }
-        });
+        // Build headers based on auth requirements
+        const headers: HeadersInit = { 'Accept': 'application/json' };
+        if (endpoint.requiresAuth && token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(endpoint.url, { headers });
         const responseTime = Date.now() - startTime;
         const data = await response.json();
         
@@ -102,11 +109,19 @@ function AdminPageContent() {
     }
 
     try {
+      // Get auth token
+      const token = await cognitoService.getIdToken();
+      if (!token) {
+        alert('Authentication required. Please sign in again.');
+        return;
+      }
+      
       const startTime = Date.now();
       const response = await fetch(`${LAMBDA_API_BASE}/api/ai/generate-response`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           conversationId: '550e8400-e29b-41d4-a716-446655440001',

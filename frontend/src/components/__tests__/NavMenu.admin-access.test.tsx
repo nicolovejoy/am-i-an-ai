@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { usePathname } from 'next/navigation';
 import NavMenu from '../NavMenu';
 
@@ -257,7 +257,9 @@ describe('NavMenu Admin Access Control', () => {
 
       // Click mobile menu button to open mobile menu
       const mobileMenuButton = screen.getByLabelText('Toggle mobile menu');
-      mobileMenuButton.click();
+      act(() => {
+        mobileMenuButton.click();
+      });
 
       // Check that admin is not in mobile menu
       const mobileMenuLinks = screen.getAllByRole('link');
@@ -292,7 +294,9 @@ describe('NavMenu Admin Access Control', () => {
 
       // Click mobile menu button to open mobile menu
       const mobileMenuButton = screen.getByLabelText('Toggle mobile menu');
-      mobileMenuButton.click();
+      act(() => {
+        mobileMenuButton.click();
+      });
 
       // Check that admin is in mobile menu
       const adminLinks = screen.getAllByText('Admin');

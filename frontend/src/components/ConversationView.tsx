@@ -6,6 +6,7 @@ import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { FullPageLoader } from './LoadingSpinner';
 import { aiOrchestrator } from '@/services/aiOrchestrator';
+import { cognitoService } from '@/services/cognito';
 import type { Message } from '@/types/messages';
 import type { Conversation, PersonaInstance } from '@/types/conversations';
 import type { Persona } from '@/types/personas';
@@ -47,13 +48,17 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
     if (conversation?.status === 'active' && !loading) {
       const interval = setInterval(async () => {
         try {
+          const token = await cognitoService.getIdToken();
+          if (!token) return; // Skip polling if not authenticated
+          
           // eslint-disable-next-line no-undef
           // eslint-disable-next-line no-undef
       const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
           const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
             method: 'GET',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
             }
           });
           
@@ -95,6 +100,14 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       setLoading(true);
       setError(null);
       
+      // Get authentication token
+      const token = await cognitoService.getIdToken();
+      if (!token) {
+        setError('Authentication required. Please sign in.');
+        setLoading(false);
+        return;
+      }
+      
       // eslint-disable-next-line no-undef
       const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
       
@@ -102,7 +115,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       const conversationResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -126,7 +140,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         const personaResponse = await fetch(`${LAMBDA_API_BASE}/api/personas/${participant.personaId}`, {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           }
         });
         if (personaResponse.ok) {
@@ -180,7 +195,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       const messagesResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
       
