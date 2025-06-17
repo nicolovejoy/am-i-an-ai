@@ -31,14 +31,16 @@ class ApiClient {
   private async getAuthHeaders(): Promise<HeadersInit> {
     try {
       const token = await cognitoService.getIdToken();
+      console.log('🔐 API Client Debug - Token retrieved:', token ? `${token.substring(0, 20)}...` : 'null');
       if (token) {
         return {
           'Authorization': `Bearer ${token}`,
         };
       }
     } catch (error) {
-      // Silently fail - user might not be authenticated
+      console.error('🔐 API Client Debug - Error getting token:', error);
     }
+    console.log('🔐 API Client Debug - No token available, proceeding without auth');
     return {};
   }
 
@@ -61,6 +63,14 @@ class ApiClient {
     // Build full URL
     const url = `${this.baseUrl}${endpoint}`;
 
+    // Debug logging
+    console.log('🌐 API Client Debug - Making request:', {
+      url,
+      method: restOptions.method || 'GET',
+      hasAuth: !!finalHeaders.Authorization,
+      authHeader: finalHeaders.Authorization ? `${finalHeaders.Authorization.substring(0, 20)}...` : 'none'
+    });
+
     try {
       const response = await fetch(url, {
         ...restOptions,
@@ -78,6 +88,12 @@ class ApiClient {
 
       // Check for API errors
       if (!response.ok) {
+        console.error('🚨 API Client Debug - Request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          url,
+          data
+        });
         throw new Error(
           typeof data === 'object' && (data.error || data.message)
             ? data.error || data.message
