@@ -64,11 +64,12 @@ class ApiClient {
     const url = `${this.baseUrl}${endpoint}`;
 
     // Debug logging
+    const authHeader = 'Authorization' in finalHeaders ? finalHeaders.Authorization as string : undefined;
     console.log('🌐 API Client Debug - Making request:', {
       url,
       method: restOptions.method || 'GET',
-      hasAuth: !!finalHeaders.Authorization,
-      authHeader: finalHeaders.Authorization ? `${finalHeaders.Authorization.substring(0, 20)}...` : 'none'
+      hasAuth: !!authHeader,
+      authHeader: authHeader ? `${authHeader.substring(0, 20)}...` : 'none'
     });
 
     try {
