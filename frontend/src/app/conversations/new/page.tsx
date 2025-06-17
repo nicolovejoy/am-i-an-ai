@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
 import { FullPageLoader } from '@/components/LoadingSpinner';
 import { Persona, PersonaType, KnowledgeDomain } from '@/types/personas';
+import { api } from '@/services/apiClient';
 
 interface ConversationFormData {
   title: string;
@@ -56,24 +57,7 @@ export default function NewConversationPage() {
       setLoading(true);
       
       // Fetch personas from Lambda API
-      // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
-      
-      // Add timeout for better UX
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-      
-      const response = await fetch(`${LAMBDA_API_BASE}/api/personas`, {
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch personas');
-      }
-      
-      const data = await response.json();
+      const data = await api.personas.list();
       // API data fetched successfully
       
       if (data.success && Array.isArray(data.personas)) {
@@ -311,42 +295,16 @@ export default function NewConversationPage() {
       setSubmitting(true);
       
       // Create conversation via Lambda API
-      // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
-      
       // Creating conversation with form data
       
-      const response = await fetch(`${LAMBDA_API_BASE}/api/conversations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          selectedPersonas: [
-            personas.find(p => p.type === 'human_persona')?.id || '660e8400-e29b-41d4-a716-446655440001', // First human persona
-            formData.selectedPersona    // Selected AI persona
-          ],
-          createdBy: 'demo-user' // In production, this would come from auth context
-        }),
+      const data = await api.conversations.create({
+        ...formData,
+        selectedPersonas: [
+          personas.find(p => p.type === 'human_persona')?.id || '660e8400-e29b-41d4-a716-446655440001', // First human persona
+          formData.selectedPersona    // Selected AI persona
+        ],
+        createdBy: 'demo-user' // In production, this would come from auth context
       });
-
-      // Response received from API
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        // Handle API error response
-        try {
-          const errorData = JSON.parse(errorText);
-          // Parse error response
-          throw new Error(errorData.error || errorData.message || 'Failed to create conversation');
-        } catch (parseError) {
-          // Could not parse error response
-          throw new Error(`Server error ${response.status}: ${errorText}`);
-        }
-      }
-
-      const data = await response.json();
       // API response received successfully
       
       if (data.success && data.conversation) {

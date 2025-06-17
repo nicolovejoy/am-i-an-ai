@@ -3,14 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useConversationStore } from '@/store';
 import type { Message } from '@/types/messages';
-
-declare const process: {
-  env: {
-    NEXT_PUBLIC_API_URL?: string;
-  };
-};
-
-const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
+import { api } from '@/services/apiClient';
 
 export function useConversation(conversationId: string | null) {
   const queryClient = useQueryClient();
@@ -36,10 +29,7 @@ export function useConversation(conversationId: string | null) {
       
       setLoadingConversation(true);
       try {
-        const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}`);
-        if (!response.ok) throw new Error('Failed to fetch conversation');
-        
-        const data = await response.json();
+        const data = await api.conversations.get(conversationId);
         if (data.success && data.conversation) {
           const conversation = data.conversation;
           setActiveConversation(conversationId, conversation);
@@ -65,10 +55,7 @@ export function useConversation(conversationId: string | null) {
       
       setLoadingMessages(true);
       try {
-        const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`);
-        if (!response.ok) throw new Error('Failed to fetch messages');
-        
-        const data = await response.json();
+        const data = await api.messages.list(conversationId);
         if (data.success && data.messages) {
           const transformedMessages: Message[] = data.messages.map((msg: {
             id: string;
@@ -145,20 +132,13 @@ export function useConversation(conversationId: string | null) {
       
       addMessage(conversationId!, optimisticMessage);
       
-      const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId,
-          authorPersonaId: personaId,
-          content,
-          type: 'text'
-        })
+      const data = await api.messages.create(conversationId!, {
+        conversationId,
+        authorPersonaId: personaId,
+        content,
+        type: 'text'
       });
       
-      if (!response.ok) throw new Error('Failed to send message');
-      
-      const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Failed to send message');
       
       return data;

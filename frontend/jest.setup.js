@@ -63,6 +63,7 @@ jest.mock("./src/services/cognito", () => ({
     signIn: jest.fn().mockResolvedValue(undefined),
     signOut: jest.fn().mockResolvedValue(undefined),
     getCurrentUser: jest.fn().mockResolvedValue(undefined),
+    getIdToken: jest.fn().mockResolvedValue(null),
   },
 }));
 

@@ -3,14 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePersonaStore } from '@/store';
 import type { Persona } from '@/types/personas';
-
-declare const process: {
-  env: {
-    NEXT_PUBLIC_API_URL?: string;
-  };
-};
-
-const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
+import { api } from '@/services/apiClient';
 
 export function usePersonas() {
   const queryClient = useQueryClient();
@@ -30,10 +23,7 @@ export function usePersonas() {
     queryFn: async () => {
       setLoadingPersonas(true);
       try {
-        const response = await fetch(`${LAMBDA_API_BASE}/api/personas`);
-        if (!response.ok) throw new Error('Failed to fetch personas');
-        
-        const data = await response.json();
+        const data = await api.personas.list();
         if (data.success && data.personas) {
           const transformedPersonas: Persona[] = data.personas.map((p: {
             id: string;
@@ -86,15 +76,8 @@ export function usePersonas() {
   // Create persona mutation
   const createPersonaMutation = useMutation({
     mutationFn: async (newPersona: Partial<Persona>) => {
-      const response = await fetch(`${LAMBDA_API_BASE}/api/personas`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPersona)
-      });
+      const data = await api.personas.create(newPersona);
       
-      if (!response.ok) throw new Error('Failed to create persona');
-      
-      const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Failed to create persona');
       
       return data.persona;
@@ -111,15 +94,8 @@ export function usePersonas() {
   // Update persona mutation
   const updatePersonaMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Persona> }) => {
-      const response = await fetch(`${LAMBDA_API_BASE}/api/personas/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
-      });
+      const data = await api.personas.update(id, updates);
       
-      if (!response.ok) throw new Error('Failed to update persona');
-      
-      const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Failed to update persona');
       
       return data.persona;
@@ -136,13 +112,8 @@ export function usePersonas() {
   // Delete persona mutation
   const deletePersonaMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`${LAMBDA_API_BASE}/api/personas/${id}`, {
-        method: 'DELETE'
-      });
+      const data = await api.personas.delete(id);
       
-      if (!response.ok) throw new Error('Failed to delete persona');
-      
-      const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Failed to delete persona');
       
       return id;

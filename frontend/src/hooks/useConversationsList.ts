@@ -3,14 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useConversationsListStore } from '@/store';
 import type { Conversation } from '@/types/conversations';
-
-declare const process: {
-  env: {
-    NEXT_PUBLIC_API_URL?: string;
-  };
-};
-
-const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
+import { apiClient } from '@/services/apiClient';
 
 export function useConversationsList() {
   const {
@@ -49,10 +42,7 @@ export function useConversationsList() {
         if (filters.search) params.append('search', filters.search);
         if (filters.personaId) params.append('personaId', filters.personaId);
         
-        const response = await fetch(`${LAMBDA_API_BASE}/api/conversations?${params}`);
-        if (!response.ok) throw new Error('Failed to fetch conversations');
-        
-        const data = await response.json();
+        const data = await apiClient.get(`/api/conversations?${params}`);
         if (data.success && data.conversations) {
           const transformedConversations: Conversation[] = data.conversations.map((conv: {
             id: string;
