@@ -1,5 +1,5 @@
 import { getDatabase } from '../lib/database';
-import { UserContext } from '../middleware/auth';
+import { UserContext } from '../middleware/cognito-auth';
 
 export interface DatabaseUser {
   id: string;

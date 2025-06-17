@@ -126,7 +126,7 @@ export const cognitoService = {
     }
   },
 
-  getCurrentUser: (): Promise<{ email: string; sub: string } | null> => {
+  getCurrentUser: async (): Promise<{ email: string; sub: string; role?: 'user' | 'moderator' | 'admin' } | null> => {
     return new Promise((resolve) => {
       const currentUser = userPool.getCurrentUser();
       if (!currentUser) {
@@ -135,13 +135,13 @@ export const cognitoService = {
       }
 
       currentUser.getSession(
-        (err: Error | null, session: { isValid: () => boolean } | null) => {
+        async (err: Error | null, session: { isValid: () => boolean } | null) => {
           if (err || !session || !session.isValid()) {
             resolve(null);
             return;
           }
 
-          const callback: NodeCallback<Error, CognitoUserAttribute[]> = (
+          const callback: NodeCallback<Error, CognitoUserAttribute[]> = async (
             err,
             attributes
           ) => {
@@ -155,7 +155,11 @@ export const cognitoService = {
             const sub =
               attributes.find((attr) => attr.Name === "sub")?.Value || "";
 
-            resolve({ email, sub });
+            // TODO: Get user role from database once schema is set up
+            // For now, give admin access to specific users
+            const role: 'user' | 'moderator' | 'admin' = email === 'nlovejoy@me.com' ? 'admin' : 'user';
+
+            resolve({ email, sub, role });
           };
 
           currentUser.getUserAttributes(callback);

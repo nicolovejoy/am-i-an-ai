@@ -21,6 +21,7 @@ Multi-persona conversation system where humans and AI agents can interact throug
 - **ALWAYS use the scripts in `/infrastructure/scripts/`**
 - For deployment: `DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/setup.sh`
 - For teardown: `DOMAIN_NAME=amianai.com ./scripts/destroy.sh`
+- **IMPORTANT**: Read infrastructure scripts before suggesting their use - `setup.sh` runs FULL deployment (terraform, Lambda, frontend, CloudFront invalidation). This remains our preferred approach.
 
 ### Architecture
 
@@ -62,13 +63,14 @@ npm run build
 - **Never start/stop dev server** - user manages this independently
 - **Infrastructure Scripts**: User runs all Terraform/infrastructure scripts manually
 - **Never run `terraform` or `./scripts/setup.sh` or `./scripts/destroy.sh`** - user manages infrastructure
+- **Lambda Deployment**: ALWAYS done via `./scripts/setup.sh` - NEVER suggest direct AWS CLI commands
 
 ### Test-Driven Development (TDD)
 
 **MANDATORY: Always follow Test-Driven Development practices**
 
 - **Write tests FIRST**: Before implementing any new feature or fixing bugs
-- **Red-Green-Refactor cycle**: 
+- **Red-Green-Refactor cycle**:
   1. Write failing tests that define the expected behavior
   2. Write minimal code to make tests pass
   3. Refactor while keeping tests green
@@ -93,6 +95,7 @@ npx tsc --noEmit      # Explicit TypeScript type checking
 ```
 
 **CRITICAL REQUIREMENTS:**
+
 - ✅ **All linting errors must be fixed** (warnings are okay)
 - ✅ **All tests must pass** (no failing tests allowed)
 - ✅ **TypeScript compilation must succeed** (no type errors)
@@ -100,6 +103,7 @@ npx tsc --noEmit      # Explicit TypeScript type checking
 - ❌ **NEVER commit if ANY check fails**
 
 **Workflow:**
+
 1. Run all four commands in parallel using multiple tool calls
 2. Fix any errors found in linting, tests, or TypeScript
 3. Re-run checks until ALL pass
@@ -109,7 +113,7 @@ npx tsc --noEmit      # Explicit TypeScript type checking
 
 - ✅ Infrastructure: PostgreSQL-based, deployed to AWS (`eeyore-postgres` RDS instance running)
 - ✅ Database: Schema deployed and seeded with sample data (3 users, 6 personas, 3 conversations, 7 messages)
-- ✅ Frontend: Next.js with comprehensive type system (200+ interfaces) 
+- ✅ Frontend: Next.js with comprehensive type system (200+ interfaces)
 - ✅ Core UI: Complete conversation and persona management system
 - ✅ Deployment: Static export working with S3 deployment and demo mode fallback
 - ✅ Testing: 284 tests passing with comprehensive coverage
@@ -117,6 +121,7 @@ npx tsc --noEmit      # Explicit TypeScript type checking
 ## PLATFORM COMPLETION STATUS
 
 ### ✅ **Complete Systems**
+
 1. **Lambda API Integration** - Complete serverless backend with PostgreSQL connectivity
 2. **Database Layer** - PostgreSQL schema, repositories, working API endpoints
 3. **Conversation System** - List view, detail view, message interface with real persistence
@@ -126,15 +131,18 @@ npx tsc --noEmit      # Explicit TypeScript type checking
 7. **Accessibility** - Full WCAG compliance with screen reader support
 
 ### 🔄 **Next Phase: AI Integration**
+
 The platform is ready for OpenAI integration. Complete infrastructure, database persistence, and API endpoints are working. All conversation data is now stored in production PostgreSQL.
 
 ### **Production API Status**
+
 - **Lambda Functions**: Node.js 20.x with VPC connectivity to RDS
 - **API Gateway**: REST API with CORS at https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod
 - **Database Connectivity**: Full CRUD operations working with production data
 - **End-to-End Testing**: Conversation creation persists to database successfully
 
 ### **AI-Ready Features**
+
 - Complete API infrastructure for AI response generation
 - Persona AI configurations ready for prompt engineering
 - Message history context available for AI responses
@@ -142,16 +150,17 @@ The platform is ready for OpenAI integration. Complete infrastructure, database 
 - Production database storing all conversation context
 
 ### **Available Development Tools**
+
 ```bash
 # Database operations
 npm run db:setup      # Create fresh database schema
-npm run db:seed       # Seed production database  
+npm run db:seed       # Seed production database
 npm run db:show       # View current data
 npm run db:reset      # Reset production database
 
 # Development and testing
 npm run dev           # Local development server
-npm run test          # Run test suite 
+npm run test          # Run test suite
 npm run lint          # Code quality checks
 npm run build         # Production build with static export
 
@@ -160,6 +169,7 @@ npm run build:static  # Creates frontend/out/ for S3 deployment
 ```
 
 ### **Database Management Options**
+
 1. **Production API Endpoints** - Working Lambda functions (recommended)
    - Health: `GET https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/health`
    - Database Status: `GET https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/admin/database-status`

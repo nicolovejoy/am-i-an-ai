@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { queryDatabase } from "../lib/database";
-import { AuthenticatedEvent } from '../middleware/auth';
+import { AuthenticatedEvent } from '../middleware/cognito-auth';
 
 export async function handlePersonas(
   event: AuthenticatedEvent,

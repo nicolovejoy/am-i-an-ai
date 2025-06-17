@@ -854,6 +854,8 @@ resource "aws_lambda_function" "api" {
       DB_NAME       = aws_db_instance.main.db_name
       NODE_ENV      = "production"
       OPENAI_SECRET_ARN = aws_secretsmanager_secret.openai_api_key.arn
+      COGNITO_USER_POOL_ID = aws_cognito_user_pool.main.id
+      COGNITO_CLIENT_ID = aws_cognito_user_pool_client.main.id
     }
   }
 

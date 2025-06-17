@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { cognitoService } from '@/services/cognito';
 
 interface ApiHealth {
   endpoint: string;
@@ -137,10 +138,19 @@ function AdminPageContent() {
       setLoading(true);
       const startTime = Date.now();
       
+      // Get auth token
+      const token = await cognitoService.getIdToken();
+      if (!token) {
+        alert('Authentication required. Please sign in again.');
+        setLoading(false);
+        return;
+      }
+      
       const response = await fetch(`${LAMBDA_API_BASE}/api/admin/seed-database`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
       
@@ -163,10 +173,18 @@ function AdminPageContent() {
 
   const checkDatabaseSetup = async () => {
     try {
+      // Get auth token
+      const token = await cognitoService.getIdToken();
+      if (!token) {
+        alert('Authentication required. Please sign in again.');
+        return;
+      }
+
       const response = await fetch(`${LAMBDA_API_BASE}/api/admin/setup-database`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
       

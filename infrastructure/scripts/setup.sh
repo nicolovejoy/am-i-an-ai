@@ -249,12 +249,12 @@ else
     log_warn "Lambda function name not found in Terraform output. Skipping Lambda deployment."
 fi
 
-# Return to infrastructure directory
-cd ../infrastructure || exit 1
+# Return to root directory for frontend build
+cd ../.. || exit 1
 
 # Build and deploy frontend
 log_info "Building frontend..."
-cd ../frontend || exit 1
+cd frontend || exit 1
 
 # Check if node_modules exists
 if [ ! -d "node_modules" ]; then

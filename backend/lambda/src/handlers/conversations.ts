@@ -1,7 +1,7 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
 import { queryDatabase } from '../lib/database';
 import { randomUUID } from 'crypto';
-import { AuthenticatedEvent } from '../middleware/auth';
+import { AuthenticatedEvent } from '../middleware/cognito-auth';
 
 export async function handleConversations(
   event: AuthenticatedEvent,
@@ -29,7 +29,7 @@ export async function handleConversations(
           }
         } else {
           // GET /api/conversations
-          return await getConversations(corsHeaders);
+          return await getConversations(event, corsHeaders);
         }
 
       case 'POST':
@@ -144,9 +144,13 @@ async function getConversation(
 }
 
 async function getConversations(
+  _event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   try {
+    // TODO: Filter conversations by user when user-specific conversations are implemented
+    // const userId = event.user.id; // Available for future use
+    
     // Query all conversations with basic info
     const conversationsQuery = `
       SELECT c.id, c.title, c.topic, c.description, c.status, 

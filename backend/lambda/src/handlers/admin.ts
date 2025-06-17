@@ -115,6 +115,8 @@ async function setupDatabase(
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   try {
+    console.log('Starting database schema setup...');
+    
     // Check if tables exist
     const tablesQuery = `
       SELECT table_name 
@@ -126,15 +128,147 @@ async function setupDatabase(
     const tablesResult = await queryDatabase(tablesQuery);
     const existingTables = tablesResult.rows.map((row: any) => row.table_name);
     
-    console.log('Database setup check completed. Existing tables:', existingTables);
+    console.log('Existing tables before setup:', existingTables);
+
+    // If some tables are missing, create the full schema
+    const requiredTables = ['users', 'personas', 'conversations', 'messages'];
+    const missingTables = requiredTables.filter(table => !existingTables.includes(table));
+    
+    if (missingTables.length > 0) {
+      console.log('Missing tables detected, creating schema:', missingTables);
+      
+      // Create the database schema
+      const schemaSQL = `
+        -- Create Users table
+        CREATE TABLE IF NOT EXISTS users (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          email VARCHAR(255) NOT NULL UNIQUE,
+          display_name VARCHAR(255),
+          avatar TEXT,
+          role VARCHAR(50) NOT NULL DEFAULT 'user',
+          subscription VARCHAR(50) NOT NULL DEFAULT 'free',
+          subscription_expires_at TIMESTAMP,
+          preferences JSONB NOT NULL DEFAULT '{}',
+          current_usage JSONB NOT NULL DEFAULT '{}',
+          limits JSONB NOT NULL DEFAULT '{}',
+          is_email_verified BOOLEAN NOT NULL DEFAULT false,
+          is_active BOOLEAN NOT NULL DEFAULT true,
+          last_login_at TIMESTAMP,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+
+        -- Create Personas table
+        CREATE TABLE IF NOT EXISTS personas (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name VARCHAR(255) NOT NULL,
+          type VARCHAR(50) NOT NULL,
+          owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+          description TEXT NOT NULL,
+          personality JSONB NOT NULL DEFAULT '{}',
+          knowledge TEXT[] NOT NULL DEFAULT '{}',
+          communication_style VARCHAR(50) NOT NULL,
+          model_config JSONB,
+          system_prompt TEXT,
+          response_time_range JSONB,
+          typing_speed INTEGER,
+          is_public BOOLEAN NOT NULL DEFAULT false,
+          allowed_interactions TEXT[] NOT NULL DEFAULT '{}',
+          conversation_count INTEGER NOT NULL DEFAULT 0,
+          total_messages INTEGER NOT NULL DEFAULT 0,
+          average_rating DECIMAL(3,2) NOT NULL DEFAULT 0.0,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+
+        -- Create Conversations table
+        CREATE TABLE IF NOT EXISTS conversations (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          title VARCHAR(255) NOT NULL,
+          topic VARCHAR(255) NOT NULL,
+          description TEXT,
+          constraints JSONB NOT NULL DEFAULT '{}',
+          goal JSONB,
+          status VARCHAR(50) NOT NULL DEFAULT 'active',
+          current_turn INTEGER NOT NULL DEFAULT 0,
+          message_count INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          started_at TIMESTAMP,
+          ended_at TIMESTAMP,
+          paused_at TIMESTAMP,
+          resumed_at TIMESTAMP,
+          created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          total_characters INTEGER NOT NULL DEFAULT 0,
+          average_response_time INTEGER NOT NULL DEFAULT 0,
+          topic_tags TEXT[] NOT NULL DEFAULT '{}',
+          quality_score DECIMAL(3,2)
+        );
+
+        -- Create Conversation Participants table
+        CREATE TABLE IF NOT EXISTS conversation_participants (
+          conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+          persona_id UUID NOT NULL REFERENCES personas(id) ON DELETE CASCADE,
+          role VARCHAR(50) NOT NULL,
+          is_revealed BOOLEAN NOT NULL DEFAULT false,
+          joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          last_active_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          PRIMARY KEY (conversation_id, persona_id)
+        );
+
+        -- Create Messages table
+        CREATE TABLE IF NOT EXISTS messages (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+          author_persona_id UUID NOT NULL REFERENCES personas(id) ON DELETE CASCADE,
+          content TEXT NOT NULL,
+          type VARCHAR(50) NOT NULL DEFAULT 'text',
+          timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+          sequence_number INTEGER NOT NULL,
+          is_edited BOOLEAN NOT NULL DEFAULT false,
+          edited_at TIMESTAMP,
+          original_content TEXT,
+          reply_to_message_id UUID REFERENCES messages(id),
+          thread_id UUID,
+          metadata JSONB NOT NULL DEFAULT '{}',
+          moderation_status VARCHAR(50) NOT NULL DEFAULT 'approved',
+          moderation_flags JSONB[] DEFAULT '{}',
+          is_visible BOOLEAN NOT NULL DEFAULT true,
+          is_archived BOOLEAN NOT NULL DEFAULT false,
+          reactions JSONB DEFAULT '{}',
+          quality_rating DECIMAL(3,2)
+        );
+
+        -- Create Indexes
+        CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+        CREATE INDEX IF NOT EXISTS idx_personas_owner ON personas(owner_id);
+        CREATE INDEX IF NOT EXISTS idx_personas_type ON personas(type);
+        CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
+        CREATE INDEX IF NOT EXISTS idx_conversations_created_by ON conversations(created_by);
+        CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
+        CREATE INDEX IF NOT EXISTS idx_messages_author ON messages(author_persona_id);
+        CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_messages_sequence ON messages(conversation_id, sequence_number);
+      `;
+      
+      console.log('Executing schema creation SQL...');
+      await queryDatabase(schemaSQL);
+      console.log('Schema creation completed');
+    }
+    
+    // Check tables again after creation
+    const finalTablesResult = await queryDatabase(tablesQuery);
+    const finalTables = finalTablesResult.rows.map((row: any) => row.table_name);
+    
+    console.log('Database setup completed. Final tables:', finalTables);
 
     return {
       statusCode: 200,
       headers: corsHeaders,
       body: JSON.stringify({
         success: true,
-        message: 'Database schema verified',
-        existingTables,
+        message: missingTables.length > 0 ? 'Database schema created successfully' : 'Database schema already exists',
+        existingTables: finalTables,
+        createdTables: missingTables,
         timestamp: new Date().toISOString(),
       }),
     };
@@ -162,37 +296,43 @@ async function seedDatabase(
     await client.query('BEGIN');
     console.log('Starting database seeding transaction');
 
-    // Clear existing data in correct order (respecting foreign keys)
+    // Clear existing data safely with TRUNCATE CASCADE
     console.log('Clearing existing data...');
     
-    // Check what exists before deletion
-    const beforeStats = await client.query(`
-      SELECT 
-        (SELECT COUNT(*) FROM messages) as messages,
-        (SELECT COUNT(*) FROM conversation_participants) as participants,
-        (SELECT COUNT(*) FROM conversations) as conversations,
-        (SELECT COUNT(*) FROM personas) as personas,
-        (SELECT COUNT(*) FROM users) as users
-    `);
-    console.log('Before deletion:', beforeStats.rows[0]);
+    // Check what exists before clearing (with error handling)
+    let beforeStats;
+    try {
+      beforeStats = await client.query(`
+        SELECT 
+          (SELECT COUNT(*) FROM messages) as messages,
+          (SELECT COUNT(*) FROM conversation_participants) as participants,
+          (SELECT COUNT(*) FROM conversations) as conversations,
+          (SELECT COUNT(*) FROM personas) as personas,
+          (SELECT COUNT(*) FROM users) as users
+      `);
+    } catch (statsError) {
+      console.log('Could not get table stats (tables may not exist yet):', statsError);
+      beforeStats = { rows: [{ messages: 0, participants: 0, conversations: 0, personas: 0, users: 0 }] };
+    }
+    console.log('Before clearing:', beforeStats.rows[0]);
     
-    // Delete with CASCADE to handle foreign keys
-    const messagesResult = await client.query('DELETE FROM messages');
-    console.log(`Deleted ${messagesResult.rowCount} messages`);
+    // Use TRUNCATE CASCADE to clear all data safely
+    try {
+      await client.query('TRUNCATE TABLE users CASCADE');
+      console.log('Truncated all tables with CASCADE');
+    } catch (truncateError) {
+      // If TRUNCATE fails due to permissions, fall back to DELETE
+      console.log('TRUNCATE failed, falling back to DELETE:', truncateError);
+      
+      await client.query('DELETE FROM messages');
+      await client.query('DELETE FROM conversation_participants'); 
+      await client.query('DELETE FROM conversations');
+      await client.query('DELETE FROM personas');
+      await client.query('DELETE FROM users');
+      console.log('Deleted data using DELETE statements');
+    }
     
-    const participantsResult = await client.query('DELETE FROM conversation_participants');
-    console.log(`Deleted ${participantsResult.rowCount} conversation participants`);
-    
-    const conversationsResult = await client.query('DELETE FROM conversations');
-    console.log(`Deleted ${conversationsResult.rowCount} conversations`);
-    
-    const personasResult = await client.query('DELETE FROM personas');
-    console.log(`Deleted ${personasResult.rowCount} personas`);
-    
-    const usersResult = await client.query('DELETE FROM users');
-    console.log(`Deleted ${usersResult.rowCount} users`);
-    
-    // Verify deletion worked
+    // Verify clearing worked
     const afterStats = await client.query(`
       SELECT 
         (SELECT COUNT(*) FROM messages) as messages,
@@ -201,7 +341,7 @@ async function seedDatabase(
         (SELECT COUNT(*) FROM personas) as personas,
         (SELECT COUNT(*) FROM users) as users
     `);
-    console.log('After deletion:', afterStats.rows[0]);
+    console.log('After clearing:', afterStats.rows[0]);
     console.log('All existing data cleared successfully');
 
     // Insert Users

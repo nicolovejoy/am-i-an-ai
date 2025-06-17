@@ -1,5 +1,5 @@
 import { syncUserFromCognito, getUserFromDatabase } from '../userSync';
-import { UserContext } from '../../middleware/auth';
+import { UserContext } from '../../middleware/cognito-auth';
 import { getDatabase } from '../../lib/database';
 
 // Mock the database utility

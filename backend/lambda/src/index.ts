@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda
 import { handleConversations } from './handlers/conversations';
 import { handlePersonas } from './handlers/personas';
 import { handleAI } from './handlers/ai';
-import { requireAdminAccess, requireAuthentication } from './middleware/auth';
+import { requireAdminAccess, requireAuthentication } from './middleware/cognito-auth';
 import { handleSecureAdmin } from './handlers/secureAdmin';
 
 export const handler = async (

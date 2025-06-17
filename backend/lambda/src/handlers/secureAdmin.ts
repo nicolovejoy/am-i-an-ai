@@ -1,5 +1,5 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
-import { AuthenticatedEvent } from '../middleware/auth';
+import { AuthenticatedEvent } from '../middleware/cognito-auth';
 import { getUserWithSync } from '../services/userSync';
 import { handleAdmin } from './admin';
 
@@ -20,8 +20,25 @@ export async function handleSecureAdmin(
       };
     }
 
-    // Get user from database to check role
-    const dbUser = await getUserWithSync(event.user);
+    // Try to get user from database to check role
+    // If database doesn't exist yet, we'll handle this gracefully
+    let dbUser;
+    try {
+      console.log('Attempting to get user from database:', event.user.email);
+      dbUser = await getUserWithSync(event.user);
+      console.log('User found in database:', { email: dbUser?.email, role: dbUser?.role });
+    } catch (error) {
+      console.log('Error getting user from database:', error);
+      // If database tables don't exist yet, allow setup operations for known admin emails
+      const adminEmails = ['nlovejoy@me.com'];
+      if (adminEmails.includes(event.user.email || '')) {
+        console.log('Database not ready, but allowing admin email for setup operations');
+        // Allow the admin operations to proceed
+        return await handleAdmin(event, corsHeaders);
+      } else {
+        throw error; // Re-throw for non-admin users
+      }
+    }
     
     if (!dbUser) {
       return {
@@ -34,8 +51,11 @@ export async function handleSecureAdmin(
       };
     }
 
-    // Check if user has admin role
-    if (dbUser.role !== 'admin') {
+    // Check if user has admin role or is in admin email list
+    const adminEmails = ['nlovejoy@me.com'];
+    const isAdminEmail = adminEmails.includes(dbUser.email || '');
+    
+    if (dbUser.role !== 'admin' && !isAdminEmail) {
       console.warn(`Unauthorized admin access attempt by user ${dbUser.email} with role ${dbUser.role}`);
       return {
         statusCode: 403,
@@ -46,6 +66,13 @@ export async function handleSecureAdmin(
           userRole: dbUser.role,
         }),
       };
+    }
+    
+    // If user is admin by email but not by role, update their role
+    if (isAdminEmail && dbUser.role !== 'admin') {
+      console.log(`Granting admin role to ${dbUser.email} based on email whitelist`);
+      // Note: We're not updating the database here to avoid circular dependencies
+      // The role will be updated on next sync
     }
 
     // Log admin operation for audit trail
