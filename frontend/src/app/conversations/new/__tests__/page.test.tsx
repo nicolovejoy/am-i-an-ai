@@ -46,18 +46,56 @@ describe('NewConversationPage', () => {
       name: 'AI Assistant',
       type: 'ai_agent',
       description: 'A helpful AI assistant',
+      knowledge: ['General Knowledge', 'Problem Solving'],
+      personality: {
+        creativity: 60,
+        conscientiousness: 80,
+        extraversion: 70,
+        agreeableness: 85,
+        neuroticism: 20,
+      },
+      aiConfig: {
+        provider: 'openai',
+        model: 'gpt-4',
+        systemPrompt: 'You are a helpful assistant.',
+        temperature: 0.7,
+        maxTokens: 2000,
+      },
     },
     {
       id: 'persona-2',
       name: 'Creative Writer',
       type: 'ai_ambiguous',
       description: 'A creative writing AI',
+      knowledge: ['Creative Writing', 'Storytelling', 'Poetry'],
+      personality: {
+        creativity: 90,
+        conscientiousness: 60,
+        extraversion: 75,
+        agreeableness: 70,
+        neuroticism: 30,
+      },
+      aiConfig: {
+        provider: 'openai',
+        model: 'gpt-4',
+        systemPrompt: 'You are a creative writer.',
+        temperature: 0.9,
+        maxTokens: 2000,
+      },
     },
     {
       id: 'persona-3',
       name: 'Human User',
       type: 'human_persona',
       description: 'A human user persona',
+      knowledge: ['Human Experience', 'Real World Knowledge'],
+      personality: {
+        creativity: 70,
+        conscientiousness: 70,
+        extraversion: 60,
+        agreeableness: 75,
+        neuroticism: 40,
+      },
     },
   ];
 
@@ -149,12 +187,12 @@ describe('NewConversationPage', () => {
 
       // Fill in form fields
       await user.type(screen.getByLabelText(/conversation title/i), 'Test Conversation');
-      await user.type(screen.getByLabelText(/topic/i), 'Testing');
+      await user.type(screen.getByPlaceholderText(/main focus of this conversation/i), 'Testing');
       await user.type(screen.getByLabelText(/description/i), 'A test conversation description');
       await user.type(screen.getByLabelText(/goals/i), 'Test the conversation creation');
 
       // Submit form
-      const submitButton = screen.getByRole('button', { name: /create conversation/i });
+      const submitButton = screen.getByRole('button', { name: /start conversation/i });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -174,7 +212,7 @@ describe('NewConversationPage', () => {
       });
 
       expect(mockAddToast).toHaveBeenCalledWith('success', 'Conversation created successfully!');
-      expect(mockPush).toHaveBeenCalledWith('/conversations?id=new-conv-123');
+      expect(mockPush).toHaveBeenCalledWith('/conversations/new-conv-123');
     });
 
     it('should handle API errors gracefully', async () => {
@@ -193,10 +231,10 @@ describe('NewConversationPage', () => {
 
       // Fill in minimal required fields
       await user.type(screen.getByLabelText(/conversation title/i), 'Test');
-      await user.type(screen.getByLabelText(/topic/i), 'Testing');
+      await user.type(screen.getByPlaceholderText(/main focus of this conversation/i), 'Testing');
 
       // Submit form
-      const submitButton = screen.getByRole('button', { name: /create conversation/i });
+      const submitButton = screen.getByRole('button', { name: /start conversation/i });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -222,7 +260,8 @@ describe('NewConversationPage', () => {
       });
 
       // Check that fallback personas are loaded
-      expect(screen.getByText(/Creative Storyteller/i)).toBeInTheDocument();
+      const deepThinkerElements = screen.getAllByText(/Deep Thinker/i);
+      expect(deepThinkerElements.length).toBeGreaterThan(0);
     });
   });
 
