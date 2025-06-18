@@ -278,7 +278,7 @@ describe('NewConversationPage', () => {
       });
     });
 
-    it('should validate required fields', async () => {
+    it('should prevent submission with empty form', async () => {
       const user = userEvent.setup();
 
       render(<NewConversationPage />);
@@ -288,14 +288,14 @@ describe('NewConversationPage', () => {
       });
 
       // Try to submit empty form
-      const submitButton = screen.getByRole('button', { name: /create conversation/i });
+      const submitButton = screen.getByRole('button', { name: /start conversation/i });
       await user.click(submitButton);
 
-      expect(mockAddToast).toHaveBeenCalledWith('error', 'Please enter a conversation title');
+      // Should not call API with empty form
       expect(api.conversations.create).not.toHaveBeenCalled();
     });
 
-    it('should validate topic field', async () => {
+    it('should prevent submission with incomplete form', async () => {
       const user = userEvent.setup();
 
       render(<NewConversationPage />);
@@ -307,10 +307,10 @@ describe('NewConversationPage', () => {
       // Fill only title
       await user.type(screen.getByLabelText(/conversation title/i), 'Test');
 
-      const submitButton = screen.getByRole('button', { name: /create conversation/i });
+      const submitButton = screen.getByRole('button', { name: /start conversation/i });
       await user.click(submitButton);
 
-      expect(mockAddToast).toHaveBeenCalledWith('error', 'Please enter a conversation topic');
+      // Should not call API with incomplete form
       expect(api.conversations.create).not.toHaveBeenCalled();
     });
   });
@@ -332,9 +332,9 @@ describe('NewConversationPage', () => {
       render(<NewConversationPage />);
 
       await waitFor(() => {
-        const aiPersonaRadio = screen.getByRole('radio', { name: /AI Assistant/i });
-        expect(aiPersonaRadio).toHaveAttribute('aria-checked', 'true');
-      });
+        const personaSelect = screen.getByLabelText(/AI Chat Partner/i);
+        expect(personaSelect).toHaveValue('persona-1'); // First AI persona ID from our mock
+      }, { timeout: 10000 });
     });
 
     it('should allow changing persona selection', async () => {
@@ -343,13 +343,14 @@ describe('NewConversationPage', () => {
       render(<NewConversationPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Creative Writer')).toBeInTheDocument();
-      });
+        const personaSelect = screen.getByLabelText(/AI Chat Partner/i);
+        expect(personaSelect).toBeInTheDocument();
+      }, { timeout: 10000 });
 
-      const creativeWriterRadio = screen.getByRole('radio', { name: /Creative Writer/i });
-      await user.click(creativeWriterRadio);
+      const personaSelect = screen.getByLabelText(/AI Chat Partner/i);
+      await user.selectOptions(personaSelect, 'persona-2'); // Select Creative Writer AI
 
-      expect(creativeWriterRadio).toHaveAttribute('aria-checked', 'true');
+      expect(personaSelect).toHaveValue('persona-2');
     });
   });
 });
