@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FullPageLoader } from './LoadingSpinner';
-import { cognitoService } from '@/services/cognito';
+import { api } from '@/services/apiClient';
 
 interface ConversationParticipant {
   personaId: string;
@@ -46,30 +46,7 @@ export default function ConversationList() {
       setLoading(true);
       setError(null);
       
-      // Get auth token
-      const token = await cognitoService.getIdToken();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      
-      // Add timeout for better UX
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-      
-      const response = await fetch('https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/conversations', {
-        signal: controller.signal,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      clearTimeout(timeoutId);
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch conversations');
-      }
+      const data = await api.conversations.list();
       
       // Transform the API response to match our component interface
       const apiConversations = data.conversations || [];

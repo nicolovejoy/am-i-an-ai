@@ -5,7 +5,7 @@ import { PersonaList } from '@/components/PersonaList';
 import { PersonaForm } from '@/components/PersonaForm';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { cognitoService } from '@/services/cognito';
+import { api } from '@/services/apiClient';
 import type { Persona } from '@/types/personas';
 
 export default function PersonasPage() {
@@ -34,37 +34,7 @@ export default function PersonasPage() {
         return;
       }
       
-      // Get auth token
-      const token = await cognitoService.getIdToken();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      
-      // Add timeout for better UX
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-      
-      const response = await fetch('https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
-        signal: controller.signal,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      clearTimeout(timeoutId);
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        // Handle specific database unavailable case
-        if (data.error && data.error.includes('Database temporarily unavailable')) {
-          setError(data.error);
-          setPersonas([]); // Show empty state with database message
-          return;
-        }
-        throw new Error(data.error || 'Failed to fetch personas');
-      }
-      
+      const data = await api.personas.list();
       setPersonas(data.personas || []);
       
       // Show warning if database returned an error but still gave us data
@@ -109,25 +79,7 @@ export default function PersonasPage() {
         return;
       }
       
-      // Get auth token
-      const token = await cognitoService.getIdToken();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      
-      const response = await fetch('https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(personaData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create persona');
-      }
+      await api.personas.create(personaData);
 
       setShowCreateForm(false);
       setEditingPersona(null);
@@ -150,24 +102,7 @@ export default function PersonasPage() {
         return;
       }
       
-      // Get auth token
-      const token = await cognitoService.getIdToken();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      
-      const response = await fetch(`https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/personas/${personaId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete persona');
-      }
+      await api.personas.delete(personaId);
 
       await loadPersonas();
     } catch (err) {

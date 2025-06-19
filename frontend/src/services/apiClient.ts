@@ -181,6 +181,9 @@ export const api = {
   admin: {
     databaseStatus: () => apiClient.get('/api/admin/database-status'),
     health: () => apiClient.get('/api/health', { skipAuth: true }),
+    seedDatabase: () => apiClient.post('/api/admin/seed-database'),
+    setupDatabase: () => apiClient.post('/api/admin/setup-database'),
+    testAI: (data: any) => apiClient.post('/api/ai/generate-response', data),
   },
 
   // AI

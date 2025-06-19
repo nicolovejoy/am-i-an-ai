@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { cognitoService } from '@/services/cognito';
+import { api } from '@/services/apiClient';
 
 interface ApiHealth {
   endpoint: string;
@@ -28,52 +28,40 @@ function AdminPageContent() {
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'overview' | 'personas' | 'conversations' | 'raw'>('overview');
 
-  const LAMBDA_API_BASE = 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
 
 
   const runHealthChecks = useCallback(async () => {
     setLoading(true);
     const results: ApiHealth[] = [];
     
-    // Get auth token for authenticated endpoints
-    const token = await cognitoService.getIdToken();
-    
     const endpoints = [
-      { name: 'Health Check', url: `${LAMBDA_API_BASE}/api/health`, requiresAuth: false },
-      { name: 'Database Status', url: `${LAMBDA_API_BASE}/api/admin/database-status`, requiresAuth: true },
-      { name: 'Personas', url: `${LAMBDA_API_BASE}/api/personas`, requiresAuth: true },
-      { name: 'Conversations', url: `${LAMBDA_API_BASE}/api/conversations`, requiresAuth: true },
+      { name: 'Health Check', apiCall: () => api.admin.health() },
+      { name: 'Database Status', apiCall: () => api.admin.databaseStatus() },
+      { name: 'Personas', apiCall: () => api.personas.list() },
+      { name: 'Conversations', apiCall: () => api.conversations.list() },
     ];
     
     for (const endpoint of endpoints) {
       const startTime = Date.now();
       try {
-        // Build headers based on auth requirements
-        const headers: HeadersInit = { 'Accept': 'application/json' };
-        if (endpoint.requiresAuth && token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-        
-        const response = await fetch(endpoint.url, { headers });
+        const data = await endpoint.apiCall();
         const responseTime = Date.now() - startTime;
-        const data = await response.json();
         
         results.push({
           endpoint: endpoint.name,
-          status: response.ok ? 'healthy' : 'error',
+          status: 'healthy',
           responseTime,
           data,
-          error: response.ok ? undefined : `HTTP ${response.status}: ${data.error || 'Unknown error'}`
         });
 
         // Store specific data for display
-        if (endpoint.name === 'Personas' && response.ok && data.personas) {
+        if (endpoint.name === 'Personas' && data.personas) {
           setPersonas(data.personas);
         }
-        if (endpoint.name === 'Conversations' && response.ok && data.conversations) {
+        if (endpoint.name === 'Conversations' && data.conversations) {
           setConversations(data.conversations);
         }
-        if (endpoint.name === 'Database Status' && response.ok) {
+        if (endpoint.name === 'Database Status') {
           setDbStats(data.stats || null);
         }
 
@@ -109,36 +97,17 @@ function AdminPageContent() {
     }
 
     try {
-      // Get auth token
-      const token = await cognitoService.getIdToken();
-      if (!token) {
-        alert('Authentication required. Please sign in again.');
-        return;
-      }
-      
       const startTime = Date.now();
-      const response = await fetch(`${LAMBDA_API_BASE}/api/ai/generate-response`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          conversationId: '770e8400-e29b-41d4-a716-446655440001', // Creative Writing Discussion
-          message: 'Hello, this is an admin test. Please respond briefly.',
-          personaId: aiPersona.id,
-          personaName: aiPersona.name,
-          personaType: aiPersona.type
-        }),
+      const data = await api.admin.testAI({
+        conversationId: '770e8400-e29b-41d4-a716-446655440001', // Creative Writing Discussion
+        message: 'Hello, this is an admin test. Please respond briefly.',
+        personaId: aiPersona.id,
+        personaName: aiPersona.name,
+        personaType: aiPersona.type
       });
       const responseTime = Date.now() - startTime;
-      const data = await response.json();
       
-      if (response.ok) {
-        alert(`AI Test Successful!\nResponse Time: ${responseTime}ms\nResponse: "${data.message.content.substring(0, 100)}..."`);
-      } else {
-        alert(`AI Test Failed: ${data.error || 'Unknown error'}`);
-      }
+      alert(`AI Test Successful!\nResponse Time: ${responseTime}ms\nResponse: "${data.message.content.substring(0, 100)}..."`);
     } catch (error) {
       alert(`AI Test Error: ${error instanceof Error ? error.message : 'Network error'}`);
     }
@@ -153,32 +122,12 @@ function AdminPageContent() {
       setLoading(true);
       const startTime = Date.now();
       
-      // Get auth token
-      const token = await cognitoService.getIdToken();
-      if (!token) {
-        alert('Authentication required. Please sign in again.');
-        setLoading(false);
-        return;
-      }
-      
-      const response = await fetch(`${LAMBDA_API_BASE}/api/admin/seed-database`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
+      const data = await api.admin.seedDatabase();
       const responseTime = Date.now() - startTime;
-      const data = await response.json();
       
-      if (response.ok) {
-        alert(`Database Seeded Successfully!\nTime: ${responseTime}ms\nRecords: ${JSON.stringify(data.recordsCreated, null, 2)}`);
-        // Refresh all data
-        await runHealthChecks();
-      } else {
-        alert(`Database Seeding Failed: ${data.error || 'Unknown error'}`);
-      }
+      alert(`Database Seeded Successfully!\nTime: ${responseTime}ms\nRecords: ${JSON.stringify(data.recordsCreated, null, 2)}`);
+      // Refresh all data
+      await runHealthChecks();
     } catch (error) {
       alert(`Database Seeding Error: ${error instanceof Error ? error.message : 'Network error'}`);
     } finally {
@@ -188,28 +137,8 @@ function AdminPageContent() {
 
   const checkDatabaseSetup = async () => {
     try {
-      // Get auth token
-      const token = await cognitoService.getIdToken();
-      if (!token) {
-        alert('Authentication required. Please sign in again.');
-        return;
-      }
-
-      const response = await fetch(`${LAMBDA_API_BASE}/api/admin/setup-database`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        alert(`Database Setup Check:\n${data.message}\nTables: ${data.existingTables?.join(', ') || 'None found'}`);
-      } else {
-        alert(`Database Setup Check Failed: ${data.error || 'Unknown error'}`);
-      }
+      const data = await api.admin.setupDatabase();
+      alert(`Database Setup Check:\n${data.message}\nTables: ${data.existingTables?.join(', ') || 'None found'}`);
     } catch (error) {
       alert(`Database Setup Error: ${error instanceof Error ? error.message : 'Network error'}`);
     }

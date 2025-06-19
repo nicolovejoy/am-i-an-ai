@@ -6,7 +6,7 @@ import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { FullPageLoader } from './LoadingSpinner';
 import { aiOrchestrator } from '@/services/aiOrchestrator';
-import { cognitoService } from '@/services/cognito';
+import { api } from '@/services/apiClient';
 import type { Message } from '@/types/messages';
 import type { Conversation, PersonaInstance } from '@/types/conversations';
 import type { Persona } from '@/types/personas';
@@ -51,43 +51,27 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           // Validate conversationId before polling
           if (!conversationId || conversationId === 'undefined') return;
           
-          const token = await cognitoService.getIdToken();
-          if (!token) return; // Skip polling if not authenticated
-          
-          // eslint-disable-next-line no-undef
-          // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
-          const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.messages) {
-              // Transform and update messages
-              const newMessages: Message[] = data.messages.map((msg: Record<string, unknown>) => ({
-                id: msg.id as string,
-                conversationId: msg.conversationId as string,
-                authorPersonaId: msg.authorPersonaId as string,
-                content: msg.content as string,
-                type: (msg.type as string) || 'text',
-                timestamp: new Date(msg.timestamp as string),
-                sequenceNumber: msg.sequenceNumber as number,
-                isEdited: (msg.isEdited as boolean) || false,
-                editedAt: msg.editedAt ? new Date(msg.editedAt as string) : undefined,
-                replyToMessageId: msg.replyToMessageId as string,
-                metadata: (msg.metadata as Record<string, unknown>) || {},
-                moderationStatus: (msg.moderationStatus as string) || 'approved',
-                isVisible: (msg.isVisible as boolean) !== false,
-                isArchived: (msg.isArchived as boolean) || false
-              }));
-              
-              setMessages(newMessages);
-            }
+          const data = await api.messages.list(conversationId);
+          if (data.success && data.messages) {
+            // Transform and update messages
+            const newMessages: Message[] = data.messages.map((msg: Record<string, unknown>) => ({
+              id: msg.id as string,
+              conversationId: msg.conversationId as string,
+              authorPersonaId: msg.authorPersonaId as string,
+              content: msg.content as string,
+              type: (msg.type as string) || 'text',
+              timestamp: new Date(msg.timestamp as string),
+              sequenceNumber: msg.sequenceNumber as number,
+              isEdited: (msg.isEdited as boolean) || false,
+              editedAt: msg.editedAt ? new Date(msg.editedAt as string) : undefined,
+              replyToMessageId: msg.replyToMessageId as string,
+              metadata: (msg.metadata as Record<string, unknown>) || {},
+              moderationStatus: (msg.moderationStatus as string) || 'approved',
+              isVisible: (msg.isVisible as boolean) !== false,
+              isArchived: (msg.isArchived as boolean) || false
+            }));
+            
+            setMessages(newMessages);
           }
         } catch (error) {
           // Error polling for messages
@@ -110,36 +94,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         return;
       }
       
-      // Get authentication token
-      const token = await cognitoService.getIdToken();
-      if (!token) {
-        setError('Authentication required. Please sign in.');
-        setLoading(false);
-        return;
-      }
-      
-      // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
-      
       // Fetch conversation details
-      const conversationResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!conversationResponse.ok) {
-        if (conversationResponse.status === 404) {
-          setConversation(null);
-          setLoading(false);
-          return;
-        }
-        throw new Error('Failed to fetch conversation');
-      }
-      
-      const conversationData = await conversationResponse.json();
+      const conversationData = await api.conversations.get(conversationId);
       
       if (!conversationData.success) {
         throw new Error(conversationData.error || 'Failed to load conversation');
@@ -147,15 +103,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       
       // Fetch conversation participants with persona details
       const participantPromises = conversationData.conversation.participants.map(async (participant: Record<string, unknown>) => {
-        const personaResponse = await fetch(`${LAMBDA_API_BASE}/api/personas/${participant.personaId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (personaResponse.ok) {
-          const personaData = await personaResponse.json();
+        try {
+          const personaData = await api.personas.get(participant.personaId as string);
           if (personaData.success) {
             return {
               ...participant,
@@ -163,8 +112,9 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
               personaType: personaData.persona.type === 'ai_agent' ? 'ai_agent' : 'human'
             };
           }
+        } catch (error) {
+          // Fallback if persona fetch fails
         }
-        // Fallback if persona fetch fails
         return {
           ...participant,
           personaName: 'Unknown Persona',
@@ -202,16 +152,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       setConversation(conversation);
       
       // Fetch messages from API
-      const messagesResponse = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (messagesResponse.ok) {
-        const messagesData = await messagesResponse.json();
+      try {
+        const messagesData = await api.messages.list(conversationId);
         
         if (messagesData.success && messagesData.messages) {
           // Transform messages to frontend format
@@ -237,9 +179,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           // No messages yet
           setMessages([]);
         }
-      } else {
+      } catch (error) {
         // Fallback to empty messages if API fails
-        // Failed to fetch messages
         setMessages([]);
       }
     } catch (err) {
@@ -285,42 +226,21 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
 
       // Send to Lambda API to persist to database
       try {
-        // Get authentication token
-        const token = await cognitoService.getIdToken();
-        if (!token) {
-          throw new Error('Authentication required. Please sign in.');
-        }
-
-        // eslint-disable-next-line no-undef
-        const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
         const messagePayload = { 
           content, 
           personaId: currentUserPersonaId,
           type: 'text'
         };
         
-        const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(messagePayload)
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          // Message persisted to database
-          // Update the optimistic message with the real database ID
-          if (result.messageId) {
-            setMessages(prev => prev.map(msg => 
-              msg.id === newMessage.id 
-                ? { ...msg, id: result.messageId }
-                : msg
-            ));
-          }
-        } else {
-          // Failed to persist message to database
+        const result = await api.messages.create(conversationId, messagePayload);
+        // Message persisted to database
+        // Update the optimistic message with the real database ID
+        if (result.messageId) {
+          setMessages(prev => prev.map(msg => 
+            msg.id === newMessage.id 
+              ? { ...msg, id: result.messageId }
+              : msg
+          ));
         }
       } catch (dbError) {
         // Error persisting message to database
@@ -393,41 +313,10 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         // Generate AI response after delay
         setTimeout(async () => {
           try {
-            // Get authentication token
-            const token = await cognitoService.getIdToken();
-            if (!token) {
-              console.error('Authentication required for AI response generation');
-              setTypingPersonas(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(trigger.personaId);
-                return newSet;
-              });
-              return;
-            }
-
-            // eslint-disable-next-line no-undef
-            // eslint-disable-next-line no-undef
-            const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
-            const response = await fetch(`${LAMBDA_API_BASE}/api/ai/generate-response`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                conversationId,
-                personaId: trigger.personaId,
-                triggerMessageId,
-              }),
+            const data = await api.ai.generateResponse(conversationId, {
+              personaId: trigger.personaId,
+              triggerMessageId,
             });
-
-            // Check response status first
-            if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
-            }
-
-            const data = await response.json();
             // AI API response received
 
             // Remove typing indicator
