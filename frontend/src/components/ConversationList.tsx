@@ -56,7 +56,7 @@ export default function ConversationList() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
       
-      const response = await fetch('https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/conversations', {
+      const response = await fetch('https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/conversations', {
         signal: controller.signal,
         headers: {
           'Authorization': `Bearer ${token}`,

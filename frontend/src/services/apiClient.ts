@@ -8,7 +8,7 @@ declare const process: {
   };
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
 
 export interface ApiRequestOptions extends RequestInit {
   skipAuth?: boolean;

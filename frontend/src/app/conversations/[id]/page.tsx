@@ -11,7 +11,7 @@ interface ConversationPageProps {
 export async function generateStaticParams() {
   try {
     // Fetch real conversation IDs from Lambda API for static generation
-    const response = await fetch('https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/conversations');
+    const response = await fetch('https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/conversations');
     
     if (!response.ok) {
       throw new Error('Failed to fetch conversations');

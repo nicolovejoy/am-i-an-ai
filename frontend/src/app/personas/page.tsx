@@ -44,7 +44,7 @@ export default function PersonasPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
-      const response = await fetch('https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
+      const response = await fetch('https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
         signal: controller.signal,
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -115,7 +115,7 @@ export default function PersonasPage() {
         throw new Error('Not authenticated');
       }
       
-      const response = await fetch('https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
+      const response = await fetch('https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/personas', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -156,7 +156,7 @@ export default function PersonasPage() {
         throw new Error('Not authenticated');
       }
       
-      const response = await fetch(`https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod/api/personas/${personaId}`, {
+      const response = await fetch(`https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/personas/${personaId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

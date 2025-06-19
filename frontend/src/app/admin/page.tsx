@@ -28,7 +28,7 @@ function AdminPageContent() {
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'overview' | 'personas' | 'conversations' | 'raw'>('overview');
 
-  const LAMBDA_API_BASE = 'https://wygrsdhzg1.execute-api.us-east-1.amazonaws.com/prod';
+  const LAMBDA_API_BASE = 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
 
 
   const runHealthChecks = useCallback(async () => {

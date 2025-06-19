@@ -18,7 +18,13 @@
     "prepare": "husky",
     "test": "cd frontend && npm run test",
     "lint": "cd backend/lambda && npm run lint && cd ../../frontend && npm run lint",
-    "build": "cd frontend && npm run build"
+    "build": "cd frontend && npm run build",
+    "db:status": "./scripts/admin-cli.js status",
+    "db:setup": "./scripts/admin-cli.js setup",
+    "db:seed": "./scripts/admin-cli.js seed",
+    "db:reset": "./scripts/admin-cli.js reset",
+    "db:show": "./scripts/admin-cli.js status",
+    "admin": "./scripts/admin-cli.js interactive"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
