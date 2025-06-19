@@ -41,7 +41,7 @@ describe('SignInForm Navigation Flow', () => {
       forward: jest.fn(),
       refresh: jest.fn(),
       prefetch: jest.fn(),
-    } as any);
+    } as jest.Mocked<ReturnType<typeof import('next/navigation').useRouter>>);
 
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,

@@ -18,7 +18,7 @@ jest.mock('next/navigation', () => ({
 // Mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: ({ alt, ...props }: any) => <img alt={alt} {...props} />,
+  default: ({ alt, ...props }: { alt: string; [key: string]: unknown }) => <img alt={alt} {...(props as Record<string, unknown>)} />,
 }));
 
 // Mock AuthContext
@@ -36,7 +36,7 @@ jest.mock('../../hooks/useRoleAccess', () => ({
 describe('NavMenu Admin Access Control', () => {
   const mockUsePathname = usePathname as jest.Mock;
 
-  const setupMocks = (authConfig: any, roleConfig: any) => {
+  const setupMocks = (authConfig: unknown, roleConfig: unknown) => {
     mockUseAuth.mockReturnValue(authConfig);
     mockUseRoleAccess.mockReturnValue(roleConfig);
   };

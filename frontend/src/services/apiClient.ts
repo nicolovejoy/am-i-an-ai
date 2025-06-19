@@ -158,6 +158,8 @@ export const api = {
     create: (data: any) => apiClient.post('/api/conversations', data),
     update: (id: string, data: any) => apiClient.put(`/api/conversations/${id}`, data),
     delete: (id: string) => apiClient.delete(`/api/conversations/${id}`),
+    close: (id: string, data: { reason?: string; status?: 'completed' | 'terminated' }) => 
+      apiClient.post(`/api/conversations/${id}/close`, data),
   },
 
   // Messages

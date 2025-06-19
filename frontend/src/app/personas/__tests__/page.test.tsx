@@ -17,22 +17,25 @@ jest.mock('@/services/apiClient', () => ({
 
 // Mock the PersonaList component
 jest.mock('@/components/PersonaList', () => ({
-  PersonaList: ({ personas, onEdit, onDelete }: any) => (
+  PersonaList: ({ personas, onEdit, onDelete }: { personas: unknown[]; onEdit: (persona: unknown) => void; onDelete: (id: string) => void }) => (
     <div data-testid="persona-list">
-      {personas.map((persona: any) => (
-        <div key={persona.id} data-testid="persona-item">
-          <span>{persona.name}</span>
-          <button onClick={() => onEdit(persona)}>Edit</button>
-          <button onClick={() => onDelete(persona.id)}>Delete</button>
-        </div>
-      ))}
+      {personas.map((persona: unknown) => {
+        const p = persona as { id: string; name: string };
+        return (
+          <div key={p.id} data-testid="persona-item">
+            <span>{p.name}</span>
+            <button onClick={() => onEdit(persona)}>Edit</button>
+            <button onClick={() => onDelete(p.id)}>Delete</button>
+          </div>
+        );
+      })}
     </div>
   ),
 }));
 
 // Mock the PersonaForm component
 jest.mock('@/components/PersonaForm', () => ({
-  PersonaForm: ({ onSubmit, onCancel }: any) => (
+  PersonaForm: ({ onSubmit, onCancel }: { onSubmit: (data: unknown) => void; onCancel: () => void }) => (
     <div data-testid="persona-form">
       <button onClick={() => onSubmit({ name: 'Test Persona', type: 'ai_agent' })}>
         Submit

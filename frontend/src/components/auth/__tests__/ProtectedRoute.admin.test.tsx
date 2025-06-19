@@ -40,7 +40,7 @@ describe('ProtectedRoute Admin Access', () => {
       forward: jest.fn(),
       refresh: jest.fn(),
       prefetch: jest.fn(),
-    } as any);
+    } as jest.Mocked<ReturnType<typeof import('next/navigation').useRouter>>);
 
     // Set default mock returns to prevent destructuring errors
     mockUseAuth.mockReturnValue({

@@ -272,6 +272,45 @@ describe('API Client Standardization', () => {
         })
       );
     });
+
+    it('closes conversation', async () => {
+      const closeData = {
+        reason: 'Conversation completed',
+        status: 'completed' as const,
+      };
+
+      await api.conversations.close('conv-123', closeData);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/conversations/conv-123/close'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer mock-token',
+          }),
+          body: JSON.stringify(closeData),
+        })
+      );
+    });
+
+    it('closes conversation with minimal data', async () => {
+      const closeData = {
+        status: 'terminated' as const,
+      };
+
+      await api.conversations.close('conv-123', closeData);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/conversations/conv-123/close'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer mock-token',
+          }),
+          body: JSON.stringify(closeData),
+        })
+      );
+    });
   });
 
   describe('Messages API Methods', () => {

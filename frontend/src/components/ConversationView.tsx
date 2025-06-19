@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { FullPageLoader } from './LoadingSpinner';
+import { CloseConversationModal } from './CloseConversationModal';
 import { aiOrchestrator } from '@/services/aiOrchestrator';
 import { api } from '@/services/apiClient';
 import type { Message } from '@/types/messages';
@@ -28,6 +29,10 @@ interface ConversationData extends Omit<Conversation, 'participants'> {
   totalCharacters: number;
   averageResponseTime: number;
   qualityScore?: number;
+  canAddMessages?: boolean;
+  closeReason?: string;
+  closedBy?: string;
+  closedAt?: Date;
 }
 
 export function ConversationView({ conversationId }: ConversationViewProps) {
@@ -38,6 +43,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
   const [typingPersonas, setTypingPersonas] = useState<Set<string>>(new Set());
   const [messageError, setMessageError] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     fetchConversationData();
@@ -140,6 +147,10 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         totalCharacters: conversationData.conversation.totalCharacters || 0,
         averageResponseTime: conversationData.conversation.averageResponseTime || 0,
         qualityScore: conversationData.conversation.qualityScore,
+        canAddMessages: conversationData.conversation.canAddMessages !== false, // Default to true if not provided
+        closeReason: conversationData.conversation.closeReason,
+        closedBy: conversationData.conversation.closedBy,
+        closedAt: conversationData.conversation.closedAt ? new Date(conversationData.conversation.closedAt) : undefined,
         createdBy: conversationData.conversation.createdBy || 'unknown',
         constraints: conversationData.conversation.constraints || {
           maxMessages: undefined,
@@ -420,6 +431,31 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
     setMessages(prev => [...prev, aiMessage]);
   };
 
+  const handleCloseConversation = async (reason: string, status: 'completed' | 'terminated' = 'completed') => {
+    try {
+      setIsClosing(true);
+      const result = await api.conversations.close(conversationId, { reason, status });
+      
+      if (result.success) {
+        // Update local conversation state
+        setConversation(prev => prev ? {
+          ...prev,
+          status: result.conversation.status,
+          canAddMessages: result.conversation.canAddMessages,
+          closeReason: result.conversation.closeReason,
+          closedBy: result.conversation.closedBy,
+          closedAt: result.conversation.closedAt ? new Date(result.conversation.closedAt) : undefined,
+        } : null);
+        
+        setShowCloseModal(false);
+      }
+    } catch (error) {
+      console.error('Error closing conversation:', error);
+      // TODO: Show error toast
+    } finally {
+      setIsClosing(false);
+    }
+  };
 
   if (loading) {
     return <FullPageLoader text="Loading conversation..." />;
@@ -498,15 +534,42 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
               <h1 className="text-xl font-semibold text-[#2D3748]">{conversation.title}</h1>
             </div>
             
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(conversation.status)}`}>
-              {conversation.status}
-            </span>
+            <div className="flex items-center space-x-3">
+              {conversation.status === 'active' && (
+                <button
+                  onClick={() => setShowCloseModal(true)}
+                  className="px-3 py-1 text-sm bg-red-100 text-red-700 hover:bg-red-200 rounded-md transition-colors"
+                >
+                  Close Conversation
+                </button>
+              )}
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(conversation.status)}`}>
+                {conversation.status}
+              </span>
+            </div>
           </div>
           
           <div className="text-sm text-gray-600 mb-3">{conversation.topic}</div>
           
           {conversation.description && (
             <div className="text-sm text-gray-500 mb-3">{conversation.description}</div>
+          )}
+          
+          {/* Conversation State Info */}
+          {(conversation.closeReason || conversation.closedAt) && (
+            <div className="bg-gray-50 border border-gray-200 rounded-md p-3 mb-3">
+              <div className="text-sm text-gray-600">
+                <div className="font-medium">Conversation Closed</div>
+                {conversation.closeReason && (
+                  <div className="mt-1">Reason: {conversation.closeReason}</div>
+                )}
+                {conversation.closedAt && (
+                  <div className="mt-1">
+                    Closed on: {conversation.closedAt.toLocaleDateString()} at {conversation.closedAt.toLocaleTimeString()}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
           
           {/* Participants */}
@@ -565,7 +628,19 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       <MessageInput 
         onSendMessage={handleSendMessage}
         conversationStatus={conversation.status}
+        disabled={!conversation.canAddMessages}
       />
+
+      {/* Close Conversation Modal */}
+      {showCloseModal && (
+        <CloseConversationModal
+          isOpen={showCloseModal}
+          onClose={() => setShowCloseModal(false)}
+          onConfirm={handleCloseConversation}
+          isLoading={isClosing}
+          conversationTitle={conversation.title}
+        />
+      )}
     </div>
   );
 }
