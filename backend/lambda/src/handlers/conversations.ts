@@ -39,6 +39,12 @@ export async function handleConversations(
           if (messagesMatch) {
             // POST /api/conversations/:id/messages
             return await createMessage(conversationId, event, corsHeaders);
+          } 
+          // Handle close conversation endpoint
+          const closeMatch = path.match(/^\/api\/conversations\/([^/]+)\/close$/);
+          if (closeMatch) {
+            // POST /api/conversations/:id/close
+            return await closeConversation(conversationId, event, corsHeaders);
           } else {
             return {
               statusCode: 404,
@@ -49,6 +55,18 @@ export async function handleConversations(
         } else {
           // POST /api/conversations
           return await createConversation(event, corsHeaders);
+        }
+
+      case 'PUT':
+        if (conversationId) {
+          // PUT /api/conversations/:id
+          return await updateConversation(conversationId, event, corsHeaders);
+        } else {
+          return {
+            statusCode: 404,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'Not Found' }),
+          };
         }
 
       default:
@@ -120,6 +138,10 @@ async function getConversation(
           topic: conversation.topic,
           description: conversation.description,
           status: conversation.status,
+          canAddMessages: conversation.can_add_messages,
+          closeReason: conversation.close_reason,
+          closedBy: conversation.closed_by,
+          closedAt: conversation.closed_at,
           participants: conversation.participants || [],
           createdAt: conversation.created_at,
           messageCount: conversation.message_count,
@@ -414,6 +436,37 @@ async function createMessage(
       };
     }
 
+    // Check if conversation allows new messages
+    const conversationStateQuery = `
+      SELECT status, can_add_messages, close_reason
+      FROM conversations
+      WHERE id = $1
+    `;
+    
+    const stateResult = await queryDatabase(conversationStateQuery, [conversationId]);
+    
+    if (stateResult.rows.length === 0) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Conversation not found' }),
+      };
+    }
+    
+    const conversationState = stateResult.rows[0];
+    
+    if (!conversationState.can_add_messages) {
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Messages cannot be added to this conversation',
+          reason: conversationState.close_reason || 'Conversation is closed',
+          status: conversationState.status
+        }),
+      };
+    }
+
     // Get the next sequence number
     const sequenceQuery = `
       SELECT COALESCE(MAX(sequence_number), 0) + 1 as next_sequence
@@ -513,6 +566,246 @@ async function createMessage(
       headers: corsHeaders,
       body: JSON.stringify({
         error: 'Failed to create message',
+        message: String(error),
+      }),
+    };
+  }
+}
+
+async function closeConversation(
+  conversationId: string,
+  event: AuthenticatedEvent,
+  corsHeaders: Record<string, string>
+): Promise<APIGatewayProxyResult> {
+  try {
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Request body is required' }),
+      };
+    }
+
+    const body = JSON.parse(event.body);
+    const { reason, status = 'completed' } = body;
+
+    // Validate status
+    const validStatuses = ['completed', 'terminated'];
+    if (!validStatuses.includes(status)) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Invalid status. Must be completed or terminated' 
+        }),
+      };
+    }
+
+    // Check if conversation exists and is not already closed
+    const checkQuery = `
+      SELECT id, status, can_add_messages
+      FROM conversations
+      WHERE id = $1
+    `;
+    
+    const checkResult = await queryDatabase(checkQuery, [conversationId]);
+    
+    if (checkResult.rows.length === 0) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Conversation not found' }),
+      };
+    }
+    
+    const conversation = checkResult.rows[0];
+    
+    if (!conversation.can_add_messages) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Conversation is already closed',
+          currentStatus: conversation.status
+        }),
+      };
+    }
+
+    // Close the conversation
+    const userId = event.user.id;
+    const closeQuery = `
+      UPDATE conversations 
+      SET status = $1,
+          can_add_messages = false,
+          close_reason = $2,
+          closed_by = $3,
+          closed_at = NOW(),
+          ended_at = NOW()
+      WHERE id = $4
+      RETURNING *
+    `;
+    
+    const result = await queryDatabase(closeQuery, [
+      status,
+      reason || null,
+      userId,
+      conversationId
+    ]);
+    
+    const updatedConversation = result.rows[0];
+    
+    console.log('Conversation closed successfully:', conversationId);
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        conversation: {
+          id: updatedConversation.id,
+          status: updatedConversation.status,
+          canAddMessages: updatedConversation.can_add_messages,
+          closeReason: updatedConversation.close_reason,
+          closedBy: updatedConversation.closed_by,
+          closedAt: updatedConversation.closed_at,
+        },
+      }),
+    };
+
+  } catch (error) {
+    console.error('Error closing conversation:', error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: 'Failed to close conversation',
+        message: String(error),
+      }),
+    };
+  }
+}
+
+async function updateConversation(
+  conversationId: string,
+  event: AuthenticatedEvent,
+  corsHeaders: Record<string, string>
+): Promise<APIGatewayProxyResult> {
+  try {
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Request body is required' }),
+      };
+    }
+
+    const body = JSON.parse(event.body);
+    const { title, topic, description, status, canAddMessages } = body;
+
+    // Check if conversation exists
+    const checkQuery = `
+      SELECT id FROM conversations WHERE id = $1
+    `;
+    
+    const checkResult = await queryDatabase(checkQuery, [conversationId]);
+    
+    if (checkResult.rows.length === 0) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Conversation not found' }),
+      };
+    }
+
+    // Build dynamic update query
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (title !== undefined) {
+      updates.push(`title = $${paramIndex++}`);
+      values.push(title.trim());
+    }
+
+    if (topic !== undefined) {
+      updates.push(`topic = $${paramIndex++}`);
+      values.push(topic.trim());
+    }
+
+    if (description !== undefined) {
+      updates.push(`description = $${paramIndex++}`);
+      values.push(description?.trim() || '');
+    }
+
+    if (status !== undefined) {
+      const validStatuses = ['active', 'paused', 'completed', 'terminated'];
+      if (!validStatuses.includes(status)) {
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ 
+            error: 'Invalid status. Must be one of: ' + validStatuses.join(', ')
+          }),
+        };
+      }
+      updates.push(`status = $${paramIndex++}`);
+      values.push(status);
+    }
+
+    if (canAddMessages !== undefined) {
+      updates.push(`can_add_messages = $${paramIndex++}`);
+      values.push(canAddMessages);
+    }
+
+    if (updates.length === 0) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'No valid fields to update' }),
+      };
+    }
+
+    // Add conversation ID as last parameter
+    values.push(conversationId);
+
+    const updateQuery = `
+      UPDATE conversations 
+      SET ${updates.join(', ')}, updated_at = NOW()
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+    
+    const result = await queryDatabase(updateQuery, values);
+    const updatedConversation = result.rows[0];
+    
+    console.log('Conversation updated successfully:', conversationId);
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        conversation: {
+          id: updatedConversation.id,
+          title: updatedConversation.title,
+          topic: updatedConversation.topic,
+          description: updatedConversation.description,
+          status: updatedConversation.status,
+          canAddMessages: updatedConversation.can_add_messages,
+          closeReason: updatedConversation.close_reason,
+          closedBy: updatedConversation.closed_by,
+          closedAt: updatedConversation.closed_at,
+        },
+      }),
+    };
+
+  } catch (error) {
+    console.error('Error updating conversation:', error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: 'Failed to update conversation',
         message: String(error),
       }),
     };
