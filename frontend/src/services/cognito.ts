@@ -170,37 +170,30 @@ export const cognitoService = {
 
   getIdToken: (): Promise<string | null> => {
     return new Promise((resolve) => {
-      console.log('🔑 Cognito Debug - Getting ID token...');
       const currentUser = userPool.getCurrentUser();
       if (!currentUser) {
-        console.log('🔑 Cognito Debug - No current user found');
         resolve(null);
         return;
       }
 
-      console.log('🔑 Cognito Debug - Current user found, getting session...');
       currentUser.getSession(
         (err: Error | null, session: any) => {
           if (err) {
-            console.error('🔑 Cognito Debug - Session error:', err);
             resolve(null);
             return;
           }
           
           if (!session) {
-            console.log('🔑 Cognito Debug - No session found');
             resolve(null);
             return;
           }
           
           if (!session.isValid()) {
-            console.log('🔑 Cognito Debug - Session is not valid');
             resolve(null);
             return;
           }
 
           const idToken = session.getIdToken().getJwtToken();
-          console.log('🔑 Cognito Debug - Token retrieved successfully:', idToken ? `${idToken.substring(0, 20)}...` : 'null');
           resolve(idToken);
         }
       );

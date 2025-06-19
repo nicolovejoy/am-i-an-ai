@@ -201,6 +201,44 @@ const commands = {
     }
   },
 
+  // Debug messages visibility
+  async debugMessages() {
+    console.log('🔍 Checking message visibility issues...');
+    
+    // Check message counts via API
+    const conversations = await apiRequest('/api/conversations');
+    console.log('Raw conversations response:', JSON.stringify(conversations, null, 2));
+    
+    if (conversations && conversations.statusCode === 200) {
+      const convData = conversations.body.conversations || [];
+      console.log('\n📊 Conversations from API:');
+      convData.forEach(conv => {
+        console.log(`  "${conv.title}": ${conv.messageCount} messages (ID: ${conv.id})`);
+      });
+      
+      // Try to fetch messages for each conversation
+      console.log('\n💬 Messages per conversation:');
+      for (const conv of convData) {
+        const messages = await apiRequest(`/api/conversations/${conv.id}/messages`);
+        
+        if (messages && messages.statusCode === 200) {
+          const msgData = messages.body.messages || messages.body || [];
+          console.log(`  "${conv.title}": ${msgData.length} visible messages`);
+          msgData.forEach((msg, idx) => {
+            console.log(`    ${idx + 1}. ${msg.content.substring(0, 50)}...`);
+          });
+        } else {
+          console.log(`  "${conv.title}": Failed to fetch messages - Status: ${messages?.statusCode}`);
+          if (messages?.body?.error) {
+            console.log(`    Error: ${messages.body.error}`);
+          }
+        }
+      }
+    } else {
+      console.log('❌ Failed to fetch conversations - Status:', conversations?.statusCode);
+    }
+  },
+
   // Interactive mode
   async interactive() {
     const rl = readline.createInterface({
@@ -209,7 +247,7 @@ const commands = {
     });
 
     console.log('\n📟 AmIAnAI Admin CLI - Interactive Mode');
-    console.log('Commands: health, status, setup, seed, reset, personas, conversations, exit\n');
+    console.log('Commands: health, status, setup, seed, reset, personas, conversations, debugMessages, exit\n');
 
     const prompt = () => {
       rl.question('admin> ', async (command) => {
@@ -246,6 +284,7 @@ Commands:
   reset          - Reset database (setup + seed)
   personas       - List all personas
   conversations  - List all conversations
+  debugMessages  - Debug message visibility issues
   interactive    - Interactive mode
   help           - Show this help
 

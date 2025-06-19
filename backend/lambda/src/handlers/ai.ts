@@ -211,6 +211,20 @@ async function generateResponse(
     
     const persona: PersonaData = personaResult.rows[0];
     
+    // Validate conversation exists before generating response
+    const conversationResult = await queryDatabase(
+      'SELECT id FROM conversations WHERE id = $1',
+      [conversationId]
+    );
+
+    if (conversationResult.rows.length === 0) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Conversation not found' }),
+      };
+    }
+    
     // Check if this is an AI persona
     if (persona.type === 'human_persona') {
       return {

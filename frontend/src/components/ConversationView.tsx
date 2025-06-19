@@ -48,6 +48,9 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
     if (conversation?.status === 'active' && !loading) {
       const interval = setInterval(async () => {
         try {
+          // Validate conversationId before polling
+          if (!conversationId || conversationId === 'undefined') return;
+          
           const token = await cognitoService.getIdToken();
           if (!token) return; // Skip polling if not authenticated
           
@@ -99,6 +102,13 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
     try {
       setLoading(true);
       setError(null);
+      
+      // Validate conversationId
+      if (!conversationId || conversationId === 'undefined') {
+        setError('Invalid conversation ID');
+        setLoading(false);
+        return;
+      }
       
       // Get authentication token
       const token = await cognitoService.getIdToken();
@@ -275,20 +285,26 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
 
       // Send to Lambda API to persist to database
       try {
+        // Get authentication token
+        const token = await cognitoService.getIdToken();
+        if (!token) {
+          throw new Error('Authentication required. Please sign in.');
+        }
+
         // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
+        const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
         const messagePayload = { 
           content, 
           personaId: currentUserPersonaId,
           type: 'text'
         };
-        // Sending message payload
-        // Using conversation ID
-        // Using current user persona ID
         
         const response = await fetch(`${LAMBDA_API_BASE}/api/conversations/${conversationId}/messages`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify(messagePayload)
         });
 
@@ -377,13 +393,26 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         // Generate AI response after delay
         setTimeout(async () => {
           try {
+            // Get authentication token
+            const token = await cognitoService.getIdToken();
+            if (!token) {
+              console.error('Authentication required for AI response generation');
+              setTypingPersonas(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(trigger.personaId);
+                return newSet;
+              });
+              return;
+            }
+
             // eslint-disable-next-line no-undef
-          // eslint-disable-next-line no-undef
-      const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
+            // eslint-disable-next-line no-undef
+            const LAMBDA_API_BASE = process.env.NEXT_PUBLIC_API_URL as string || 'https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod';
             const response = await fetch(`${LAMBDA_API_BASE}/api/ai/generate-response`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
               },
               body: JSON.stringify({
                 conversationId,

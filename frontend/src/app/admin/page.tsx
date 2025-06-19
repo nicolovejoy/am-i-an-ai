@@ -124,7 +124,7 @@ function AdminPageContent() {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          conversationId: '550e8400-e29b-41d4-a716-446655440001',
+          conversationId: '770e8400-e29b-41d4-a716-446655440001', // Creative Writing Discussion
           message: 'Hello, this is an admin test. Please respond briefly.',
           personaId: aiPersona.id,
           personaName: aiPersona.name,
@@ -135,7 +135,7 @@ function AdminPageContent() {
       const data = await response.json();
       
       if (response.ok) {
-        alert(`AI Test Successful!\nResponse Time: ${responseTime}ms\nResponse: "${data.response.content.substring(0, 100)}..."`);
+        alert(`AI Test Successful!\nResponse Time: ${responseTime}ms\nResponse: "${data.message.content.substring(0, 100)}..."`);
       } else {
         alert(`AI Test Failed: ${data.error || 'Unknown error'}`);
       }
