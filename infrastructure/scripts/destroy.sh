@@ -14,7 +14,24 @@ if [ "$(basename "$(pwd)")" != "infrastructure" ]; then
 fi
 
 echo "⚠️  This will destroy all resources for ${DOMAIN_NAME}"
-echo "Are you sure? (y/n)"
+echo ""
+
+# Cognito preservation prompt with default to preserve
+echo "🔐 Preserve Cognito user pool? (keeps user accounts for testing)"
+echo "   [Y/n] (default: Yes)"
+read -r cognito_response
+
+# Default to preserve if empty response
+if [ -z "$cognito_response" ] || [ "$cognito_response" = "y" ] || [ "$cognito_response" = "Y" ]; then
+    PRESERVE_COGNITO=true
+    echo "✅ Cognito user pool will be preserved"
+else
+    PRESERVE_COGNITO=false
+    echo "❌ Cognito user pool will be destroyed"
+fi
+
+echo ""
+echo "Are you sure you want to proceed with the destruction? (y/n)"
 read -r response
 
 if [ "$response" != "y" ]; then
@@ -78,6 +95,18 @@ fi
 
 # Destroy infrastructure
 echo "Destroying infrastructure..."
+
+if [ "$PRESERVE_COGNITO" = true ]; then
+    echo "🔐 Removing Cognito resources from Terraform state to preserve them..."
+    
+    # Remove Cognito resources from state before destroy
+    terraform state rm aws_cognito_user_pool.main 2>/dev/null || echo "Cognito user pool not in state"
+    terraform state rm aws_cognito_user_pool_domain.main 2>/dev/null || echo "Cognito user pool domain not in state"  
+    terraform state rm aws_cognito_user_pool_client.main 2>/dev/null || echo "Cognito user pool client not in state"
+    
+    echo "✅ Cognito resources removed from state and will be preserved"
+fi
+
 terraform destroy -auto-approve
 
 # Ask if user wants to clean up remote state backend resources
