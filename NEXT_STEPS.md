@@ -1,6 +1,6 @@
 # Next Steps: Enhanced Authentication Model & Permissions System
 
-## 🎯 Current Status (Updated: 2025-06-20)
+## 🎯 Current Status (Updated: 2025-06-25)
 
 ### ✅ **Platform Fully Operational**
 - All tests passing (302 tests)
@@ -30,6 +30,13 @@
 - Resolved AI response generation authentication issues
 - Created admin CLI tool for fast database management
 - Fixed conversation ID validation preventing crashes
+
+### 🔒 **Security Improvements (2025-06-25)**
+- ✅ **Removed exposed OpenAI API key** from `import-resources.sh`
+- ✅ **Added pre-commit hooks** to detect and prevent secret exposure
+- ✅ **Created installation scripts** for team-wide security checks
+- Pre-commit hook detects: OpenAI keys, AWS credentials, passwords, private keys
+- Security scripts added: `scripts/install-hooks.sh` and `scripts/pre-commit-hook.sh`
 
 ## 🎯 **Strategic Direction: Enhanced Permissions & Features**
 
@@ -146,6 +153,15 @@ CREATE TABLE persona_ratings (
 ---
 
 ## 🚀 **Immediate Next Session Actions**
+
+### **Priority 0: Update OpenAI API Key** 🔴 **URGENT**
+1. **Create new OpenAI API key** at https://platform.openai.com/api-keys
+2. **Update AWS Secrets Manager** with new key:
+   ```bash
+   aws secretsmanager update-secret --secret-id amianai-openai-api-key \
+     --secret-string '{"api_key":"your-new-key-here"}'
+   ```
+3. **Verify AI functionality** by testing message responses
 
 ### **Priority 1: Database Schema Initialization & Debugging**
 1. **Database Investigation** - Determine why admin API calls are failing

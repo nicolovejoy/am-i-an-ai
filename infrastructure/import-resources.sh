@@ -35,7 +35,7 @@ cd /Users/nico/src/amianai/infrastructure
 
 # Set required variables to avoid prompts
 export TF_VAR_github_username="${GITHUB_USERNAME:-nicolovejoy}"
-export TF_VAR_openai_api_key="${OPENAI_API_KEY:-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}"
+export TF_VAR_openai_api_key="${OPENAI_API_KEY:-}"
 
 log_info "Importing existing AWS resources into Terraform state..."
 
