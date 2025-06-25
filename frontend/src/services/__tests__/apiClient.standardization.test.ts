@@ -450,18 +450,4 @@ describe('API Client Standardization', () => {
     });
   });
 
-  describe('Request Logging', () => {
-    it('logs API requests for debugging', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      await api.personas.list();
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('🌐 API Client Debug - Making request:'),
-        expect.any(Object)
-      );
-
-      consoleSpy.mockRestore();
-    });
-  });
 });

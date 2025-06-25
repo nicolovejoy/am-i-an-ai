@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import PersonasPage from '../page';
 import { api } from '@/services/apiClient';
@@ -62,14 +62,19 @@ describe('PersonasPage', () => {
     });
   });
 
-  it('renders personas page header', () => {
+  it('renders personas page header', async () => {
     (api.personas.list as jest.Mock).mockResolvedValue({ 
       personas: [] 
     });
 
-    render(<PersonasPage />);
+    await act(async () => {
+      render(<PersonasPage />);
+    });
     
-    expect(screen.getByText('Personas')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Personas')).toBeInTheDocument();
+    });
+    
     expect(screen.getByText('Create and manage conversation personas for richer interactions')).toBeInTheDocument();
     expect(screen.getByText('Create Persona')).toBeInTheDocument();
   });
@@ -97,7 +102,9 @@ describe('PersonasPage', () => {
   it('handles API errors and falls back to mock data', async () => {
     (api.personas.list as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-    render(<PersonasPage />);
+    await act(async () => {
+      render(<PersonasPage />);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('Demo mode: Showing sample personas. Database connection will be restored soon.')).toBeInTheDocument();

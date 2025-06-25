@@ -24,6 +24,7 @@
     "db:seed": "./scripts/admin-cli.js seed",
     "db:reset": "./scripts/admin-cli.js reset",
     "db:show": "./scripts/admin-cli.js status",
+    "db:migrate": "./scripts/run-migration.js",
     "admin": "./scripts/admin-cli.js interactive"
   },
   "lint-staged": {

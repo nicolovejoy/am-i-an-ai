@@ -450,7 +450,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         setShowCloseModal(false);
       }
     } catch (error) {
-      console.error('Error closing conversation:', error);
+      // Error closing conversation
       // TODO: Show error toast
     } finally {
       setIsClosing(false);

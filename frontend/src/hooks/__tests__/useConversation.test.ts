@@ -324,7 +324,9 @@ describe('useConversation', () => {
       });
 
       // Fast forward 5 seconds (polling interval)
-      jest.advanceTimersByTime(5000);
+      act(() => {
+        jest.advanceTimersByTime(5000);
+      });
 
       await waitFor(() => {
         expect(api.messages.list).toHaveBeenCalledTimes(2);
