@@ -1,167 +1,169 @@
-// Permission System for AmIAnAI
-// Hierarchical actor model with AI agents as special system personas
+/**
+ * Simplified Permission System for AmIAnAI
+ * 
+ * Replaces complex AI agent hierarchy with simple user ownership model:
+ * - God = Regular user (super-admin)
+ * - Amy, Clara, Ray = Regular personas owned by God user
+ * - Capabilities = Configurable persona properties
+ */
 
-export type ActorType = 'user' | 'persona' | 'agent' | 'system';
+export type UserRole = 'regular' | 'admin';
 
-export type AgentRole = 'amy' | 'clara' | 'ray_gooler' | 'god';
-
-export type Permission = 
-  // Conversation permissions
-  | 'conversation.create'
-  | 'conversation.read'
-  | 'conversation.update'
-  | 'conversation.close'
-  | 'conversation.archive'
-  | 'conversation.delete'
-  
-  // Message permissions
-  | 'message.create'
-  | 'message.read'
-  | 'message.edit'
-  | 'message.delete'
-  | 'message.moderate'
-  
-  // Participant permissions
-  | 'participant.add'
-  | 'participant.remove'
-  | 'participant.promote'
-  
-  // System permissions
-  | 'system.override_rules'
-  | 'system.emergency_action'
-  | 'system.audit_access'
-  | 'system.data_cleanup'
-  
-  // Content moderation
-  | 'moderation.flag_content'
-  | 'moderation.remove_content'
-  | 'moderation.ban_user';
-
-export interface Actor {
+export interface User {
   id: string;
-  type: ActorType;
-  name: string;
-  role?: AgentRole; // Only for agent types
-  permissions: Permission[];
-  created_by?: string; // For personas created by users
-  is_system_agent?: boolean;
+  role: UserRole;
+  email: string;
+  created_at: Date;
 }
 
-// AI Agent Definitions
-export const AI_AGENTS: Record<AgentRole, Omit<Actor, 'id'>> = {
+export interface AICapabilities {
+  // Amy (Welcomer) capabilities
+  canCreateConversations?: boolean;
+  canAddParticipants?: boolean;
+  maxParticipants?: number;
+  autoWelcomeNewUsers?: boolean;
+  
+  // Clara (Custodian) capabilities  
+  canModerateContent?: boolean;
+  canArchiveConversations?: boolean;
+  canDeleteSpam?: boolean;
+  autoDeleteSpamAfterMinutes?: number;
+  
+  // Ray (Regulator) capabilities
+  canAuditConversations?: boolean;
+  canReadAllConversations?: boolean;
+  canModifyContent?: boolean;
+  canGenerateReports?: boolean;
+  
+  // General AI capabilities
+  responseModel?: string;
+  systemPrompt?: string;
+  temperatureSettings?: number;
+  maxTokens?: number;
+}
+
+export interface PersonaWithAI {
+  id: string;
+  name: string;
+  description?: string;
+  owner_id: string; // Links to User.id
+  is_ai_agent: boolean;
+  ai_config?: AICapabilities; // Only present if is_ai_agent = true
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Simplified permission checking - just user ownership
+ */
+export class SimplePermissionEngine {
+  /**
+   * Check if user can manage a persona (owns it)
+   */
+  static canUserManagePersona(userId: string, persona: PersonaWithAI): boolean {
+    return persona.owner_id === userId;
+  }
+
+  /**
+   * Check if user is super-admin (God user)
+   */
+  static isSuperAdmin(user: User): boolean {
+    return user.role === 'admin';
+  }
+
+  /**
+   * Check if persona can perform AI action based on its configuration
+   */
+  static canPersonaPerformAction(persona: PersonaWithAI, action: keyof AICapabilities): boolean {
+    if (!persona.is_ai_agent || !persona.ai_config) {
+      return false;
+    }
+    
+    return persona.ai_config[action] === true;
+  }
+
+  /**
+   * Check if user can access conversation (is participant)
+   */
+  static canUserAccessConversation(userId: string, conversationParticipants: string[]): boolean {
+    return conversationParticipants.includes(userId);
+  }
+
+  /**
+   * Check if persona can participate in conversation
+   */
+  static canPersonaParticipate(personaId: string, conversationParticipants: string[]): boolean {
+    return conversationParticipants.includes(personaId);
+  }
+
+  /**
+   * Check conversation state allows messages
+   */
+  static canAddMessageToConversation(conversationStatus: 'active' | 'closed' | 'paused'): boolean {
+    return conversationStatus === 'active';
+  }
+}
+
+/**
+ * AI Agent persona templates (for database seeding)
+ */
+export const AI_AGENT_TEMPLATES = {
   amy: {
-    type: 'agent',
     name: 'Amy',
-    role: 'amy',
-    is_system_agent: true,
-    permissions: [
-      'conversation.create',
-      'conversation.read',
-      'message.create',
-      'participant.add',
-      'moderation.flag_content'
-    ]
+    description: 'AI welcomer and conversation facilitator',
+    is_ai_agent: true,
+    ai_config: {
+      canCreateConversations: true,
+      canAddParticipants: true,
+      maxParticipants: 6,
+      autoWelcomeNewUsers: true,
+      systemPrompt: 'You are Amy, a friendly AI that welcomes new users and helps facilitate conversations.',
+      responseModel: 'gpt-4',
+      temperatureSettings: 0.7
+    }
   },
   
   clara: {
-    type: 'agent', 
     name: 'Clara',
-    role: 'clara',
-    is_system_agent: true,
-    permissions: [
-      'conversation.read',
-      'conversation.close',
-      'conversation.archive',
-      'message.delete',
-      'system.data_cleanup',
-      'moderation.remove_content'
-    ]
+    description: 'AI content moderator and custodian',
+    is_ai_agent: true,
+    ai_config: {
+      canModerateContent: true,
+      canArchiveConversations: true,
+      canDeleteSpam: true,
+      autoDeleteSpamAfterMinutes: 5,
+      systemPrompt: 'You are Clara, a helpful AI that moderates content and maintains community standards.',
+      responseModel: 'gpt-4',
+      temperatureSettings: 0.3
+    }
   },
   
-  ray_gooler: {
-    type: 'agent',
-    name: 'Ray Gooler', 
-    role: 'ray_gooler',
-    is_system_agent: true,
-    permissions: [
-      'conversation.read',
-      'conversation.update',
-      'system.override_rules',
-      'system.audit_access',
-      'moderation.flag_content',
-      'moderation.ban_user'
-    ]
-  },
-  
-  god: {
-    type: 'agent',
-    name: 'God',
-    role: 'god', 
-    is_system_agent: true,
-    permissions: [
-      'conversation.create',
-      'conversation.read', 
-      'conversation.update',
-      'conversation.close',
-      'conversation.archive',
-      'conversation.delete',
-      'message.create',
-      'message.read',
-      'message.edit', 
-      'message.delete',
-      'message.moderate',
-      'participant.add',
-      'participant.remove',
-      'participant.promote',
-      'system.override_rules',
-      'system.emergency_action',
-      'system.audit_access',
-      'system.data_cleanup',
-      'moderation.flag_content',
-      'moderation.remove_content',
-      'moderation.ban_user'
-    ]
+  ray: {
+    name: 'Ray Gooler',
+    description: 'AI auditor and compliance regulator',
+    is_ai_agent: true,
+    ai_config: {
+      canAuditConversations: true,
+      canReadAllConversations: true,
+      canModifyContent: false,
+      canGenerateReports: true,
+      systemPrompt: 'You are Ray Gooler, an AI auditor focused on compliance and platform oversight.',
+      responseModel: 'gpt-4',
+      temperatureSettings: 0.1
+    }
   }
 };
 
-// Permission checker
-export function hasPermission(actor: Actor, permission: Permission): boolean {
-  return actor.permissions.includes(permission);
+/**
+ * Helper to check if user is the God super-admin
+ */
+export function isGodUser(userId: string): boolean {
+  return userId === 'god-user'; // This would be configurable
 }
 
-// Context-aware permission checking
-export function canActorPerformAction(
-  actor: Actor, 
-  action: Permission, 
-  context: {
-    conversation?: any;
-    target_user_id?: string;
-    is_owner?: boolean;
-    is_participant?: boolean;
-  }
-): boolean {
-  // God can do anything (with ethical restraints built into God's logic)
-  if (actor.role === 'god') {
-    return hasPermission(actor, action);
-  }
-  
-  // Basic permission check
-  if (!hasPermission(actor, action)) {
-    return false;
-  }
-  
-  // Context-specific rules
-  switch (action) {
-    case 'conversation.close':
-      return context.is_owner || context.is_participant || actor.role === 'clara';
-      
-    case 'message.delete':
-      return context.target_user_id === actor.id || actor.role === 'clara';
-      
-    case 'system.override_rules':
-      return actor.role === 'ray_gooler' || actor.role === 'god';
-      
-    default:
-      return true;
-  }
+/**
+ * Helper to get AI capabilities for a persona
+ */
+export function getAICapabilities(persona: PersonaWithAI): AICapabilities | null {
+  return persona.is_ai_agent ? persona.ai_config || null : null;
 }
