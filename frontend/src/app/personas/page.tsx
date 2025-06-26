@@ -172,7 +172,7 @@ export default function PersonasPage() {
       <main className="min-h-screen bg-[#F8F6F3]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Demo Mode Banner */}
-          {personas.length > 0 && personas[0]?.id?.startsWith('mock-') && (
+          {personas && personas.length > 0 && personas[0]?.id?.startsWith('mock-') && (
             <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">

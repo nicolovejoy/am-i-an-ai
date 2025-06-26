@@ -111,7 +111,11 @@ describe('JSONB Conversation Types', () => {
       const historyEntry: ConversationHistoryEntry = {
         timestamp: new Date('2025-01-01T11:00:00Z'),
         action: 'state_change',
-        actor: 'user-123',
+        actor: {
+          id: 'user-123',
+          type: 'user',
+          name: 'Test User'
+        },
         details: {
           field: 'status',
           old_value: 'active',
@@ -128,7 +132,11 @@ describe('JSONB Conversation Types', () => {
       const historyEntry: ConversationHistoryEntry = {
         timestamp: new Date(),
         action: 'participant_added',
-        actor: 'system',
+        actor: {
+          id: 'system',
+          type: 'system',
+          name: 'System'
+        },
         details: {
           persona_id: 'persona-789',
           role: 'guest'

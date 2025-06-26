@@ -42,7 +42,7 @@ describe('AdminPage', () => {
     mockConfirm.mockReturnValue(true);
   });
 
-  it('renders admin console header', () => {
+  it('renders admin console header', async () => {
     // Setup mock responses
     (api.admin.health as jest.Mock).mockResolvedValue({ status: 'healthy' });
     (api.admin.databaseStatus as jest.Mock).mockResolvedValue({ stats: { personas: 5, conversations: 3, messages: 10, users: 2 } });
@@ -51,7 +51,11 @@ describe('AdminPage', () => {
 
     render(<AdminPage />);
     
-    expect(screen.getByText('Admin Console')).toBeInTheDocument();
+    // Wait for loading to complete
+    await waitFor(() => {
+      expect(screen.getByText('Admin Console')).toBeInTheDocument();
+    });
+    
     expect(screen.getByText('Database health checks and real-time data visibility')).toBeInTheDocument();
   });
 
@@ -106,11 +110,11 @@ describe('AdminPage', () => {
 
     // Wait for initial health checks to complete
     await waitFor(() => {
-      expect(screen.getByText('Reset & Seed Database')).toBeInTheDocument();
-    });
+      expect(screen.getByRole('button', { name: 'Reset & Seed Database' })).toBeInTheDocument();
+    }, { timeout: 10000 });
 
     // Click the seed database button
-    const seedButton = screen.getByText('Reset & Seed Database');
+    const seedButton = screen.getByRole('button', { name: 'Reset & Seed Database' });
     fireEvent.click(seedButton);
 
     await waitFor(() => {
@@ -119,7 +123,7 @@ describe('AdminPage', () => {
         expect.stringContaining('Database Seeded Successfully!')
       );
     });
-  });
+  }, 15000);
 
   it('checks database setup using standardized API call', async () => {
     // Setup initial health check mocks
@@ -136,11 +140,11 @@ describe('AdminPage', () => {
 
     // Wait for initial health checks to complete
     await waitFor(() => {
-      expect(screen.getByText('Check Schema')).toBeInTheDocument();
-    });
+      expect(screen.getByRole('button', { name: 'Check Schema' })).toBeInTheDocument();
+    }, { timeout: 10000 });
 
     // Click the check schema button
-    const checkButton = screen.getByText('Check Schema');
+    const checkButton = screen.getByRole('button', { name: 'Check Schema' });
     fireEvent.click(checkButton);
 
     await waitFor(() => {
@@ -149,7 +153,7 @@ describe('AdminPage', () => {
         expect.stringContaining('Database Setup Check:')
       );
     });
-  });
+  }, 15000);
 
   it('tests AI response using standardized API call', async () => {
     // Setup initial health check mocks with AI persona

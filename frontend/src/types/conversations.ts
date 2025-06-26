@@ -276,7 +276,11 @@ export function addParticipantToConversation(
   const historyEntry: ConversationHistoryEntry = {
     timestamp: new Date(),
     action: 'participant_added',
-    actor: 'system',
+    actor: {
+      id: 'system',
+      type: 'system',
+      name: 'System'
+    },
     details: { persona_id: personaId, role }
   };
   
@@ -297,7 +301,11 @@ export function closeConversation(
   const historyEntry: ConversationHistoryEntry = {
     timestamp: now,
     action: 'conversation_closed',
-    actor: closedBy,
+    actor: {
+      id: closedBy,
+      type: 'user',
+      name: 'User'
+    },
     details: { reason }
   };
   
@@ -318,7 +326,7 @@ export function closeConversation(
 export function updateConversationState(
   conversation: ConversationWithJSONB,
   updates: Partial<ConversationState>,
-  actor: string
+  actorId: string
 ): ConversationWithJSONB {
   const oldState = conversation.state;
   const newState = { ...oldState, ...updates };
@@ -326,7 +334,11 @@ export function updateConversationState(
   const historyEntry: ConversationHistoryEntry = {
     timestamp: new Date(),
     action: 'state_change',
-    actor,
+    actor: {
+      id: actorId,
+      type: 'user',
+      name: 'User'
+    },
     details: {
       changes: Object.keys(updates).map(key => ({
         field: key,

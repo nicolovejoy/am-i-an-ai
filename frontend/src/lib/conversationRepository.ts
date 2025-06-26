@@ -65,7 +65,7 @@ export class ConversationRepositoryImpl implements ConversationJSONBRepository {
     const now = new Date();
     
     // Prepare participants with full structure
-    const participants = data.participants.map(p => ({
+    const participants = data.participants.map((p: any) => ({
       persona_id: p.persona_id!,
       role: p.role || 'guest',
       joined_at: p.joined_at || now,
@@ -92,7 +92,11 @@ export class ConversationRepositoryImpl implements ConversationJSONBRepository {
     const initialHistory: ConversationHistoryEntry[] = [{
       timestamp: now,
       action: 'conversation_created',
-      actor: data.created_by,
+      actor: {
+        id: data.created_by,
+        type: 'user',
+        name: 'User'
+      },
       details: {
         title: data.title,
         topic: data.topic,
@@ -249,7 +253,11 @@ export class ConversationRepositoryImpl implements ConversationJSONBRepository {
       const historyEntry: ConversationHistoryEntry = {
         timestamp: new Date(),
         action: 'state_change',
-        actor,
+        actor: {
+          id: actor,
+          type: 'user',
+          name: 'User'
+        },
         details: { updates: Object.keys(updates) }
       };
 
@@ -290,7 +298,11 @@ export class ConversationRepositoryImpl implements ConversationJSONBRepository {
     const historyEntry: ConversationHistoryEntry = {
       timestamp: new Date(),
       action: 'participant_added',
-      actor: 'system',
+      actor: {
+        id: 'system',
+        type: 'system',
+        name: 'System'
+      },
       details: {
         persona_id: participant.persona_id,
         role: participant.role
@@ -325,7 +337,11 @@ export class ConversationRepositoryImpl implements ConversationJSONBRepository {
     const historyEntry: ConversationHistoryEntry = {
       timestamp: new Date(),
       action: 'participant_removed',
-      actor: 'system',
+      actor: {
+        id: 'system',
+        type: 'system',
+        name: 'System'
+      },
       details: { persona_id: personaId }
     };
 
@@ -371,7 +387,11 @@ export class ConversationRepositoryImpl implements ConversationJSONBRepository {
     const historyEntry: ConversationHistoryEntry = {
       timestamp: now,
       action: 'conversation_closed',
-      actor: closedBy,
+      actor: {
+        id: closedBy,
+        type: 'user',
+        name: 'User'
+      },
       details: { reason }
     };
 
@@ -436,7 +456,7 @@ export class ConversationRepositoryImpl implements ConversationJSONBRepository {
       created_at: new Date(row.created_at),
       
       // Parse JSONB fields
-      participants: Array.isArray(row.participants) ? row.participants.map(p => ({
+      participants: Array.isArray(row.participants) ? row.participants.map((p: any) => ({
         ...p,
         joined_at: new Date(p.joined_at),
         left_at: p.left_at ? new Date(p.left_at) : null
@@ -452,7 +472,7 @@ export class ConversationRepositoryImpl implements ConversationJSONBRepository {
       metadata: row.metadata || {},
       settings: row.settings || {},
       
-      history: Array.isArray(row.history) ? row.history.map(h => ({
+      history: Array.isArray(row.history) ? row.history.map((h: any) => ({
         ...h,
         timestamp: new Date(h.timestamp)
       })) : [],

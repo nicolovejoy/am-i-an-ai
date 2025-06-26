@@ -112,8 +112,12 @@ describe('Simplified Conversation Repository', () => {
 
   beforeEach(() => {
     mockDb = {
-      query: jest.fn().mockResolvedValue({ rows: [] as any[] }),
-    } as DatabaseConnection;
+      query: jest.fn(),
+      queryOne: jest.fn(),
+      execute: jest.fn(),
+      transaction: jest.fn(),
+      close: jest.fn()
+    } as jest.Mocked<DatabaseConnection>;
     repository = new ConversationRepositoryImpl(mockDb);
   });
 

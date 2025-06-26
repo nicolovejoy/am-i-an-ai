@@ -69,7 +69,11 @@ describe('ConversationJSONBRepository', () => {
       {
         timestamp: new Date('2025-01-01T10:00:00Z'),
         action: 'conversation_created',
-        actor: 'user-123',
+        actor: {
+          id: 'user-123',
+          type: 'user',
+          name: 'Test User'
+        },
         details: { title: 'Test Conversation' }
       }
     ],

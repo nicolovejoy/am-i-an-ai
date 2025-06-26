@@ -1,4 +1,4 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { APIGatewayProxyResult } from "aws-lambda";
 import { queryDatabase } from "../lib/database";
 import { AuthenticatedEvent } from '../middleware/cognito-auth';
 
@@ -45,7 +45,7 @@ export async function handlePersonas(
       case "DELETE":
         if (personaId) {
           // DELETE /api/personas/:id
-          return await deletePersona(personaId, corsHeaders);
+          return await deletePersona(personaId, event, corsHeaders);
         } else {
           return {
             statusCode: 400,
@@ -203,38 +203,392 @@ async function getPersona(
 }
 
 async function createPersona(
-  _event: APIGatewayProxyEvent,
+  event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
-  // TODO: Implement persona creation
-  return {
-    statusCode: 501,
-    headers: corsHeaders,
-    body: JSON.stringify({ error: "Persona creation not implemented yet" }),
-  };
+  try {
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: "Request body is required",
+        }),
+      };
+    }
+
+    const personaData = JSON.parse(event.body);
+    
+    // Validate required fields
+    if (!personaData.name || !personaData.type || !personaData.description) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: "Missing required fields: name, type, description",
+        }),
+      };
+    }
+
+    // Set defaults for optional fields
+    const personality = personaData.personality || {
+      openness: 50,
+      conscientiousness: 50,
+      extraversion: 50,
+      agreeableness: 50,
+      neuroticism: 50,
+      creativity: 50,
+      assertiveness: 50,
+      empathy: 50,
+    };
+    
+    const knowledge = personaData.knowledge || ['general'];
+    const isPublic = personaData.isPublic !== undefined ? personaData.isPublic : true;
+    const allowedInteractions = personaData.allowedInteractions || ['casual_chat'];
+    const communicationStyle = personaData.communicationStyle || 'casual';
+
+    // Insert persona into database
+    const insertQuery = `
+      INSERT INTO personas (
+        name, type, description, owner_id, personality, knowledge,
+        communication_style, model_config, system_prompt, response_time_range,
+        typing_speed, is_public, allowed_interactions, conversation_count,
+        total_messages, average_rating
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 0, 0.0
+      ) RETURNING *
+    `;
+
+    const values = [
+      personaData.name,
+      personaData.type,
+      personaData.description,
+      event.user?.id || null, // Set owner_id to authenticated user
+      JSON.stringify(personality),
+      knowledge,
+      communicationStyle,
+      personaData.modelConfig ? JSON.stringify(personaData.modelConfig) : null,
+      personaData.systemPrompt || null,
+      personaData.responseTimeRange ? JSON.stringify(personaData.responseTimeRange) : null,
+      personaData.typingSpeed || null,
+      isPublic,
+      allowedInteractions,
+    ];
+
+    const result = await queryDatabase(insertQuery, values);
+    
+    if (result.rows.length === 0) {
+      throw new Error('Failed to create persona');
+    }
+
+    const row = result.rows[0];
+    const createdPersona = {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      type: row.type,
+      ownerId: row.owner_id,
+      personality: row.personality,
+      knowledge: row.knowledge,
+      communicationStyle: row.communication_style,
+      modelConfig: row.model_config,
+      systemPrompt: row.system_prompt,
+      responseTimeRange: row.response_time_range,
+      typingSpeed: row.typing_speed,
+      isPublic: row.is_public,
+      allowedInteractions: row.allowed_interactions,
+      conversationCount: row.conversation_count,
+      totalMessages: row.total_messages,
+      averageRating: parseFloat(row.average_rating),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+
+    return {
+      statusCode: 201,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        persona: createdPersona,
+      }),
+    };
+  } catch (error) {
+    console.error('Error creating persona:', error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: false,
+        error: 'Failed to create persona',
+        message: String(error),
+      }),
+    };
+  }
 }
 
 async function updatePersona(
-  _personaId: string,
-  _event: APIGatewayProxyEvent,
+  personaId: string,
+  event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
-  // TODO: Implement persona update
-  return {
-    statusCode: 501,
-    headers: corsHeaders,
-    body: JSON.stringify({ error: "Persona update not implemented yet" }),
-  };
+  try {
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: "Request body is required",
+        }),
+      };
+    }
+
+    // Check if persona exists and user has permission to update it
+    const checkQuery = `
+      SELECT owner_id FROM personas WHERE id = $1
+    `;
+    const checkResult = await queryDatabase(checkQuery, [personaId]);
+    
+    if (checkResult.rows.length === 0) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: "Persona not found",
+        }),
+      };
+    }
+
+    const personaOwnerId = checkResult.rows[0].owner_id;
+    if (personaOwnerId && personaOwnerId !== event.user?.id) {
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: "You do not have permission to update this persona",
+        }),
+      };
+    }
+
+    const updateData = JSON.parse(event.body);
+    const updateFields = [];
+    const updateValues = [];
+    let valueIndex = 1;
+
+    // Build dynamic update query based on provided fields
+    if (updateData.name !== undefined) {
+      updateFields.push(`name = $${valueIndex++}`);
+      updateValues.push(updateData.name);
+    }
+    if (updateData.description !== undefined) {
+      updateFields.push(`description = $${valueIndex++}`);
+      updateValues.push(updateData.description);
+    }
+    if (updateData.personality !== undefined) {
+      updateFields.push(`personality = $${valueIndex++}`);
+      updateValues.push(JSON.stringify(updateData.personality));
+    }
+    if (updateData.knowledge !== undefined) {
+      updateFields.push(`knowledge = $${valueIndex++}`);
+      updateValues.push(updateData.knowledge);
+    }
+    if (updateData.communicationStyle !== undefined) {
+      updateFields.push(`communication_style = $${valueIndex++}`);
+      updateValues.push(updateData.communicationStyle);
+    }
+    if (updateData.modelConfig !== undefined) {
+      updateFields.push(`model_config = $${valueIndex++}`);
+      updateValues.push(JSON.stringify(updateData.modelConfig));
+    }
+    if (updateData.systemPrompt !== undefined) {
+      updateFields.push(`system_prompt = $${valueIndex++}`);
+      updateValues.push(updateData.systemPrompt);
+    }
+    if (updateData.responseTimeRange !== undefined) {
+      updateFields.push(`response_time_range = $${valueIndex++}`);
+      updateValues.push(JSON.stringify(updateData.responseTimeRange));
+    }
+    if (updateData.typingSpeed !== undefined) {
+      updateFields.push(`typing_speed = $${valueIndex++}`);
+      updateValues.push(updateData.typingSpeed);
+    }
+    if (updateData.isPublic !== undefined) {
+      updateFields.push(`is_public = $${valueIndex++}`);
+      updateValues.push(updateData.isPublic);
+    }
+    if (updateData.allowedInteractions !== undefined) {
+      updateFields.push(`allowed_interactions = $${valueIndex++}`);
+      updateValues.push(updateData.allowedInteractions);
+    }
+
+    if (updateFields.length === 0) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: "No fields to update",
+        }),
+      };
+    }
+
+    // Add updated_at timestamp
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+    updateValues.push(personaId);
+
+    const updateQuery = `
+      UPDATE personas 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${valueIndex}
+      RETURNING *
+    `;
+
+    const result = await queryDatabase(updateQuery, updateValues);
+    
+    if (result.rows.length === 0) {
+      throw new Error('Failed to update persona');
+    }
+
+    const row = result.rows[0];
+    const updatedPersona = {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      type: row.type,
+      ownerId: row.owner_id,
+      personality: row.personality,
+      knowledge: row.knowledge,
+      communicationStyle: row.communication_style,
+      modelConfig: row.model_config,
+      systemPrompt: row.system_prompt,
+      responseTimeRange: row.response_time_range,
+      typingSpeed: row.typing_speed,
+      isPublic: row.is_public,
+      allowedInteractions: row.allowed_interactions,
+      conversationCount: row.conversation_count,
+      totalMessages: row.total_messages,
+      averageRating: parseFloat(row.average_rating),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        persona: updatedPersona,
+      }),
+    };
+  } catch (error) {
+    console.error('Error updating persona:', error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: false,
+        error: 'Failed to update persona',
+        message: String(error),
+      }),
+    };
+  }
 }
 
 async function deletePersona(
-  _personaId: string,
+  personaId: string,
+  event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
-  // TODO: Implement persona deletion
-  return {
-    statusCode: 501,
-    headers: corsHeaders,
-    body: JSON.stringify({ error: "Persona deletion not implemented yet" }),
-  };
+  try {
+    // Check if persona exists and user has permission to delete it
+    const checkQuery = `
+      SELECT owner_id FROM personas WHERE id = $1
+    `;
+    const checkResult = await queryDatabase(checkQuery, [personaId]);
+    
+    if (checkResult.rows.length === 0) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: "Persona not found",
+        }),
+      };
+    }
+
+    const personaOwnerId = checkResult.rows[0].owner_id;
+    if (personaOwnerId && personaOwnerId !== event.user?.id) {
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: "You do not have permission to delete this persona",
+        }),
+      };
+    }
+
+    // Check if persona is in active conversations
+    const conversationCheckQuery = `
+      SELECT COUNT(*) as active_conversations
+      FROM conversations c
+      WHERE c.participants @> $1::jsonb
+      AND c.status = 'active'
+    `;
+    const conversationResult = await queryDatabase(conversationCheckQuery, [
+      JSON.stringify([{ persona_id: personaId }])
+    ]);
+    
+    const activeConversations = parseInt(conversationResult.rows[0].active_conversations);
+    if (activeConversations > 0) {
+      return {
+        statusCode: 409,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: `Cannot delete persona: it is currently in ${activeConversations} active conversation(s)`,
+        }),
+      };
+    }
+
+    // Perform soft delete by updating status or hard delete
+    // For now, we'll do a hard delete, but in production you might want soft delete
+    const deleteQuery = `
+      DELETE FROM personas WHERE id = $1 RETURNING id, name
+    `;
+    
+    const result = await queryDatabase(deleteQuery, [personaId]);
+    
+    if (result.rows.length === 0) {
+      throw new Error('Failed to delete persona');
+    }
+
+    const deletedPersona = result.rows[0];
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        message: `Persona "${deletedPersona.name}" has been deleted`,
+        deletedPersonaId: deletedPersona.id,
+      }),
+    };
+  } catch (error) {
+    console.error('Error deleting persona:', error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: false,
+        error: 'Failed to delete persona',
+        message: String(error),
+      }),
+    };
+  }
 }

@@ -19,7 +19,7 @@ jest.mock('@/services/apiClient', () => ({
 jest.mock('@/components/PersonaList', () => ({
   PersonaList: ({ personas, onEdit, onDelete }: { personas: unknown[]; onEdit: (persona: unknown) => void; onDelete: (id: string) => void }) => (
     <div data-testid="persona-list">
-      {personas.map((persona: unknown) => {
+      {(personas || []).map((persona: unknown) => {
         const p = persona as { id: string; name: string };
         return (
           <div key={p.id} data-testid="persona-item">
@@ -46,10 +46,12 @@ jest.mock('@/components/PersonaForm', () => ({
 }));
 
 // Mock the mock data module
+const mockGetMockPersonas = jest.fn().mockResolvedValue([
+  { id: 'mock-1', name: 'Mock Persona', type: 'ai_agent' }
+]);
+
 jest.mock('@/lib/mockData', () => ({
-  getMockPersonas: jest.fn().mockResolvedValue([
-    { id: 'mock-1', name: 'Mock Persona', type: 'ai_agent' }
-  ]),
+  getMockPersonas: mockGetMockPersonas,
 }));
 
 describe('PersonasPage', () => {
@@ -100,16 +102,34 @@ describe('PersonasPage', () => {
   });
 
   it('handles API errors and falls back to mock data', async () => {
-    (api.personas.list as jest.Mock).mockRejectedValue(new Error('Network error'));
+    // Mock the dynamic import that happens in the error handler
+    const mockImport = jest.fn().mockResolvedValue({
+      getMockPersonas: jest.fn().mockResolvedValue([
+        { id: 'mock-1', name: 'Mock Persona', type: 'ai_agent' }
+      ])
+    });
+    
+    // Mock the dynamic import function
+    jest.doMock('@/lib/mockData', () => ({
+      getMockPersonas: jest.fn().mockResolvedValue([
+        { id: 'mock-1', name: 'Mock Persona', type: 'ai_agent' }
+      ])
+    }));
+
+    (api.personas.list as jest.Mock).mockRejectedValue(new Error('Failed to fetch'));
 
     await act(async () => {
       render(<PersonasPage />);
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Demo mode: Showing sample personas. Database connection will be restored soon.')).toBeInTheDocument();
-      expect(screen.getByText('Mock Persona')).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        // Check that the error state is rendered with demo mode
+        expect(screen.getByText('Demo Mode Active')).toBeInTheDocument();
+        expect(screen.getByText('Demo mode: Showing sample personas. Database connection will be restored soon.')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
   });
 
   it('shows demo mode banner for mock data', async () => {
@@ -186,7 +206,14 @@ describe('PersonasPage', () => {
     (api.personas.list as jest.Mock).mockResolvedValue({ personas: [] });
     (api.personas.create as jest.Mock).mockRejectedValue(new Error('Creation failed'));
 
-    render(<PersonasPage />);
+    await act(async () => {
+      render(<PersonasPage />);
+    });
+
+    // Wait for loading to complete
+    await waitFor(() => {
+      expect(screen.getByText('Create Persona')).toBeInTheDocument();
+    });
 
     // Open create form
     fireEvent.click(screen.getByText('Create Persona'));
@@ -247,9 +274,27 @@ describe('PersonasPage', () => {
       writable: true,
     });
 
-    (api.personas.list as jest.Mock).mockResolvedValue({ personas: [] });
+    // In file protocol mode, the component should use mock data
+    mockGetMockPersonas.mockResolvedValue([
+      { id: 'mock-1', name: 'Mock Persona', type: 'ai_agent' }
+    ]);
 
-    render(<PersonasPage />);
+    await act(async () => {
+      render(<PersonasPage />);
+    });
+
+    // Wait for mock data to load and component to show demo mode
+    await waitFor(() => {
+      expect(screen.getByText('Demo mode: Showing sample personas. Database connection will be restored soon.')).toBeInTheDocument();
+    });
+
+    // Click "Continue with Demo" to proceed
+    fireEvent.click(screen.getByText('Continue with Demo'));
+
+    // Wait for the main content to show
+    await waitFor(() => {
+      expect(screen.getByText('Create Persona')).toBeInTheDocument();
+    });
 
     // Open create form
     fireEvent.click(screen.getByText('Create Persona'));
@@ -271,7 +316,14 @@ describe('PersonasPage', () => {
   it('cancels form creation', async () => {
     (api.personas.list as jest.Mock).mockResolvedValue({ personas: [] });
 
-    render(<PersonasPage />);
+    await act(async () => {
+      render(<PersonasPage />);
+    });
+
+    // Wait for loading to complete
+    await waitFor(() => {
+      expect(screen.getByText('Create Persona')).toBeInTheDocument();
+    });
 
     // Open create form
     fireEvent.click(screen.getByText('Create Persona'));

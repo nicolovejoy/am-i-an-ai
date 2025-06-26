@@ -99,7 +99,7 @@ export class SimplePermissionEngine {
   /**
    * Check conversation state allows messages
    */
-  static canAddMessageToConversation(conversationStatus: 'active' | 'closed' | 'paused'): boolean {
+  static canAddMessageToConversation(conversationStatus: 'active' | 'closed' | 'paused' | 'archived'): boolean {
     return conversationStatus === 'active';
   }
 }

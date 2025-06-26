@@ -19,9 +19,10 @@ Multi-persona conversation system where humans and AI agents can interact throug
 
 - **NEVER run terraform commands directly**
 - **ALWAYS use the scripts in `/infrastructure/scripts/`**
-- For deployment: `DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/setup.sh`
+- For full deployment: `DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all`
+- For Lambda-only deployment: `DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --lambda`
 - For teardown: `DOMAIN_NAME=amianai.com ./scripts/destroy.sh`
-- **IMPORTANT**: Read infrastructure scripts before suggesting their use - `setup.sh` runs FULL deployment (terraform, Lambda, frontend, CloudFront invalidation). This remains our preferred approach.
+- **IMPORTANT**: The new granular deployment system allows selective component deployment for faster iterations.
 
 ### Architecture
 
@@ -34,7 +35,10 @@ Multi-persona conversation system where humans and AI agents can interact throug
 
 ```bash
 # Infrastructure Deployment (REQUIRED FIRST)
-cd infrastructure && DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/setup.sh
+cd infrastructure && DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all
+
+# Lambda-only deployment (for code changes)
+cd infrastructure && DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --lambda
 
 # Database operations (PRODUCTION ONLY)
 npm run db:setup      # Create fresh database schema
@@ -61,9 +65,11 @@ npm run build
 - Follow existing code conventions and patterns
 - **Dev Server**: User runs `npm run dev` manually in separate window (http://localhost:3000)
 - **Never start/stop dev server** - user manages this independently
-- **Infrastructure Scripts**: User runs all Terraform/infrastructure scripts manually
-- **Never run `terraform` or `./scripts/setup.sh` or `./scripts/destroy.sh`** - user manages infrastructure
-- **Lambda Deployment**: ALWAYS done via `./scripts/setup.sh` - NEVER suggest direct AWS CLI commands
+- **Infrastructure & Deployment**: User handles all deployment operations manually
+  - **Never run deployment commands** - user manages all infrastructure scripts
+  - **Lambda Deployment**: User runs `./scripts/deploy.sh --lambda` for Lambda-only deployment  
+  - **Full Deployment**: User runs `./scripts/deploy.sh --all` for complete infrastructure
+  - **Claude's Role**: Implement fixes and features, user handles deployment verification
 
 ### Test-Driven Development (TDD)
 

@@ -1,24 +1,7 @@
-# Infrastructure Scripts - Granular Deployment Plan
-
-## Overview
-
-This document outlines the plan to refactor AmIAnAI infrastructure scripts from a monolithic approach to a granular, component-based deployment system. This will enable selective deployment of components, preserve user data during testing iterations, and improve development velocity.
-
-## Current State
-
-### Existing Scripts
-- `setup.sh` - Monolithic deployment (handles all components)
-- `destroy.sh` - Full teardown with optional state backend cleanup
-
-### Current Limitations
-- Must deploy entire infrastructure for any change
-- Cannot preserve Cognito user pools during testing iterations
-- Long deployment times for simple changes
-- Difficult to debug component-specific issues
-
-## Target Architecture
+# Infrastructure Scripts
 
 ### New Script Structure
+
 ```
 infrastructure/scripts/
 ├── deploy.sh                 # Main orchestrator script
@@ -37,6 +20,7 @@ infrastructure/scripts/
 ```
 
 ### Terraform Module Structure
+
 ```
 infrastructure/modules/
 ├── cognito/
@@ -64,10 +48,12 @@ infrastructure/modules/
 ## Implementation Phases
 
 ### ✅ Phase 0: Planning & Documentation
+
 - [x] Document granular infrastructure plan
 - [x] Update destroy script for Cognito preservation prompt
 
 ### ✅ Phase 1: Component Scripts (COMPLETED 2025-06-19)
+
 - [x] Extract common functions to `shared.sh`
 - [x] Create individual component deployment scripts (6 components)
 - [x] Create main orchestrator script `deploy.sh`
@@ -78,6 +64,7 @@ infrastructure/modules/
 - [x] **DEPLOYED AND VALIDATED**: All components successfully deployed to production
 
 ### ✅ Phase 2: Production Deployment (COMPLETED 2025-06-19)
+
 - [x] State backend deployment working
 - [x] Networking component deployment working
 - [x] Cognito preservation working (user accounts maintained)
@@ -89,22 +76,25 @@ infrastructure/modules/
 - [x] Update deprecated terraform backend configuration
 
 ### 📋 Phase 3: Enhanced Modularization (FUTURE)
+
 - [ ] Split main.tf into focused modules
 - [ ] Add conditional resource creation for preservation scenarios
 - [ ] Test module dependencies and outputs
 - [ ] Update variable files and outputs
 
-### 📋 Phase 4: Documentation & Migration (FUTURE)
-- [ ] Update CLAUDE.md with new deployment commands
-- [ ] Create migration guide from old to new scripts
-- [ ] Add troubleshooting guide
-- [ ] Update README.md with new workflow
+### ✅ Phase 4: Documentation & Migration (COMPLETED)
+
+- [x] Update CLAUDE.md with new deployment commands
+- [x] Remove deprecated setup.sh and setup.sh.old scripts
+- [x] Update documentation with granular deployment examples
+- [x] Validate new deployment workflow
 
 ## New Deployment Commands
 
 ### Full Deployment (Current Behavior)
+
 ```bash
-# Deploy everything (equivalent to current setup.sh)
+# Deploy everything (replaces old setup.sh)
 ./scripts/deploy.sh --all
 
 # Deploy with forced refresh
@@ -112,11 +102,12 @@ infrastructure/modules/
 ```
 
 ### Selective Component Deployment
+
 ```bash
 # Individual components
 ./scripts/deploy.sh --lambda           # Deploy just Lambda functions
 ./scripts/deploy.sh --database         # Deploy just database
-./scripts/deploy.sh --frontend         # Deploy just frontend  
+./scripts/deploy.sh --frontend         # Deploy just frontend
 ./scripts/deploy.sh --cognito          # Deploy just authentication
 
 # Component groups
@@ -126,6 +117,7 @@ infrastructure/modules/
 ```
 
 ### Enhanced Destroy Options
+
 ```bash
 # Preserve Cognito (DEFAULT - for user testing)
 ./scripts/destroy.sh                   # Prompts, defaults to preserve Cognito
@@ -143,9 +135,11 @@ infrastructure/modules/
 ## Cognito Preservation Strategy
 
 ### Problem Statement
+
 During development iterations, we need to preserve Cognito user pools so that user testers can maintain their accounts across infrastructure rebuilds.
 
 ### Solution: Conditional Terraform Resources
+
 ```hcl
 # In cognito module
 variable "preserve_cognito" {
@@ -174,13 +168,14 @@ data "aws_cognito_user_pool" "existing" {
 
 # Output that works for both scenarios
 output "user_pool_id" {
-  value = var.preserve_cognito ? 
-    data.aws_cognito_user_pool.existing[0].id : 
+  value = var.preserve_cognito ?
+    data.aws_cognito_user_pool.existing[0].id :
     aws_cognito_user_pool.main[0].id
 }
 ```
 
 ### Destroy Script Enhancement
+
 The destroy script will prompt with Cognito preservation as the default:
 
 ```bash
@@ -201,53 +196,66 @@ fi
 ## Benefits
 
 ### Development Velocity
+
 - **Faster iterations**: Deploy only changed components
 - **Reduced deployment time**: Skip unchanged infrastructure
 - **Better debugging**: Isolate issues to specific components
 
 ### Cost Optimization
+
 - **Selective teardown**: Destroy expensive resources (RDS) while keeping cheap ones
 - **Development flexibility**: Keep core infrastructure, iterate on application
 
 ### User Experience
+
 - **Preserve user accounts**: Cognito pools maintained across rebuilds
 - **Continuous testing**: User testers don't lose access during development
 
 ### Operational Excellence
+
 - **Modular maintenance**: Update components independently
 - **Clear dependencies**: Explicit component relationships
 - **Better rollbacks**: Revert specific components if needed
 
 ## Migration Strategy
 
-### Backward Compatibility
-The current workflow will continue to work:
-```bash
-# Current command (will continue to work)
-DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/setup.sh
+### Migration Complete
 
-# New equivalent
+The old monolithic scripts have been replaced:
+
+```bash
+# OLD (deprecated/removed):
+# ./scripts/setup.sh
+# ./scripts/setup.sh.old
+
+# NEW (production-ready):
 DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all
+DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --lambda
 ```
 
-### Migration Steps for Users
-1. **Phase 1**: Use new scripts alongside old ones
-2. **Phase 2**: Migrate to component-based deployments
-3. **Phase 3**: Deprecate old monolithic scripts (optional)
+### Migration Complete
+
+1. **✅ Phase 1**: New granular scripts implemented and tested
+2. **✅ Phase 2**: Production deployment validated
+3. **✅ Phase 3**: Old monolithic scripts removed
+4. **✅ Phase 4**: Documentation updated with new commands
 
 ## Testing Strategy
 
 ### Component Testing
+
 - Each component script must be testable in isolation
 - Mock dependencies where possible
 - Validate outputs and state consistency
 
 ### Integration Testing
+
 - Test component dependencies and ordering
 - Validate cross-component communications
 - End-to-end deployment validation
 
 ### Rollback Testing
+
 - Verify ability to rollback individual components
 - Test recovery from partial deployment failures
 - Validate state consistency after rollbacks
@@ -255,11 +263,13 @@ DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all
 ## Security Considerations
 
 ### State Management
+
 - Maintain secure state backend
 - Ensure component isolation doesn't compromise security
 - Validate permissions for selective deployments
 
 ### Cognito Preservation
+
 - Secure handling of existing Cognito pool references
 - Prevent accidental exposure of user data
 - Maintain authentication security during transitions
@@ -267,16 +277,19 @@ DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all
 ## Success Metrics
 
 ### Performance
+
 - [ ] Component deployment time < 5 minutes
 - [ ] Full deployment time < 20 minutes (down from 40 minutes)
 - [ ] Lambda-only deployment < 2 minutes
 
 ### Reliability
+
 - [ ] 100% backward compatibility maintained
 - [ ] Zero data loss during component updates
 - [ ] Successful Cognito preservation across rebuilds
 
 ### Usability
+
 - [ ] Clear error messages for failed deployments
 - [ ] Intuitive command-line interface
 - [ ] Comprehensive documentation and examples
@@ -284,6 +297,7 @@ DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all
 ## 🎉 **Implementation Complete - Production Ready!**
 
 ### ✅ **Successfully Deployed (2025-06-19)**
+
 - [x] **Phase 0.1**: Create implementation plan documentation
 - [x] **Phase 0.2**: Update destroy script with Cognito preservation prompt
 - [x] **Phase 1.1**: Extract shared functions (`shared.sh`)
@@ -294,14 +308,16 @@ DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all
 - [x] **Phase 2.3**: Fix terraform resource targeting and bash compatibility
 
 ### 🔄 **Next Phase: Code Quality & Enhanced Features**
+
 - [ ] **Phase 1.1**: Standardize API client usage across all components
 - [ ] **Phase 1.2**: Implement conversation state management (close/archive)
 - [ ] **Phase 1.3**: Add enhanced persona permission system
 
 ### 📊 **Success Metrics Achieved**
+
 - ✅ Component deployment time < 5 minutes (vs 40 minutes full rebuild)
 - ✅ Full deployment time reduced to ~20 minutes
-- ✅ Lambda-only deployment < 2 minutes  
+- ✅ Lambda-only deployment < 2 minutes
 - ✅ 100% backward compatibility maintained
 - ✅ Zero data loss during component updates
 - ✅ Successful Cognito preservation across rebuilds
@@ -312,5 +328,5 @@ DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all
 
 ---
 
-*Last updated: 2025-06-19*  
-*Status: **PRODUCTION DEPLOYED** - Ready for application layer development*
+_Last updated: 2025-06-19_  
+_Status: **PRODUCTION DEPLOYED** - Ready for application layer development_
