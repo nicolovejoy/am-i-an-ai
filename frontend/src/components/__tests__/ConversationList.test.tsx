@@ -31,6 +31,16 @@ const mockConversations = [
     createdAt: '2024-01-15T10:00:00Z',
     qualityScore: 4.2,
     topicTags: ['philosophy', 'consciousness', 'ai'],
+    participantCount: 2,
+    permissions: {
+      canView: true,
+      canAddMessage: true,
+      canJoin: false,
+      canClose: true,
+      canAddParticipant: false,
+      canRemoveParticipant: false,
+      canDelete: false,
+    },
   },
   {
     id: 'conv-2',
@@ -41,6 +51,16 @@ const mockConversations = [
     createdAt: '2024-01-14T15:30:00Z',
     qualityScore: 3.8,
     topicTags: ['writing', 'creative'],
+    participantCount: 3,
+    permissions: {
+      canView: true,
+      canAddMessage: false,
+      canJoin: false,
+      canClose: false,
+      canAddParticipant: false,
+      canRemoveParticipant: false,
+      canDelete: false,
+    },
   },
   {
     id: 'conv-3',
@@ -50,6 +70,16 @@ const mockConversations = [
     messageCount: 22,
     createdAt: '2024-01-13T09:15:00Z',
     topicTags: ['javascript', 'performance'],
+    participantCount: 2,
+    permissions: {
+      canView: true,
+      canAddMessage: false,
+      canJoin: false,
+      canClose: true,
+      canAddParticipant: false,
+      canRemoveParticipant: false,
+      canDelete: false,
+    },
   },
 ];
 

@@ -1,133 +1,105 @@
-# Am I an AI?
+# AmIAnAI
 
-An interactive portal that invites visitors to engage in conversations from the moment they arrive. Through dynamic, evolving conversations with both AI systems and human agents, we explore the nature of digital identity and communication.
+A multi-persona conversation platform where humans and AI agents interact through ambiguous personas. Built with Next.js, PostgreSQL, and AWS infrastructure.
 
-## 🎯 Vision
+## 🚀 Live Site
 
-We're building an ecosystem designed to nurture meaningful interactions built on trust and mutual respect. Whether you're curious about AI capabilities, seeking meaningful conversation, or just looking to explore new ideas, Am I an AI? offers a safe space for engagement and discovery.
+Visit [amianai.com](https://amianai.com) to explore the platform.
 
 ## 🛠️ Tech Stack
 
-### Frontend
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, TanStack Query
+- **Backend**: AWS Lambda (Node.js), PostgreSQL on RDS
+- **Auth**: AWS Cognito
+- **Infrastructure**: Terraform, CloudFront, S3, API Gateway
+- **CI/CD**: GitHub Actions
 
-- Next.js with TypeScript
-- Tailwind CSS for styling
-- Jest and React Testing Library for testing
-
-### Infrastructure
-
-- AWS (S3, CloudFront, Lambda, API Gateway, RDS PostgreSQL)
-- Terraform for IaC
-- GitHub Actions for CI/CD
-
-## 🚀 Getting Started
+## 🏃 Quick Start
 
 ### Prerequisites
 
-- Node.js >= 20 and npm
-- AWS CLI configured with appropriate permissions
+- Node.js >= 20
+- AWS CLI configured
 - Terraform >= 1.0.0
-
-### Deployment
-
-The site is deployed at [amianai.com](https://amianai.com)
 
 ### Local Development
 
-1. Install dependencies:
-
 ```bash
+# Install dependencies
 cd frontend
 npm install
-```
 
-2. Start the development server:
-
-```bash
+# Start development server
 npm run dev
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser
+Visit [http://localhost:3000](http://localhost:3000)
 
 ### Testing
 
 ```bash
-cd frontend
+# Run all tests
 npm test
+
+# Run with coverage
+npm test -- --coverage
 ```
 
-## 🧪 Development Approach
+## 🚀 Deployment
 
-We follow these key principles:
-
-1. Build incrementally with small, testable changes
-2. Write tests first, then implement
-3. Document as we build
-4. Simplify and remove complexity
-5. Push to production frequently
-
-## 📚 Documentation
-
-- [Lambda Implementation Plan](docs/lambda-implementation-plan.md): Complete serverless API architecture
-- [Infrastructure](docs/infrastructure.md): AWS infrastructure and deployment details
-- [Next Steps](NEXT_STEPS.md): Current development phase and roadmap
-- [Project Summary](PROJECT_SUMMARY.md): Complete platform status overview
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-## 🔧 Infrastructure Management
-
-### Scripts Overview
-
-The project includes several scripts to manage infrastructure:
-
-| Script     | Purpose                             | When to Use                          |
-| ---------- | ----------------------------------- | ------------------------------------ |
-| `setup.sh` | Initial infrastructure provisioning | First-time setup or complete rebuild |
-
-### Setup Script (`setup.sh`)
-
-The setup script handles the complete infrastructure deployment:
+### Infrastructure Deployment
 
 ```bash
 cd infrastructure
-DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/setup.sh
+DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all
 ```
 
-This script:
+### Lambda-Only Deployment (for code changes)
 
-- Initializes Terraform
-- Creates all AWS resources (VPC, RDS PostgreSQL, Lambda, API Gateway, S3, CloudFront)
-- Configures DNS settings and SSL certificates
-- Sets up Lambda functions with VPC connectivity
-- Deploys database schema and sample data
-- Creates API endpoints for full database integration
+```bash
+cd infrastructure
+DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --lambda
+```
 
-Expected duration: 20-40 minutes
-
-### Teardown Script (`destroy.sh`)
-
-The destroy script handles complete cleanup:
+### Teardown
 
 ```bash
 cd infrastructure
 DOMAIN_NAME=amianai.com ./scripts/destroy.sh
 ```
 
-This script:
+## 📁 Project Structure
 
-- Removes all AWS resources created by Terraform
-- Cleans up any dependencies
-- Backs up configuration when possible
+```
+amianai/
+├── frontend/          # Next.js application
+├── backend/          # Lambda functions
+├── infrastructure/   # Terraform configuration
+├── scripts/          # Database and utility scripts
+└── docs/            # Documentation
+```
 
-> **Important**: Wait for CloudFront to fully disable before running destroy script again.
+## 🔑 Key Features
 
-### Resource Tags
+- **Multi-persona conversations** with AI and human participants
+- **Dynamic conversation joining** with comprehensive permission system
+- **Real-time messaging** with PostgreSQL persistence
+- **Secure authentication** via AWS Cognito with role-based access
+- **Comprehensive permission engine** with single source of truth
+- **Responsive design** with full accessibility
+- **AI integration** with OpenAI for dynamic responses
 
-All resources are tagged with:
+## 📚 Documentation
 
-- Project = "amianai"
-- Environment = "prod"
-- Terraform = "true"
+- [CLAUDE.md](CLAUDE.md) - Development instructions and conventions
+- [NEXT_STEPS.md](NEXT_STEPS.md) - Current priorities and roadmap
+- [Infrastructure Guide](docs/infrastructure.md) - AWS setup details
+- [Lambda Implementation](docs/lambda-implementation-plan.md) - API architecture
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## 📄 License
+
+This project is proprietary and confidential.

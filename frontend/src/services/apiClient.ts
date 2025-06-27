@@ -1,6 +1,8 @@
 "use client";
 
 import { cognitoService } from './cognito';
+import { ConversationListItem, Conversation } from '../types/conversations';
+import { ConversationPermissions } from '../types/permissions';
 
 declare const process: {
   env: {
@@ -132,12 +134,15 @@ class ApiClient {
 // Create singleton instance
 export const apiClient = new ApiClient(API_BASE_URL);
 
+
 // Convenience exports for specific API endpoints
 export const api = {
   // Conversations
   conversations: {
-    list: () => apiClient.get('/api/conversations'),
-    get: (id: string) => apiClient.get(`/api/conversations/${id}`),
+    list: (): Promise<{ conversations: ConversationListItem[]; total: number }> => 
+      apiClient.get('/api/conversations'),
+    get: (id: string): Promise<{ success: boolean; conversation?: Conversation; permissions?: ConversationPermissions; error?: string }> => 
+      apiClient.get(`/api/conversations/${id}`),
     create: (data: any) => apiClient.post('/api/conversations', data),
     update: (id: string, data: any) => apiClient.put(`/api/conversations/${id}`, data),
     delete: (id: string) => apiClient.delete(`/api/conversations/${id}`),

@@ -11,6 +11,7 @@ import { api } from '@/services/apiClient';
 import type { Message } from '@/types/messages';
 import type { Conversation, PersonaInstance } from '@/types/conversations';
 import type { Persona } from '@/types/personas';
+import type { ConversationPermissions } from '@/types/permissions';
 
 interface ConversationViewProps {
   conversationId: string;
@@ -29,10 +30,11 @@ interface ConversationData extends Omit<Conversation, 'participants'> {
   totalCharacters: number;
   averageResponseTime: number;
   qualityScore?: number;
-  canAddMessages?: boolean;
+  canAddMessages?: boolean; // Keep for backward compatibility
   closeReason?: string;
   closedBy?: string;
   closedAt?: Date;
+  permissions?: ConversationPermissions; // New permissions from API
 }
 
 export function ConversationView({ conversationId }: ConversationViewProps) {
@@ -157,7 +159,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           maxDuration: undefined,
           allowedTopics: conversationData.conversation.topicTags || [],
           endConditions: []
-        }
+        },
+        permissions: conversationData.permissions // Add permissions from API response
       };
       
       setConversation(conversation);
@@ -445,6 +448,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           closeReason: result.conversation.closeReason,
           closedBy: result.conversation.closedBy,
           closedAt: result.conversation.closedAt ? new Date(result.conversation.closedAt) : undefined,
+          permissions: result.permissions || prev.permissions, // Update permissions if provided
         } : null);
         
         setShowCloseModal(false);
@@ -535,7 +539,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
             </div>
             
             <div className="flex items-center space-x-3">
-              {conversation.status === 'active' && (
+              {conversation.status === 'active' && conversation.permissions?.canClose && (
                 <button
                   onClick={() => setShowCloseModal(true)}
                   className="px-3 py-1 text-sm bg-red-100 text-red-700 hover:bg-red-200 rounded-md transition-colors"
@@ -628,7 +632,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       <MessageInput 
         onSendMessage={handleSendMessage}
         conversationStatus={conversation.status}
-        disabled={!conversation.canAddMessages}
+        disabled={!(conversation.permissions?.canAddMessage ?? conversation.canAddMessages)}
       />
 
       {/* Close Conversation Modal */}

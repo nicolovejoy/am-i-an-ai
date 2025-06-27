@@ -4,35 +4,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FullPageLoader } from './LoadingSpinner';
 import { api } from '@/services/apiClient';
-
-interface ConversationParticipant {
-  personaId: string;
-  personaName: string;
-  personaType: string;
-  isRevealed: boolean;
-  role: 'initiator' | 'responder';
-  joinedAt: Date;
-  lastActiveAt: Date;
-}
-
-interface ConversationSummary {
-  id: string;
-  title: string;
-  topic: string;
-  description?: string;
-  status: 'active' | 'paused' | 'completed' | 'terminated';
-  participants: ConversationParticipant[];
-  messageCount: number;
-  createdAt: Date;
-  startedAt?: Date;
-  endedAt?: Date;
-  qualityScore?: number;
-  topicTags: string[];
-}
-
+import { ConversationListItem } from '@/types/conversations';
 
 export default function ConversationList() {
-  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -48,34 +23,11 @@ export default function ConversationList() {
       
       const data = await api.conversations.list();
       
-      // Transform the API response to match our component interface
+      // The API now returns properly formatted ConversationListItem objects with permissions
       const apiConversations = data.conversations || [];
-      const transformedConversations: ConversationSummary[] = apiConversations.map((conv: {
-        id: string;
-        title: string;
-        topic: string;
-        description?: string;
-        status: string;
-        participants?: unknown[];
-        messageCount?: number;
-        createdAt: string;
-        startedAt?: string;
-        endedAt?: string;
-        qualityScore?: number;
-        topicTags?: string[];
-      }) => ({
-        id: conv.id,
-        title: conv.title,
-        topic: conv.topic,
-        description: conv.description || '',
-        status: conv.status,
-        participants: [], // We'll fetch this separately if needed
-        messageCount: conv.messageCount || 0,
-        createdAt: new Date(conv.createdAt),
-        startedAt: conv.startedAt ? new Date(conv.startedAt) : undefined,
-        endedAt: conv.endedAt ? new Date(conv.endedAt) : undefined,
-        qualityScore: conv.qualityScore || undefined,
-        topicTags: conv.topicTags || [],
+      const transformedConversations: ConversationListItem[] = apiConversations.map((conv) => ({
+        ...conv,
+        createdAt: new Date(conv.createdAt), // Convert string date to Date object
       }));
       
       // Filter by status if needed
@@ -214,12 +166,18 @@ export default function ConversationList() {
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <Link
-                    href={`/conversations/${conversation.id}`}
-                    className="text-lg font-medium text-[#2D3748] hover:text-[#8B6B4A] transition-colors"
-                  >
-                    {conversation.title}
-                  </Link>
+                  {conversation.permissions.canView ? (
+                    <Link
+                      href={`/conversations/${conversation.id}`}
+                      className="text-lg font-medium text-[#2D3748] hover:text-[#8B6B4A] transition-colors"
+                    >
+                      {conversation.title}
+                    </Link>
+                  ) : (
+                    <span className="text-lg font-medium text-gray-400">
+                      {conversation.title} (No Access)
+                    </span>
+                  )}
                   <div className="text-sm text-gray-600 mt-1">{conversation.topic}</div>
                   {conversation.description && (
                     <div className="text-sm text-gray-500 mt-2">{conversation.description}</div>
@@ -230,6 +188,16 @@ export default function ConversationList() {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(conversation.status)}`}>
                     {conversation.status}
                   </span>
+                  {conversation.permissions.canAddMessage && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Can Message
+                    </span>
+                  )}
+                  {conversation.permissions.canClose && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      Can Close
+                    </span>
+                  )}
                   <div className="text-sm text-gray-500">
                     {formatTimeAgo(conversation.createdAt)}
                   </div>
@@ -240,34 +208,9 @@ export default function ConversationList() {
               <div className="flex items-center space-x-4 mb-3">
                 <div className="text-sm text-gray-600">Participants:</div>
                 <div className="flex space-x-3">
-                  {conversation.participants.length > 0 ? (
-                    conversation.participants.map((participant) => (
-                      <div
-                        key={participant.personaId}
-                        className="flex items-center space-x-1"
-                      >
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            participant.personaType === 'human'
-                              ? 'bg-blue-500'
-                              : participant.personaType === 'ai_agent'
-                              ? 'bg-green-500'
-                              : 'bg-gray-400'
-                          }`}
-                        />
-                        <span className="text-sm text-gray-700">
-                          {participant.personaName}
-                          {participant.isRevealed && (
-                            <span className="text-xs text-gray-500 ml-1">
-                              ({participant.personaType})
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <span className="text-sm text-gray-500">Loading participants...</span>
-                  )}
+                  <span className="text-sm text-gray-700">
+                    {conversation.participantCount} participant{conversation.participantCount !== 1 ? 's' : ''}
+                  </span>
                 </div>
               </div>
 

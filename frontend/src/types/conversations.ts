@@ -1,3 +1,5 @@
+import { ConversationPermissions } from './permissions';
+
 export type ConversationStatus = 'active' | 'paused' | 'completed' | 'terminated';
 export type ParticipantRole = 'initiator' | 'responder';
 export type RevealTrigger = 'self' | 'system' | 'other_participant' | 'time_based' | 'message_count';
@@ -73,7 +75,32 @@ export interface Conversation {
   averageResponseTime: number;
   topicTags: string[];
   qualityScore?: number;
+  
+  // Permissions (from backend API)
+  permissions?: ConversationPermissions;
+  
+  // Additional fields that frontend components expect
+  canAddMessages?: boolean; // Backward compatibility
+  closeReason?: string;
+  closedBy?: string;
+  closedAt?: Date;
 }
+
+// Simplified version returned by the API list endpoint
+export interface ConversationListItem {
+  id: string;
+  title: string;
+  topic: string;
+  description?: string;
+  status: ConversationStatus;
+  createdAt: Date;
+  messageCount: number;
+  topicTags: string[];
+  participantCount: number;
+  qualityScore?: number;
+  permissions: ConversationPermissions;
+}
+
 
 export interface ConversationCreate {
   title: string;

@@ -25,7 +25,7 @@ export async function handleConversations(
             return await getMessages(conversationId, corsHeaders);
           } else {
             // GET /api/conversations/:id
-            return await getConversation(conversationId, corsHeaders);
+            return await getConversation(conversationId, event, corsHeaders);
           }
         } else {
           // GET /api/conversations
@@ -45,13 +45,20 @@ export async function handleConversations(
           if (closeMatch) {
             // POST /api/conversations/:id/close
             return await closeConversation(conversationId, event, corsHeaders);
-          } else {
-            return {
-              statusCode: 404,
-              headers: corsHeaders,
-              body: JSON.stringify({ error: 'Not Found' }),
-            };
           }
+          
+          // Handle join conversation endpoint
+          const joinMatch = path.match(/^\/api\/conversations\/([^/]+)\/join$/);
+          if (joinMatch) {
+            // POST /api/conversations/:id/join
+            return await joinConversation(conversationId, event, corsHeaders);
+          }
+          
+          return {
+            statusCode: 404,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'Not Found' }),
+          };
         } else {
           // POST /api/conversations
           return await createConversation(event, corsHeaders);
@@ -91,25 +98,24 @@ export async function handleConversations(
 
 async function getConversation(
   conversationId: string,
+  event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   try {
-    // Query conversation with participants
+    const { transformUserContext, getUserPersonas } = await import('../utils/permissions');
+    const { PermissionEngine } = await import('../permissions/PermissionEngine');
+    
+    const user = transformUserContext(event.user);
+    const userPersonas = await getUserPersonas(user.id);
+    const permissionEngine = new PermissionEngine();
+    
+    // Query conversation with full details for permission checking
     const conversationQuery = `
-      SELECT c.*, 
-             json_agg(
-               json_build_object(
-                 'personaId', cp.persona_id,
-                 'role', cp.role,
-                 'isRevealed', cp.is_revealed,
-                 'joinedAt', cp.joined_at,
-                 'lastActiveAt', cp.last_active_at
-               )
-             ) as participants
-      FROM conversations c
-      LEFT JOIN conversation_participants cp ON c.id = cp.conversation_id
-      WHERE c.id = $1
-      GROUP BY c.id
+      SELECT id, title, topic, description, status, participants, metadata,
+             can_add_messages, initiator_persona_id, created_at, updated_at,
+             close_reason, closed_by, closed_at, message_count, total_characters, topic_tags
+      FROM conversations
+      WHERE id = $1
     `;
     
     const result = await queryDatabase(conversationQuery, [conversationId]);
@@ -119,19 +125,55 @@ async function getConversation(
         statusCode: 404,
         headers: corsHeaders,
         body: JSON.stringify({
-          success: false,
           error: 'Conversation not found'
         }),
       };
     }
     
-    const conversation = result.rows[0];
+    const row = result.rows[0];
+    const conversation = {
+      id: row.id,
+      title: row.title,
+      topic: row.topic,
+      description: row.description,
+      participants: row.participants || [],
+      metadata: row.metadata || {},
+      settings: {},
+      constraints: {},
+      goal: {},
+      status: row.status,
+      can_add_messages: row.can_add_messages,
+      initiator_persona_id: row.initiator_persona_id,
+      permission_overrides: {},
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
+    };
+    
+    // Check if user can view this conversation
+    const canView = await permissionEngine.canUserViewConversation(user, conversation, userPersonas);
+    if (!canView) {
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'You do not have permission to view this conversation'
+        }),
+      };
+    }
+    
+    // Get full permissions for this conversation
+    const permissions = await permissionEngine.evaluatePermissions({
+      user,
+      action: 'all',
+      resource: conversation,
+      resourceType: 'conversation',
+      metadata: { userPersonas },
+    });
     
     return {
       statusCode: 200,
       headers: corsHeaders,
       body: JSON.stringify({
-        success: true,
         conversation: {
           id: conversation.id,
           title: conversation.title,
@@ -139,15 +181,16 @@ async function getConversation(
           description: conversation.description,
           status: conversation.status,
           canAddMessages: conversation.can_add_messages,
-          closeReason: conversation.close_reason,
-          closedBy: conversation.closed_by,
-          closedAt: conversation.closed_at,
-          participants: conversation.participants || [],
+          closeReason: row.close_reason,
+          closedBy: row.closed_by,
+          closedAt: row.closed_at,
+          participants: conversation.participants,
           createdAt: conversation.created_at,
-          messageCount: conversation.message_count,
-          totalCharacters: conversation.total_characters,
-          topicTags: conversation.topic_tags,
+          messageCount: row.message_count,
+          totalCharacters: row.total_characters,
+          topicTags: row.topic_tags,
         },
+        permissions: permissions.permissions,
       }),
     };
     
@@ -157,66 +200,101 @@ async function getConversation(
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
-        success: false,
         error: 'Failed to fetch conversation',
-        message: String(error)
+        details: error instanceof Error ? error.message : String(error)
       }),
     };
   }
 }
 
 async function getConversations(
-  _event: AuthenticatedEvent,
+  event: AuthenticatedEvent,
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   try {
-    // TODO: Filter conversations by user when user-specific conversations are implemented
-    // const userId = event.user.id; // Available for future use
+    const { transformUserContext, getUserPersonas } = await import('../utils/permissions');
+    const { PermissionEngine } = await import('../permissions/PermissionEngine');
     
-    // Query all conversations with basic info
+    const user = transformUserContext(event.user);
+    const userPersonas = await getUserPersonas(user.id);
+    const permissionEngine = new PermissionEngine();
+    
+    // Query all conversations with full details for permission checking
     const conversationsQuery = `
-      SELECT c.id, c.title, c.topic, c.description, c.status, 
-             c.created_at, c.message_count, c.topic_tags,
-             COUNT(cp.persona_id) as participant_count
-      FROM conversations c
-      LEFT JOIN conversation_participants cp ON c.id = cp.conversation_id
-      GROUP BY c.id, c.title, c.topic, c.description, c.status, c.created_at, c.message_count, c.topic_tags
-      ORDER BY c.created_at DESC
-      LIMIT 50
+      SELECT id, title, topic, description, status, participants, metadata,
+             can_add_messages, initiator_persona_id, created_at, updated_at
+      FROM conversations
+      ORDER BY created_at DESC
+      LIMIT 100
     `;
     
     const result = await queryDatabase(conversationsQuery);
     
-    const conversations = result.rows.map((row: any) => ({
-      id: row.id,
-      title: row.title,
-      topic: row.topic,
-      description: row.description,
-      status: row.status,
-      createdAt: row.created_at,
-      messageCount: row.message_count,
-      participantCount: parseInt(row.participant_count) || 0,
-      topicTags: row.topic_tags || [],
-    }));
+    // Filter conversations based on permissions
+    const accessibleConversations = [];
     
+    for (const row of result.rows) {
+      const conversation = {
+        id: row.id,
+        title: row.title,
+        topic: row.topic,
+        description: row.description,
+        participants: row.participants || [],
+        metadata: row.metadata || {},
+        settings: {},
+        constraints: {},
+        goal: {},
+        status: row.status,
+        can_add_messages: row.can_add_messages,
+        initiator_persona_id: row.initiator_persona_id,
+        permission_overrides: {},
+        created_at: new Date(row.created_at),
+        updated_at: new Date(row.updated_at),
+      };
+      
+      // Check if user can view this conversation
+      const canView = await permissionEngine.canUserViewConversation(user, conversation, userPersonas);
+      if (canView) {
+        // Get full permissions for this conversation
+        const permissions = await permissionEngine.evaluatePermissions({
+          user,
+          action: 'all',
+          resource: conversation,
+          resourceType: 'conversation',
+          metadata: { userPersonas },
+        });
+        
+        accessibleConversations.push({
+          id: conversation.id,
+          title: conversation.title,
+          topic: conversation.topic,
+          description: conversation.description,
+          status: conversation.status,
+          createdAt: conversation.created_at,
+          messageCount: 0, // TODO: Calculate from messages table
+          topicTags: conversation.metadata.tags || [],
+          participantCount: conversation.participants.length,
+          permissions: permissions.permissions,
+        });
+      }
+    }
+
     return {
       statusCode: 200,
       headers: corsHeaders,
       body: JSON.stringify({
-        success: true,
-        conversations,
+        conversations: accessibleConversations,
+        total: accessibleConversations.length,
       }),
     };
-    
   } catch (error) {
     console.error('Error fetching conversations:', error);
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
-        success: false,
         error: 'Failed to fetch conversations',
-        message: String(error)
+        details: error instanceof Error ? error.message : String(error),
       }),
     };
   }
@@ -436,16 +514,25 @@ async function createMessage(
       };
     }
 
-    // Check if conversation allows new messages
-    const conversationStateQuery = `
-      SELECT status, can_add_messages, close_reason
+    // Permission checks
+    const { transformUserContext, getUserPersonas } = await import('../utils/permissions');
+    const { PermissionEngine } = await import('../permissions/PermissionEngine');
+    
+    const user = transformUserContext(event.user);
+    const userPersonas = await getUserPersonas(user.id);
+    const permissionEngine = new PermissionEngine();
+
+    // Get conversation details for permission checking
+    const conversationQuery = `
+      SELECT id, title, topic, description, status, participants, metadata,
+             can_add_messages, initiator_persona_id, created_at, updated_at
       FROM conversations
       WHERE id = $1
     `;
     
-    const stateResult = await queryDatabase(conversationStateQuery, [conversationId]);
+    const convResult = await queryDatabase(conversationQuery, [conversationId]);
     
-    if (stateResult.rows.length === 0) {
+    if (convResult.rows.length === 0) {
       return {
         statusCode: 404,
         headers: corsHeaders,
@@ -453,19 +540,48 @@ async function createMessage(
       };
     }
     
-    const conversationState = stateResult.rows[0];
-    
-    if (!conversationState.can_add_messages) {
+    const row = convResult.rows[0];
+    const conversation = {
+      id: row.id,
+      title: row.title,
+      topic: row.topic,
+      description: row.description,
+      participants: row.participants || [],
+      metadata: row.metadata || {},
+      settings: {},
+      constraints: {},
+      goal: {},
+      status: row.status,
+      can_add_messages: row.can_add_messages,
+      initiator_persona_id: row.initiator_persona_id,
+      permission_overrides: {},
+      created_at: new Date(row.created_at),
+      updated_at: new Date(row.updated_at),
+    };
+
+    // Check if user can post a message as this persona
+    const canPost = await permissionEngine.canUserPostMessage(user, conversation, personaId, userPersonas);
+    if (!canPost) {
+      // Get more specific error reason
+      const permissions = await permissionEngine.evaluatePermissions({
+        user,
+        action: 'addMessage',
+        resource: conversation,
+        resourceType: 'conversation',
+        metadata: { userPersonas, personaId },
+      });
+      
       return {
         statusCode: 403,
         headers: corsHeaders,
         body: JSON.stringify({ 
-          error: 'Messages cannot be added to this conversation',
-          reason: conversationState.close_reason || 'Conversation is closed',
-          status: conversationState.status
+          error: permissions.reason || 'You do not have permission to post messages to this conversation'
         }),
       };
     }
+
+    // The permission engine already checked if conversation allows messages
+    // No need for additional state checking here
 
     // Get the next sequence number
     const sequenceQuery = `
@@ -807,6 +923,239 @@ async function updateConversation(
       body: JSON.stringify({
         error: 'Failed to update conversation',
         message: String(error),
+      }),
+    };
+  }
+}
+
+async function joinConversation(
+  conversationId: string,
+  event: AuthenticatedEvent,
+  corsHeaders: Record<string, string>
+): Promise<APIGatewayProxyResult> {
+  try {
+    // Parse request body
+    const body = event.body ? JSON.parse(event.body) : {};
+    const { personaId } = body;
+
+    if (!personaId) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Bad Request',
+          message: 'personaId is required',
+        }),
+      };
+    }
+
+    // Get conversation
+    const conversationResult = await queryDatabase(`
+      SELECT * FROM conversations 
+      WHERE id = $1 AND deleted_at IS NULL
+    `, [conversationId]);
+
+    if (conversationResult.rows.length === 0) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Not Found',
+          message: 'Conversation not found',
+        }),
+      };
+    }
+
+    const conversation = conversationResult.rows[0];
+
+    // Check if conversation is active
+    if (conversation.state?.status !== 'active') {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Bad Request',
+          message: 'Cannot join a closed conversation',
+        }),
+      };
+    }
+
+    // Check if conversation allows late joining
+    if (conversation.settings?.allow_late_joining === false) {
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Forbidden',
+          message: 'This conversation does not allow late joining',
+        }),
+      };
+    }
+
+    // Check if conversation is at max participants
+    const currentParticipantCount = conversation.participants?.length || 0;
+    const maxParticipants = conversation.settings?.max_participants;
+    if (maxParticipants && currentParticipantCount >= maxParticipants) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Bad Request',
+          message: 'Conversation has reached maximum number of participants',
+        }),
+      };
+    }
+
+    // Check if persona is already a participant
+    const isAlreadyParticipant = conversation.participants?.some(
+      (p: any) => p.persona_id === personaId && !p.left_at
+    );
+    if (isAlreadyParticipant) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Bad Request',
+          message: 'Persona is already a participant in this conversation',
+        }),
+      };
+    }
+
+    // Get user from database
+    const userResult = await queryDatabase(`
+      SELECT id, email, role FROM users WHERE id = $1
+    `, [event.user.id]);
+
+    if (userResult.rows.length === 0) {
+      return {
+        statusCode: 401,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Unauthorized',
+          message: 'User not found in database',
+        }),
+      };
+    }
+
+    const user = userResult.rows[0];
+
+    // Get user's personas
+    const personasResult = await queryDatabase(`
+      SELECT * FROM personas WHERE owner_id = $1 AND deleted_at IS NULL
+    `, [user.id]);
+
+    const userPersonas = personasResult.rows;
+
+    // Check if user owns the persona
+    const ownedPersona = userPersonas.find((p: any) => p.id === personaId);
+    if (!ownedPersona) {
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Forbidden',
+          message: 'You do not own the specified persona',
+        }),
+      };
+    }
+
+    // Import PermissionEngine and check permissions
+    const { PermissionEngine } = await import('../permissions/PermissionEngine');
+    const permissionEngine = new PermissionEngine();
+
+    // Check if conversation is private and user is not admin
+    if (conversation.metadata?.visibility === 'private' && user.role !== 'admin') {
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Forbidden',
+          message: 'Cannot join private conversations',
+        }),
+      };
+    }
+
+    // Determine participant role based on user role
+    const participantRole = user.role === 'admin' ? 'moderator' : 'guest';
+    const participantPermissions = user.role === 'admin' 
+      ? ['read', 'write', 'moderate'] 
+      : ['read', 'write'];
+
+    // Add user as participant
+    const newParticipant = {
+      persona_id: personaId,
+      role: participantRole,
+      joined_at: new Date(),
+      is_revealed: true,
+      left_at: null,
+      permissions: participantPermissions,
+      metadata: {}
+    };
+
+    const updatedParticipants = [...(conversation.participants || []), newParticipant];
+
+    // Add history entry
+    const historyEntry = {
+      timestamp: new Date(),
+      action: 'participant_added',
+      actor: {
+        id: user.id,
+        type: 'user',
+        name: user.email
+      },
+      target: personaId,
+      details: { 
+        persona_id: personaId,
+        role: participantRole,
+        joined_via: 'join_endpoint'
+      }
+    };
+
+    const updatedHistory = [...(conversation.history || []), historyEntry];
+
+    // Update conversation in database
+    await queryDatabase(`
+      UPDATE conversations 
+      SET participants = $1, history = $2, updated_at = NOW()
+      WHERE id = $3
+    `, [JSON.stringify(updatedParticipants), JSON.stringify(updatedHistory), conversationId]);
+
+    // Get updated conversation
+    const updatedConversationResult = await queryDatabase(`
+      SELECT * FROM conversations WHERE id = $1
+    `, [conversationId]);
+
+    const updatedConversation = updatedConversationResult.rows[0];
+
+    // Get permissions for the updated conversation
+    const permissionResult = await permissionEngine.evaluatePermissions({
+      user,
+      action: 'view',
+      resource: updatedConversation,
+      resourceType: 'conversation'
+    });
+
+    const permissions = permissionResult.permissions;
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        message: 'Successfully joined conversation',
+        conversation: updatedConversation,
+        permissions,
+      }),
+    };
+
+  } catch (error) {
+    console.error('Error joining conversation:', error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: 'Internal Server Error',
+        message: 'Failed to join conversation',
       }),
     };
   }
