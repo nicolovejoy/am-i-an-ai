@@ -6,10 +6,13 @@ import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { FullPageLoader } from './LoadingSpinner';
 import { CloseConversationModal } from './CloseConversationModal';
+import ConversationParticipants from './ConversationParticipants';
+import JoinConversationButton from './JoinConversationButton';
+import JoinSuccessMessage from './JoinSuccessMessage';
 import { aiOrchestrator } from '@/services/aiOrchestrator';
 import { api } from '@/services/apiClient';
 import type { Message } from '@/types/messages';
-import type { Conversation, PersonaInstance } from '@/types/conversations';
+import type { Conversation, PersonaInstance, ConversationParticipant, ParticipantRole } from '@/types/conversations';
 import type { Persona } from '@/types/personas';
 import type { ConversationPermissions } from '@/types/permissions';
 
@@ -17,13 +20,13 @@ interface ConversationViewProps {
   conversationId: string;
 }
 
-interface ConversationParticipant extends PersonaInstance {
+interface ConversationViewParticipant extends PersonaInstance {
   personaName: string;
   personaType: 'human' | 'ai_agent';
 }
 
 interface ConversationData extends Omit<Conversation, 'participants'> {
-  participants: ConversationParticipant[];
+  participants: ConversationViewParticipant[];
   messageCount: number;
   currentTurn: number;
   topicTags: string[];
@@ -47,6 +50,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
   const [aiError, setAiError] = useState<string | null>(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [joinResult, setJoinResult] = useState<any>(null);
+  const [participants, setParticipants] = useState<ConversationParticipant[]>([]);
 
   useEffect(() => {
     fetchConversationData();
@@ -110,60 +115,88 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         throw new Error(conversationData.error || 'Failed to load conversation');
       }
       
+      // Check if conversation exists
+      if (!conversationData.conversation) {
+        throw new Error('Conversation data not found');
+      }
+
       // Fetch conversation participants with persona details
-      const participantPromises = conversationData.conversation.participants.map(async (participant: Record<string, unknown>) => {
+      const participantPromises = (conversationData.conversation.participants as any[]).map(async (participant: Record<string, unknown>) => {
         try {
           const personaData = await api.personas.get(participant.personaId as string);
           if (personaData.success) {
             return {
-              ...participant,
+              personaId: participant.personaId as string,
+              role: (participant.role as ParticipantRole) || 'responder',
+              isRevealed: (participant.isRevealed as boolean) !== false,
+              joinedAt: new Date(participant.joinedAt as string || conversationData.conversation!.createdAt),
+              lastActiveAt: new Date(participant.lastActiveAt as string || conversationData.conversation!.createdAt),
               personaName: personaData.persona.name,
-              personaType: personaData.persona.type === 'ai_agent' ? 'ai_agent' : 'human'
+              personaType: personaData.persona.type === 'ai_agent' ? 'ai_agent' as const : 'human' as const
             };
           }
         } catch (error) {
           // Fallback if persona fetch fails
         }
         return {
-          ...participant,
+          personaId: participant.personaId as string,
+          role: (participant.role as ParticipantRole) || 'responder',
+          isRevealed: (participant.isRevealed as boolean) !== false,
+          joinedAt: new Date(participant.joinedAt as string || conversationData.conversation!.createdAt),
+          lastActiveAt: new Date(participant.lastActiveAt as string || conversationData.conversation!.createdAt),
           personaName: 'Unknown Persona',
-          personaType: 'human'
+          personaType: 'human' as const
         };
       });
       
       const participants = await Promise.all(participantPromises);
       
+      const conv = conversationData.conversation;
+      
       // Transform to ConversationData format
       const conversation: ConversationData = {
-        id: conversationData.conversation.id,
-        title: conversationData.conversation.title,
-        topic: conversationData.conversation.topic,
-        description: conversationData.conversation.description,
-        status: conversationData.conversation.status,
+        id: conv.id,
+        title: conv.title,
+        topic: conv.topic,
+        description: conv.description,
+        status: conv.status,
         participants: participants,
-        messageCount: conversationData.conversation.messageCount || 0,
-        currentTurn: conversationData.conversation.messageCount || 0,
-        createdAt: new Date(conversationData.conversation.createdAt),
-        startedAt: conversationData.conversation.startedAt ? new Date(conversationData.conversation.startedAt) : undefined,
-        topicTags: conversationData.conversation.topicTags || [],
-        totalCharacters: conversationData.conversation.totalCharacters || 0,
-        averageResponseTime: conversationData.conversation.averageResponseTime || 0,
-        qualityScore: conversationData.conversation.qualityScore,
-        canAddMessages: conversationData.conversation.canAddMessages !== false, // Default to true if not provided
-        closeReason: conversationData.conversation.closeReason,
-        closedBy: conversationData.conversation.closedBy,
-        closedAt: conversationData.conversation.closedAt ? new Date(conversationData.conversation.closedAt) : undefined,
-        createdBy: conversationData.conversation.createdBy || 'unknown',
-        constraints: conversationData.conversation.constraints || {
+        messageCount: conv.messageCount || 0,
+        currentTurn: conv.messageCount || 0,
+        createdAt: new Date(conv.createdAt),
+        startedAt: conv.startedAt ? new Date(conv.startedAt) : undefined,
+        topicTags: conv.topicTags || [],
+        totalCharacters: conv.totalCharacters || 0,
+        averageResponseTime: conv.averageResponseTime || 0,
+        qualityScore: conv.qualityScore,
+        canAddMessages: conv.canAddMessages !== false, // Default to true if not provided
+        closeReason: conv.closeReason,
+        closedBy: conv.closedBy,
+        closedAt: conv.closedAt ? new Date(conv.closedAt) : undefined,
+        createdBy: conv.createdBy || 'unknown',
+        constraints: conv.constraints || {
           maxMessages: undefined,
           maxDuration: undefined,
-          allowedTopics: conversationData.conversation.topicTags || [],
+          allowedTopics: conv.topicTags || [],
           endConditions: []
         },
         permissions: conversationData.permissions // Add permissions from API response
       };
       
       setConversation(conversation);
+      
+      // Set participants for the ConversationParticipants component
+      // Transform participants to match ConversationParticipant interface
+      const formattedParticipants: ConversationParticipant[] = conv.participants.map((p: any) => ({
+        persona_id: p.personaId || p.persona_id,
+        role: p.role || 'guest',
+        joined_at: new Date(p.joinedAt || p.joined_at || conv.createdAt),
+        is_revealed: p.isRevealed !== false,
+        left_at: p.leftAt ? new Date(p.leftAt) : null,
+        permissions: p.permissions || ['read', 'write'],
+        metadata: p.metadata || {}
+      }));
+      setParticipants(formattedParticipants);
       
       // Fetch messages from API
       try {
@@ -519,6 +552,16 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
     }
   };
 
+  const handleJoinSuccess = (result: any) => {
+    setJoinResult(result);
+    // Refresh conversation data to show updated participants
+    fetchConversationData();
+  };
+
+  const handleDismissJoinSuccess = () => {
+    setJoinResult(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
@@ -576,33 +619,32 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
             </div>
           )}
           
-          {/* Participants */}
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600">Participants:</div>
-            <div className="flex space-x-3">
-              {conversation.participants.map((participant) => (
-                <div
-                  key={participant.personaId}
-                  className="flex items-center space-x-2"
-                >
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      participant.personaType === 'human'
-                        ? 'bg-blue-500'
-                        : 'bg-green-500'
-                    }`}
-                  />
-                  <span className="text-sm text-gray-700 font-medium">
-                    {participant.personaName}
-                  </span>
-                  {participant.isRevealed && (
-                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                      {participant.personaType === 'human' ? 'Human' : 'AI'}
-                    </span>
-                  )}
-                </div>
-              ))}
+          {/* Participants and Join */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <ConversationParticipants participants={participants} />
             </div>
+            
+            {/* Join Button */}
+            {conversation.permissions?.canJoin && (
+              <div className="ml-4">
+                <JoinConversationButton 
+                  conversation={{
+                    id: conversation.id,
+                    title: conversation.title,
+                    topic: conversation.topic,
+                    description: conversation.description,
+                    status: conversation.status,
+                    createdAt: conversation.createdAt,
+                    messageCount: conversation.messageCount,
+                    topicTags: conversation.topicTags,
+                    participantCount: participants.length,
+                    permissions: conversation.permissions,
+                  }}
+                  onJoinSuccess={handleJoinSuccess}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -643,6 +685,14 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           onConfirm={handleCloseConversation}
           isLoading={isClosing}
           conversationTitle={conversation.title}
+        />
+      )}
+
+      {/* Join Success Message */}
+      {joinResult && (
+        <JoinSuccessMessage 
+          joinResult={joinResult}
+          onDismiss={handleDismissJoinSuccess}
         />
       )}
     </div>

@@ -111,11 +111,29 @@ async function getConversation(
     
     // Query conversation with full details for permission checking
     const conversationQuery = `
-      SELECT id, title, topic, description, status, participants, metadata,
-             can_add_messages, initiator_persona_id, created_at, updated_at,
-             close_reason, closed_by, closed_at, message_count, total_characters, topic_tags
-      FROM conversations
-      WHERE id = $1
+      SELECT 
+        c.id, c.title, c.topic, c.description, c.status, c.metadata,
+        c.can_add_messages, c.initiator_persona_id, c.created_at, c.updated_at,
+        c.close_reason, c.closed_by, c.closed_at, c.message_count, c.total_characters, c.topic_tags,
+        COALESCE(
+          c.participants,
+          jsonb_agg(
+            jsonb_build_object(
+              'personaId', cp.persona_id,
+              'role', cp.role,
+              'joinedAt', cp.joined_at,
+              'isRevealed', cp.is_revealed
+            )
+          ) FILTER (WHERE cp.persona_id IS NOT NULL),
+          '[]'::jsonb
+        ) as participants
+      FROM conversations c
+      LEFT JOIN conversation_participants cp ON c.id = cp.conversation_id
+      WHERE c.id = $1
+      GROUP BY c.id, c.title, c.topic, c.description, c.status, c.metadata,
+               c.can_add_messages, c.initiator_persona_id, c.created_at, c.updated_at,
+               c.close_reason, c.closed_by, c.closed_at, c.message_count, c.total_characters, 
+               c.topic_tags, c.participants
     `;
     
     const result = await queryDatabase(conversationQuery, [conversationId]);
@@ -217,14 +235,33 @@ async function getConversations(
     
     const user = transformUserContext(event.user);
     const userPersonas = await getUserPersonas(user.id);
+    
     const permissionEngine = new PermissionEngine();
     
     // Query all conversations with full details for permission checking
     const conversationsQuery = `
-      SELECT id, title, topic, description, status, participants, metadata,
-             can_add_messages, initiator_persona_id, created_at, updated_at
-      FROM conversations
-      ORDER BY created_at DESC
+      SELECT 
+        c.id, c.title, c.topic, c.description, c.status, c.metadata,
+        c.can_add_messages, c.initiator_persona_id, c.created_at, c.updated_at,
+        COALESCE(
+          jsonb_agg(
+            jsonb_build_object(
+              'personaId', cp.persona_id,
+              'role', cp.role,
+              'joinedAt', cp.joined_at,
+              'isRevealed', cp.is_revealed
+            )
+          ) FILTER (WHERE cp.persona_id IS NOT NULL),
+          '[]'::jsonb
+        ) as participants,
+        c.message_count,
+        c.topic_tags
+      FROM conversations c
+      LEFT JOIN conversation_participants cp ON c.id = cp.conversation_id
+      GROUP BY c.id, c.title, c.topic, c.description, c.status, c.metadata,
+               c.can_add_messages, c.initiator_persona_id, c.created_at, c.updated_at, 
+               c.message_count, c.topic_tags
+      ORDER BY c.created_at DESC
       LIMIT 100
     `;
     
@@ -254,6 +291,7 @@ async function getConversations(
       
       // Check if user can view this conversation
       const canView = await permissionEngine.canUserViewConversation(user, conversation, userPersonas);
+      
       if (canView) {
         // Get full permissions for this conversation
         const permissions = await permissionEngine.evaluatePermissions({
@@ -271,8 +309,8 @@ async function getConversations(
           description: conversation.description,
           status: conversation.status,
           createdAt: conversation.created_at,
-          messageCount: 0, // TODO: Calculate from messages table
-          topicTags: conversation.metadata.tags || [],
+          messageCount: row.message_count || 0,
+          topicTags: row.topic_tags || [],
           participantCount: conversation.participants.length,
           permissions: permissions.permissions,
         });

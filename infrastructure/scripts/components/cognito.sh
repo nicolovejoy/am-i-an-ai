@@ -25,6 +25,8 @@ deploy_cognito() {
         -target="aws_cognito_user_pool.main" \
         -target="aws_cognito_user_pool_domain.main" \
         -target="aws_cognito_user_pool_client.main" \
+        -target="aws_cognito_user_group.admin" \
+        -target="aws_cognito_user_group.user" \
         -var="github_username=${GITHUB_USERNAME}" \
         -out=cognito-plan
     

@@ -26,6 +26,10 @@ export async function handleAdmin(
       return await fixMessageCounts(corsHeaders);
     }
 
+    if (path === '/api/admin/users' && method === 'GET') {
+      return await listUsers(corsHeaders);
+    }
+
     return {
       statusCode: 404,
       headers: corsHeaders,
@@ -201,7 +205,11 @@ async function setupDatabase(
           total_characters INTEGER NOT NULL DEFAULT 0,
           average_response_time INTEGER NOT NULL DEFAULT 0,
           topic_tags TEXT[] NOT NULL DEFAULT '{}',
-          quality_score DECIMAL(3,2)
+          quality_score DECIMAL(3,2),
+          can_add_messages BOOLEAN DEFAULT true,
+          close_reason TEXT,
+          closed_by VARCHAR(255),
+          closed_at TIMESTAMP
         );
 
         -- Create Conversation Participants table
@@ -597,6 +605,83 @@ async function fixMessageCounts(
       body: JSON.stringify({
         success: false,
         error: 'Message count fix failed',
+        message: String(error),
+      }),
+    };
+  }
+}
+
+async function listUsers(
+  corsHeaders: Record<string, string>
+): Promise<APIGatewayProxyResult> {
+  try {
+    console.log('Fetching users list...');
+    
+    const usersQuery = `
+      SELECT 
+        u.id,
+        u.email,
+        u.display_name,
+        u.role,
+        u.subscription,
+        u.subscription_expires_at,
+        u.is_email_verified,
+        u.is_active,
+        u.last_login_at,
+        u.created_at,
+        u.updated_at,
+        (SELECT COUNT(*) FROM personas WHERE owner_id = u.id) as persona_count,
+        (SELECT COUNT(DISTINCT c.id) 
+         FROM conversations c 
+         WHERE c.created_by = u.id 
+         OR EXISTS (
+           SELECT 1 FROM conversation_participants cp 
+           JOIN personas p ON cp.persona_id = p.id 
+           WHERE cp.conversation_id = c.id AND p.owner_id = u.id
+         )) as conversation_count
+      FROM users u
+      ORDER BY u.created_at DESC
+    `;
+    
+    const result = await queryDatabase(usersQuery);
+    
+    const users = result.rows.map((row: any) => ({
+      id: row.id,
+      email: row.email,
+      displayName: row.display_name,
+      role: row.role,
+      subscription: row.subscription,
+      subscriptionExpiresAt: row.subscription_expires_at,
+      isEmailVerified: row.is_email_verified,
+      isActive: row.is_active,
+      lastLoginAt: row.last_login_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      personaCount: parseInt(row.persona_count),
+      conversationCount: parseInt(row.conversation_count),
+    }));
+    
+    console.log(`Found ${users.length} users`);
+    
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        users,
+        count: users.length,
+        timestamp: new Date().toISOString(),
+      }),
+    };
+    
+  } catch (error) {
+    console.error('List users failed:', error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: false,
+        error: 'Failed to fetch users',
         message: String(error),
       }),
     };

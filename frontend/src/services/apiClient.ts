@@ -148,6 +148,8 @@ export const api = {
     delete: (id: string) => apiClient.delete(`/api/conversations/${id}`),
     close: (id: string, data: { reason?: string; status?: 'completed' | 'terminated' }) => 
       apiClient.post(`/api/conversations/${id}/close`, data),
+    join: (id: string, data: { personaId: string }) => 
+      apiClient.post(`/api/conversations/${id}/join`, data),
   },
 
   // Messages
@@ -174,6 +176,7 @@ export const api = {
     seedDatabase: () => apiClient.post('/api/admin/seed-database'),
     setupDatabase: () => apiClient.post('/api/admin/setup-database'),
     testAI: (data: any) => apiClient.post('/api/ai/generate-response', data),
+    listUsers: () => apiClient.get('/api/admin/users'),
   },
 
   // AI

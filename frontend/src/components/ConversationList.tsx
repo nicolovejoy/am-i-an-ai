@@ -5,12 +5,15 @@ import Link from 'next/link';
 import { FullPageLoader } from './LoadingSpinner';
 import { api } from '@/services/apiClient';
 import { ConversationListItem } from '@/types/conversations';
+import JoinConversationButton from './JoinConversationButton';
+import JoinSuccessMessage from './JoinSuccessMessage';
 
 export default function ConversationList() {
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [joinResult, setJoinResult] = useState<any>(null);
 
   useEffect(() => {
     fetchConversations();
@@ -27,7 +30,16 @@ export default function ConversationList() {
       const apiConversations = data.conversations || [];
       const transformedConversations: ConversationListItem[] = apiConversations.map((conv) => ({
         ...conv,
-        createdAt: new Date(conv.createdAt), // Convert string date to Date object
+        createdAt: typeof conv.createdAt === 'string' ? new Date(conv.createdAt) : conv.createdAt,
+        permissions: conv.permissions || {
+          canView: false,
+          canAddMessage: false,
+          canJoin: false,
+          canClose: false,
+          canAddParticipant: false,
+          canRemoveParticipant: false,
+          canDelete: false,
+        },
       }));
       
       // Filter by status if needed
@@ -63,7 +75,8 @@ export default function ConversationList() {
 
   const formatTimeAgo = (date: Date) => {
     const now = new Date();
-    const diffMs = now.getTime() - new Date(date).getTime();
+    const targetDate = date instanceof Date ? date : new Date(date);
+    const diffMs = now.getTime() - targetDate.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
@@ -72,7 +85,17 @@ export default function ConversationList() {
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
-    return new Date(date).toLocaleDateString();
+    return targetDate.toLocaleDateString();
+  };
+
+  const handleJoinSuccess = (result: any) => {
+    setJoinResult(result);
+    // Refresh the conversation list to show updated participant count
+    fetchConversations();
+  };
+
+  const handleDismissJoinSuccess = () => {
+    setJoinResult(null);
   };
 
   if (loading) {
@@ -166,7 +189,7 @@ export default function ConversationList() {
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  {conversation.permissions.canView ? (
+                  {conversation.permissions?.canView ? (
                     <Link
                       href={`/conversations/${conversation.id}`}
                       className="text-lg font-medium text-[#2D3748] hover:text-[#8B6B4A] transition-colors"
@@ -188,12 +211,12 @@ export default function ConversationList() {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(conversation.status)}`}>
                     {conversation.status}
                   </span>
-                  {conversation.permissions.canAddMessage && (
+                  {conversation.permissions?.canAddMessage && (
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       Can Message
                     </span>
                   )}
-                  {conversation.permissions.canClose && (
+                  {conversation.permissions?.canClose && (
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                       Can Close
                     </span>
@@ -214,7 +237,7 @@ export default function ConversationList() {
                 </div>
               </div>
 
-              {/* Stats */}
+              {/* Stats and Actions */}
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <div className="flex items-center space-x-4">
                   <span>{conversation.messageCount} messages</span>
@@ -223,27 +246,43 @@ export default function ConversationList() {
                   )}
                 </div>
                 
-                {conversation.topicTags.length > 0 && (
-                  <div className="flex space-x-1">
-                    {conversation.topicTags.slice(0, 3).map((tag, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {conversation.topicTags.length > 3 && (
-                      <span className="text-xs text-gray-400">
-                        +{conversation.topicTags.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                )}
+                <div className="flex items-center space-x-3">
+                  {conversation.topicTags.length > 0 && (
+                    <div className="flex space-x-1">
+                      {conversation.topicTags.slice(0, 3).map((tag, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {conversation.topicTags.length > 3 && (
+                        <span className="text-xs text-gray-400">
+                          +{conversation.topicTags.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Join Button */}
+                  <JoinConversationButton 
+                    conversation={conversation}
+                    onJoinSuccess={handleJoinSuccess}
+                  />
+                </div>
               </div>
             </div>
           ))}
         </div>
+      )}
+      
+      {/* Join Success Message */}
+      {joinResult && (
+        <JoinSuccessMessage 
+          joinResult={joinResult}
+          onDismiss={handleDismissJoinSuccess}
+        />
       )}
     </div>
   );

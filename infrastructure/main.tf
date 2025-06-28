@@ -651,6 +651,21 @@ resource "aws_cognito_user_pool_client" "main" {
   allowed_oauth_scopes                 = ["email", "openid", "profile"]
 }
 
+# Cognito User Pool Groups
+resource "aws_cognito_user_group" "admin" {
+  name         = "admin"
+  user_pool_id = aws_cognito_user_pool.main.id
+  description  = "Admin users with full platform access"
+  precedence   = 1
+}
+
+resource "aws_cognito_user_group" "user" {
+  name         = "user"
+  user_pool_id = aws_cognito_user_pool.main.id
+  description  = "Regular users"
+  precedence   = 10
+}
+
 ############################
 # Outputs
 ############################
@@ -693,6 +708,16 @@ output "cognito_domain" {
 output "cognito_region" {
   description = "The AWS region where Cognito is deployed"
   value       = data.aws_region.current.name
+}
+
+output "cognito_admin_group_name" {
+  description = "The name of the admin Cognito group"
+  value       = aws_cognito_user_group.admin.name
+}
+
+output "cognito_user_group_name" {
+  description = "The name of the user Cognito group"
+  value       = aws_cognito_user_group.user.name
 }
 
 output "database_endpoint" {

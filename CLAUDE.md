@@ -182,12 +182,14 @@ npm run build:static  # Creates frontend/out/ for S3 deployment
 
 ### **Database Management Options**
 
-1. **Production API Endpoints** - Working Lambda functions (recommended)
+1. **DBeaver GUI** - Visual database management (USER ACTIVELY USES THIS)
+   - Host: `eeyore-postgres.cw92m20s8ece.us-east-1.rds.amazonaws.com:5432`
+   - Database: `amianai`, User: `amianai_admin`
+   - **NOTE**: User can directly view and modify database data using DBeaver
+   - Useful for quick fixes, data inspection, and manual operations
+2. **Production API Endpoints** - Working Lambda functions (recommended for app)
    - Health: `GET https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/health`
    - Database Status: `GET https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/admin/database-status`
    - Personas: `GET https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/personas`
    - Conversations: `GET https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/conversations`
-2. **DBeaver GUI** - Visual database management
-   - Host: `eeyore-postgres.cw92m20s8ece.us-east-1.rds.amazonaws.com:5432`
-   - Database: `amianai`, User: `amianai_admin`
 3. **Direct Scripts** - `npm run db:setup`, `npm run db:seed`, `npm run db:show`

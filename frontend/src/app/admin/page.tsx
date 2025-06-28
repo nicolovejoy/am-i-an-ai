@@ -20,13 +20,30 @@ interface DatabaseStats {
   users: number;
 }
 
+interface User {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: string;
+  subscription: string;
+  subscriptionExpiresAt: string | null;
+  isEmailVerified: boolean;
+  isActive: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  personaCount: number;
+  conversationCount: number;
+}
+
 function AdminPageContent() {
   const [healthChecks, setHealthChecks] = useState<ApiHealth[]>([]);
   const [personas, setPersonas] = useState<Record<string, unknown>[]>([]);
   const [conversations, setConversations] = useState<Record<string, unknown>[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [dbStats, setDbStats] = useState<DatabaseStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'personas' | 'conversations' | 'raw'>('overview');
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'users' | 'personas' | 'conversations' | 'raw'>('overview');
 
 
 
@@ -39,6 +56,7 @@ function AdminPageContent() {
       { name: 'Database Status', apiCall: () => api.admin.databaseStatus() },
       { name: 'Personas', apiCall: () => api.personas.list() },
       { name: 'Conversations', apiCall: () => api.conversations.list() },
+      { name: 'Users', apiCall: () => api.admin.listUsers() },
     ];
     
     for (const endpoint of endpoints) {
@@ -63,6 +81,9 @@ function AdminPageContent() {
         }
         if (endpoint.name === 'Database Status') {
           setDbStats(data.stats || null);
+        }
+        if (endpoint.name === 'Users' && data.users) {
+          setUsers(data.users);
         }
 
       } catch (error) {
@@ -122,14 +143,35 @@ function AdminPageContent() {
       setLoading(true);
       const startTime = Date.now();
       
+      // First check if schema exists
+      try {
+        await api.admin.setupDatabase();
+      } catch (schemaError) {
+        console.warn('Schema setup warning:', schemaError);
+      }
+      
       const data = await api.admin.seedDatabase();
       const responseTime = Date.now() - startTime;
       
-      alert(`Database Seeded Successfully!\nTime: ${responseTime}ms\nRecords: ${JSON.stringify(data.recordsCreated, null, 2)}`);
-      // Refresh all data
-      await runHealthChecks();
+      if (data.success && data.recordsCreated) {
+        const message = `Database Seeded Successfully!\n\nTime: ${responseTime}ms\n\nRecords Created:\n` +
+          `• Users: ${data.recordsCreated.users}\n` +
+          `• Personas: ${data.recordsCreated.personas}\n` +
+          `• Conversations: ${data.recordsCreated.conversations}\n` +
+          `• Messages: ${data.recordsCreated.messages}`;
+        alert(message);
+        
+        // Refresh all data
+        await runHealthChecks();
+      } else {
+        alert('Database seeding completed but with unexpected response format');
+      }
     } catch (error) {
-      alert(`Database Seeding Error: ${error instanceof Error ? error.message : 'Network error'}`);
+      console.error('Database seeding error:', error);
+      const errorMessage = error instanceof Error 
+        ? `Database Seeding Error:\n\n${error.message}\n\nCheck the browser console for more details.`
+        : 'Network error during database seeding';
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -234,13 +276,14 @@ function AdminPageContent() {
             <nav className="-mb-px flex space-x-8">
               {[
                 { id: 'overview', label: 'Overview' },
+                { id: 'users', label: `Users (${users.length})` },
                 { id: 'personas', label: `Personas (${personas.length})` },
                 { id: 'conversations', label: `Conversations (${conversations.length})` },
                 { id: 'raw', label: 'Raw API Data' },
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setSelectedTab(tab.id as 'overview' | 'personas' | 'conversations' | 'raw')}
+                  onClick={() => setSelectedTab(tab.id as 'overview' | 'users' | 'personas' | 'conversations' | 'raw')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     selectedTab === tab.id
                       ? 'border-[#8B6B4A] text-[#8B6B4A]'
@@ -367,6 +410,90 @@ function AdminPageContent() {
                 </a>
               </div>
             </div>
+          </div>
+        )}
+
+        {selectedTab === 'users' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Registered Users</h2>
+            {users.length === 0 ? (
+              <p className="text-gray-600">No users found in database</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Display Name</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personas</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversations</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {users.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {user.email}
+                          {user.isEmailVerified && (
+                            <span className="ml-2 text-green-600" title="Email verified">✓</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.displayName || '—'}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            user.role === 'admin' 
+                              ? 'bg-purple-100 text-purple-800' 
+                              : user.role === 'premium'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            user.subscription === 'premium' 
+                              ? 'bg-yellow-100 text-yellow-800' 
+                              : user.subscription === 'basic'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {user.subscription}
+                          </span>
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.lastLoginAt 
+                            ? new Date(user.lastLoginAt).toLocaleString() 
+                            : <span className="text-gray-400">Never</span>
+                          }
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.personaCount}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.conversationCount}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            user.isActive 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {user.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 

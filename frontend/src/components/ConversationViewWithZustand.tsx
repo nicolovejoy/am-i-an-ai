@@ -13,11 +13,6 @@ interface ConversationViewProps {
   conversationId: string;
 }
 
-interface ConversationParticipant extends PersonaInstance {
-  personaName: string;
-  personaType: 'human' | 'ai_agent';
-}
-
 export function ConversationViewWithZustand({ conversationId }: ConversationViewProps) {
   const {
     conversation,
@@ -36,7 +31,7 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
 
   // Get the human participant (for sending messages)
   const humanParticipant = conversation?.participants.find(
-    (p: ConversationParticipant) => p.personaType === 'human'
+    (p) => (p as any).personaType === 'human'
   );
 
   const handleSendMessage = async (content: string) => {
@@ -46,7 +41,7 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
       setMessageError(null);
       sendMessage({ 
         content: content.trim(), 
-        personaId: humanParticipant.personaId 
+        personaId: humanParticipant?.personaId || '' 
       });
     } catch (error) {
       // Error is handled by the mutation
@@ -77,11 +72,11 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
   }
 
   // Transform participants for display
-  const participants = conversation.participants.map((p: ConversationParticipant) => ({
+  const participants = conversation.participants.map((p) => ({
     id: p.personaId,
-    name: p.personaName || 'Unknown',
-    type: p.personaType,
-    avatar: p.personaType === 'human' ? '👤' : '🤖'
+    name: (p as any).personaName || 'Unknown',
+    type: (p as any).personaType || 'human',
+    avatar: (p as any).personaType === 'human' ? '👤' : '🤖'
   }));
 
   // Note: typingParticipants functionality would be implemented when needed
@@ -117,10 +112,10 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
       <div className="flex-1 overflow-hidden">
         <MessageList 
           messages={messages}
-          participants={participants.map((p: { id: string; name: string; type: string }) => ({
+          participants={participants.map((p) => ({
             personaId: p.id,
             personaName: p.name,
-            personaType: p.type,
+            personaType: p.type as 'human' | 'ai_agent',
             isRevealed: true
           }))}
           typingPersonas={new Set()}
