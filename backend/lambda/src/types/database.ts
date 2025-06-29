@@ -12,7 +12,7 @@ export interface User {
 export interface Persona {
   id: string;
   name: string;
-  type: 'human_persona' | 'ai_agent';
+  type: 'human_persona' | 'ai_agent' | 'ai_ambiguous';
   owner_id: string;
   description?: string;
   personality?: any; // JSONB

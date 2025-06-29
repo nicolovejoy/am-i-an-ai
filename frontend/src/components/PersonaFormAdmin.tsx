@@ -68,7 +68,7 @@ const AI_PROVIDERS = [
   { value: 'custom', label: 'Custom' }
 ];
 
-export function PersonaForm({ persona, onSubmit, onCancel }: PersonaFormProps) {
+export function PersonaFormAdmin({ persona, onSubmit, onCancel }: PersonaFormProps) {
   const [formData, setFormData] = useState<PersonaCreate>({
     name: '',
     type: 'human_persona',
@@ -232,7 +232,8 @@ export function PersonaForm({ persona, onSubmit, onCancel }: PersonaFormProps) {
       {/* Basic Information */}
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">AI Persona Configuration</h3>
+          <p className="text-sm text-gray-600 mb-4">Admin-only: Create and configure AI agents with advanced behavioral settings</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Name */}
@@ -248,7 +249,7 @@ export function PersonaForm({ persona, onSubmit, onCancel }: PersonaFormProps) {
                 className={`block w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#8B6B4A] focus:border-[#8B6B4A] transition-colors ${
                   errors.name ? 'border-red-300' : 'border-gray-300'
                 }`}
-                placeholder="e.g., Creative Writer, Data Scientist"
+                placeholder="e.g., AI Writing Assistant, AI Research Assistant"
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
             </div>

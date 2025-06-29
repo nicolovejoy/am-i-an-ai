@@ -9,6 +9,9 @@ import React, {
 } from "react";
 import { cognitoService } from "../services/cognito";
 import { AuthUser } from "../types/auth";
+import { useConversationStore } from "../store/conversationStore";
+import { useConversationsListStore } from "../store/conversationsListStore";
+import { usePersonaStore } from "../store/personaStore";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -44,9 +47,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = () => {
+    // Clear authentication state
     cognitoService.signOut();
     setIsAuthenticated(false);
     setUser(null);
+    
+    // Clear all user data from stores
+    const conversationStore = useConversationStore.getState();
+    const conversationsListStore = useConversationsListStore.getState();
+    const personaStore = usePersonaStore.getState();
+    
+    conversationStore.clearAllData();
+    conversationsListStore.clearAllData();
+    personaStore.clearAllData();
+    
+    // Clear session storage
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.clear();
+    }
   };
 
   useEffect(() => {

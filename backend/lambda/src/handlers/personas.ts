@@ -234,6 +234,34 @@ async function createPersona(
 
     const personaData = JSON.parse(event.body);
     
+    // Validate persona type and user permissions
+    const ALLOWED_PERSONA_TYPES = ['human_persona', 'ai_agent', 'ai_ambiguous'];
+    const ADMIN_ONLY_TYPES = ['ai_agent'];
+    
+    if (!ALLOWED_PERSONA_TYPES.includes(personaData.type)) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: `Invalid persona type. Must be one of: ${ALLOWED_PERSONA_TYPES.join(', ')}`,
+        }),
+      };
+    }
+    
+    // Check if user is admin for AI agent creation
+    const userIsAdmin = isAdmin(event.user, dbUser);
+    if (!userIsAdmin && ADMIN_ONLY_TYPES.includes(personaData.type)) {
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: "Only administrators can create AI agent personas",
+        }),
+      };
+    }
+    
     // Validate required fields
     if (!personaData.name || !personaData.type || !personaData.description) {
       return {

@@ -4,6 +4,31 @@ import '@testing-library/jest-dom';
 import PersonasPage from '../page';
 import { api } from '@/services/apiClient';
 
+// Mock useRoleAccess hook
+jest.mock('@/hooks/useRoleAccess', () => ({
+  useRoleAccess: () => ({
+    isAdmin: jest.fn().mockReturnValue(false), // Default to non-admin user
+    hasRole: jest.fn(),
+    canAccessAdmin: jest.fn().mockReturnValue(false),
+    userRole: 'user'
+  })
+}));
+
+// Mock AuthContext
+const mockAuthContext = {
+  isAuthenticated: true,
+  user: { id: 'test-user', email: 'test@example.com' },
+  isLoading: false,
+  signOut: jest.fn(),
+  checkAuthStatus: jest.fn(),
+  error: null
+};
+
+jest.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => mockAuthContext,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children
+}));
+
 // Mock the API client
 jest.mock('@/services/apiClient', () => ({
   api: {
@@ -33,12 +58,23 @@ jest.mock('@/components/PersonaList', () => ({
   ),
 }));
 
-// Mock the PersonaForm component
-jest.mock('@/components/PersonaForm', () => ({
-  PersonaForm: ({ onSubmit, onCancel }: { onSubmit: (data: unknown) => void; onCancel: () => void }) => (
-    <div data-testid="persona-form">
+// Mock the PersonaForm components
+jest.mock('@/components/PersonaFormUser', () => ({
+  PersonaFormUser: ({ onSubmit, onCancel }: { onSubmit: (data: unknown) => void; onCancel: () => void }) => (
+    <div data-testid="persona-form-user">
+      <button onClick={() => onSubmit({ name: 'Test Persona', type: 'human_persona' })}>
+        Submit User Form
+      </button>
+      <button onClick={onCancel}>Cancel</button>
+    </div>
+  ),
+}));
+
+jest.mock('@/components/PersonaFormAdmin', () => ({
+  PersonaFormAdmin: ({ onSubmit, onCancel }: { onSubmit: (data: unknown) => void; onCancel: () => void }) => (
+    <div data-testid="persona-form-admin">
       <button onClick={() => onSubmit({ name: 'Test Persona', type: 'ai_agent' })}>
-        Submit
+        Submit Admin Form
       </button>
       <button onClick={onCancel}>Cancel</button>
     </div>
@@ -160,20 +196,20 @@ describe('PersonasPage', () => {
     fireEvent.click(screen.getByText('Create Persona'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('persona-form')).toBeInTheDocument();
+      expect(screen.getByTestId('persona-form-user')).toBeInTheDocument();
     });
 
-    // Submit the form
-    fireEvent.click(screen.getByText('Submit'));
+    // Submit User Form the form
+    fireEvent.click(screen.getByText('Submit User Form'));
 
     await waitFor(() => {
       expect(api.personas.create).toHaveBeenCalledTimes(1);
       expect(api.personas.create).toHaveBeenCalledWith({
         name: 'Test Persona',
-        type: 'ai_agent'
+        type: 'human_persona'
       });
       // Form should be hidden after successful creation
-      expect(screen.queryByTestId('persona-form')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('persona-form-user')).not.toBeInTheDocument();
     });
   });
 
@@ -219,16 +255,16 @@ describe('PersonasPage', () => {
     fireEvent.click(screen.getByText('Create Persona'));
     
     await waitFor(() => {
-      expect(screen.getByTestId('persona-form')).toBeInTheDocument();
+      expect(screen.getByTestId('persona-form-user')).toBeInTheDocument();
     });
 
-    // Submit the form
-    fireEvent.click(screen.getByText('Submit'));
+    // Submit User Form the form
+    fireEvent.click(screen.getByText('Submit User Form'));
 
     await waitFor(() => {
       expect(api.personas.create).toHaveBeenCalledTimes(1);
       // Form should still be visible on error
-      expect(screen.getByTestId('persona-form')).toBeInTheDocument();
+      expect(screen.getByTestId('persona-form-user')).toBeInTheDocument();
     });
   });
 
@@ -300,11 +336,11 @@ describe('PersonasPage', () => {
     fireEvent.click(screen.getByText('Create Persona'));
     
     await waitFor(() => {
-      expect(screen.getByTestId('persona-form')).toBeInTheDocument();
+      expect(screen.getByTestId('persona-form-user')).toBeInTheDocument();
     });
 
-    // Submit the form
-    fireEvent.click(screen.getByText('Submit'));
+    // Submit User Form the form
+    fireEvent.click(screen.getByText('Submit User Form'));
 
     await waitFor(() => {
       expect(api.personas.create).not.toHaveBeenCalled();
@@ -329,14 +365,14 @@ describe('PersonasPage', () => {
     fireEvent.click(screen.getByText('Create Persona'));
     
     await waitFor(() => {
-      expect(screen.getByTestId('persona-form')).toBeInTheDocument();
+      expect(screen.getByTestId('persona-form-user')).toBeInTheDocument();
     });
 
     // Cancel the form
     fireEvent.click(screen.getByText('Cancel'));
 
     await waitFor(() => {
-      expect(screen.queryByTestId('persona-form')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('persona-form-user')).not.toBeInTheDocument();
     });
   });
 });

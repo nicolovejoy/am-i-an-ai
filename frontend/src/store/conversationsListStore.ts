@@ -48,6 +48,7 @@ interface ConversationsListState {
   
   // Utility
   resetList: () => void;
+  clearAllData: () => void;
 }
 
 export const useConversationsListStore = create<ConversationsListState>()(
@@ -131,6 +132,19 @@ export const useConversationsListStore = create<ConversationsListState>()(
           totalCount: 0,
           hasMore: true,
           filters: {},
+          conversationsError: null
+        })),
+      
+      clearAllData: () =>
+        set(() => ({
+          conversations: [],
+          page: 1,
+          pageSize: 20,
+          totalCount: 0,
+          hasMore: true,
+          filters: {},
+          loadingConversations: false,
+          loadingMore: false,
           conversationsError: null
         }))
     }),

@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { PersonaList } from '@/components/PersonaList';
-import { PersonaForm } from '@/components/PersonaForm';
+import { PersonaFormUser } from '@/components/PersonaFormUser';
+import { PersonaFormAdmin } from '@/components/PersonaFormAdmin';
+import { useRoleAccess } from '@/hooks/useRoleAccess';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { api } from '@/services/apiClient';
@@ -14,6 +16,7 @@ export default function PersonasPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
+  const { isAdmin } = useRoleAccess();
 
   useEffect(() => {
     loadPersonas();
@@ -234,14 +237,25 @@ export default function PersonasPage() {
                   </svg>
                 </button>
               </div>
-              <PersonaForm
-                persona={editingPersona}
-                onSubmit={handleCreatePersona}
-                onCancel={() => {
-                  setShowCreateForm(false);
-                  setEditingPersona(null);
-                }}
-              />
+              {isAdmin() ? (
+                <PersonaFormAdmin
+                  persona={editingPersona}
+                  onSubmit={handleCreatePersona}
+                  onCancel={() => {
+                    setShowCreateForm(false);
+                    setEditingPersona(null);
+                  }}
+                />
+              ) : (
+                <PersonaFormUser
+                  persona={editingPersona}
+                  onSubmit={handleCreatePersona}
+                  onCancel={() => {
+                    setShowCreateForm(false);
+                    setEditingPersona(null);
+                  }}
+                />
+              )}
             </div>
           ) : (
             <PersonaList

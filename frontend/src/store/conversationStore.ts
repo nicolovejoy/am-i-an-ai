@@ -52,6 +52,7 @@ interface ConversationState {
   
   // Utility
   clearConversationData: () => void;
+  clearAllData: () => void;
 }
 
 export const useConversationStore = create<ConversationState>()(
@@ -171,7 +172,28 @@ export const useConversationStore = create<ConversationState>()(
             drafts: {},
             conversationError: null,
             messageError: null
-          }))
+          })),
+        
+        clearAllData: () => {
+          // Clear the state
+          set(() => ({
+            activeConversationId: null,
+            activeConversation: null,
+            messages: {},
+            typingPersonas: new Set(),
+            drafts: {},
+            loadingConversation: false,
+            loadingMessages: false,
+            sendingMessage: false,
+            conversationError: null,
+            messageError: null
+          }));
+          
+          // Clear localStorage persistence
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('conversation-storage');
+          }
+        }
       }),
       {
         name: 'conversation-storage',

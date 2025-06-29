@@ -16,13 +16,15 @@
 
 ## 🚀 **Next Priorities**
 
-### **1. UX Simplification & Polish** *(Ready)*
-- ✅ **Conversation Interface**: Fixed layout, positioning, and scrolling behavior
-- ✅ **Homepage Layout**: Reduced padding, improved card design, better visual hierarchy
-- ✅ **Production Issues**: All critical bugs resolved (persona creation, admin access, conversation detail pages)
-- 🔄 **Persona Form Audit**: Determine which fields actually affect AI behavior (PRIORITY)
-- **Navigation Simplification**: Streamline menu options and admin functions 
-- **Mobile Responsiveness**: Enhanced mobile conversation experience
+### **1. Persona UX Redesign** *(COMPLETED)*
+- ✅ **Persona Form Audit**: Completed - identified which fields affect AI behavior
+- ✅ **Split User/Admin Persona Creation**: 
+  - ✅ **Phase 1**: Created PersonaFormUser (simplified) vs PersonaFormAdmin (full AI config)
+  - 🔄 **Phase 2**: Redesign persona listing - "Conversation Partners" vs "AI Assistants" sections  
+  - 🔄 **Phase 3**: Move advanced AI configuration to admin console
+- ✅ **User Experience**: Regular users create human/ambiguous personas only (no AI config)
+- ✅ **Admin Experience**: Full AI agent creation with personality traits, model config, system prompts
+- ✅ **Backend Validation**: Added persona type restrictions - only admins can create AI agents
 
 ### **2. Technical Optimizations**
 - State management consolidation (eliminate component duplication)

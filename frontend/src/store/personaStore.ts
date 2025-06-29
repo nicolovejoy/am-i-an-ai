@@ -30,6 +30,9 @@ interface PersonaState {
   // Loading and errors
   setLoadingPersonas: (loading: boolean) => void;
   setPersonaError: (error: string | null) => void;
+  
+  // Utility
+  clearAllData: () => void;
 }
 
 export const usePersonaStore = create<PersonaState>()(
@@ -88,7 +91,15 @@ export const usePersonaStore = create<PersonaState>()(
         set(() => ({ loadingPersonas: loading })),
       
       setPersonaError: (error) =>
-        set(() => ({ personaError: error }))
+        set(() => ({ personaError: error })),
+      
+      clearAllData: () =>
+        set(() => ({
+          personas: [],
+          selectedPersonas: [],
+          loadingPersonas: false,
+          personaError: null
+        }))
     }),
     {
       name: 'persona-store'
