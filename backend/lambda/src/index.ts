@@ -61,10 +61,8 @@ export const handler = async (
     }
 
     if (path.startsWith('/api/users') || path.startsWith('/api/connections')) {
-      console.log('User routes matched for path:', path);
       // User profile endpoints - need authentication for most operations
       return await requireAuthentication(event, context, async (authenticatedEvent) => {
-        console.log('Authentication successful, calling handleUsers');
         return await handleUsers(authenticatedEvent, corsHeaders);
       });
     }

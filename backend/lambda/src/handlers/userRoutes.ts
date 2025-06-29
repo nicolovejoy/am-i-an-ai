@@ -16,13 +16,9 @@ export async function handleUsers(
     const method = event.httpMethod;
     const path = event.path;
 
-    console.log('UserRoutes Debug:', { method, path, user: event.user });
-
     // Extract path segments
     const pathSegments = path.split('/').filter(Boolean);
     // pathSegments = ['api', 'users', ...rest]
-
-    console.log('Path segments:', pathSegments);
 
     if (pathSegments.length < 3) {
       return {

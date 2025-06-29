@@ -120,7 +120,6 @@ export const getCurrentUser = async (
   _context: any
 ): Promise<APIGatewayProxyResult> => {
   try {
-    console.log('getCurrentUser called with user:', event.user);
     const userId = event.user.id;
 
     const result = await queryDatabase(`
