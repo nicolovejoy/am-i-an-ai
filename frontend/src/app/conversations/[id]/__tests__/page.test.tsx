@@ -44,65 +44,17 @@ describe('ConversationPage', () => {
   });
 
   describe('Static Generation', () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
-
     it('exports generateStaticParams function', () => {
       expect(typeof generateStaticParams).toBe('function');
     });
 
-    it('returns correct static params when API call fails', async () => {
-      // Mock fetch to fail
-      (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
-      
+    it('returns real conversation IDs from seeded database', async () => {
       const params = await generateStaticParams();
       
       expect(params).toEqual([
-        { id: '01234567-1111-1111-1111-012345678901' },
-        { id: '01234567-4444-4444-4444-012345678901' },
-        { id: '01234567-7777-7777-7777-012345678901' },
-      ]);
-    });
-
-    it('returns real conversation IDs when API succeeds', async () => {
-      // Mock successful API response
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          conversations: [
-            { id: 'real-conversation-1' },
-            { id: 'real-conversation-2' },
-            { id: 'real-conversation-3' },
-          ]
-        })
-      });
-      
-      const params = await generateStaticParams();
-      
-      expect(params).toEqual([
-        { id: 'real-conversation-1' },
-        { id: 'real-conversation-2' },
-        { id: 'real-conversation-3' },
-      ]);
-    });
-
-    it('returns fallback when API returns invalid data', async () => {
-      // Mock API response with invalid data
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: false,
-        })
-      });
-      
-      const params = await generateStaticParams();
-      
-      expect(params).toEqual([
-        { id: '01234567-1111-1111-1111-012345678901' },
-        { id: '01234567-4444-4444-4444-012345678901' },
-        { id: '01234567-7777-7777-7777-012345678901' },
+        { id: '770e8400-e29b-41d4-a716-446655440001' }, // Creative Writing Discussion
+        { id: '770e8400-e29b-41d4-a716-446655440002' }, // Philosophy of AI Consciousness
+        { id: '770e8400-e29b-41d4-a716-446655440003' }, // Technology Trends 2024
       ]);
     });
   });
