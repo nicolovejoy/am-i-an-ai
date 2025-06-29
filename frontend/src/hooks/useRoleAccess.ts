@@ -5,6 +5,7 @@
  */
 
 import { useAuth } from "../contexts/AuthContext";
+import { isAdmin, isModerator, getUserRole } from "../utils/adminConfig";
 
 export type UserRole = 'user' | 'moderator' | 'admin';
 
@@ -12,36 +13,38 @@ export const useRoleAccess = () => {
   const { user, isAuthenticated } = useAuth();
 
   const hasRole = (requiredRole: UserRole): boolean => {
-    if (!isAuthenticated || !user?.role) {
+    if (!isAuthenticated || !user) {
       return false;
     }
 
+    const userRole = getUserRole(user);
+    
     const roleHierarchy: Record<UserRole, number> = {
       user: 1,
       moderator: 2,
       admin: 3,
     };
 
-    const userRoleLevel = roleHierarchy[user.role.toLowerCase() as UserRole] || 0;
+    const userRoleLevel = roleHierarchy[userRole] || 0;
     const requiredRoleLevel = roleHierarchy[requiredRole];
 
     return userRoleLevel >= requiredRoleLevel;
   };
 
-  const isAdmin = (): boolean => hasRole('admin');
-  const isModerator = (): boolean => hasRole('moderator');
-  const isUser = (): boolean => hasRole('user');
+  const checkIsAdmin = (): boolean => isAdmin(user);
+  const checkIsModerator = (): boolean => isModerator(user);
+  const checkIsUser = (): boolean => hasRole('user');
 
-  const canAccessAdmin = (): boolean => isAdmin();
-  const canModerate = (): boolean => isModerator() || isAdmin();
+  const canAccessAdmin = (): boolean => checkIsAdmin();
+  const canModerate = (): boolean => checkIsModerator() || checkIsAdmin();
 
   return {
     hasRole,
-    isAdmin,
-    isModerator,
-    isUser,
+    isAdmin: checkIsAdmin,
+    isModerator: checkIsModerator,
+    isUser: checkIsUser,
     canAccessAdmin,
     canModerate,
-    userRole: user?.role || null,
+    userRole: getUserRole(user),
   };
 };

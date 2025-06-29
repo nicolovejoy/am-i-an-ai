@@ -1,6 +1,7 @@
 import { APIGatewayProxyResult } from "aws-lambda";
 import { queryDatabase } from "../lib/database";
 import { AuthenticatedEvent } from '../middleware/cognito-auth';
+import { getUserWithSync } from '../services/userSync.js';
 
 export async function handlePersonas(
   event: AuthenticatedEvent,
@@ -218,6 +219,19 @@ async function createPersona(
       };
     }
 
+    // Ensure user exists in database before creating persona
+    const dbUser = await getUserWithSync(event.user);
+    if (!dbUser) {
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: "Failed to sync user to database",
+        }),
+      };
+    }
+
     const personaData = JSON.parse(event.body);
     
     // Validate required fields
@@ -265,7 +279,7 @@ async function createPersona(
       personaData.name,
       personaData.type,
       personaData.description,
-      event.user?.id || null, // Set owner_id to authenticated user
+      dbUser.id, // Set owner_id to synced database user
       JSON.stringify(personality),
       knowledge,
       communicationStyle,
