@@ -117,7 +117,7 @@ describe('MessageList', () => {
       
       const container = screen.getByRole('log');
       expect(container).toHaveAttribute('aria-label', 'Conversation messages');
-      expect(container).toHaveClass('flex-1', 'overflow-y-auto', 'p-4', 'space-y-4');
+      expect(container).toHaveClass('h-full', 'overflow-y-auto', 'p-4', 'space-y-4');
     });
   });
 

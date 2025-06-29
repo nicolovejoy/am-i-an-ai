@@ -17,12 +17,37 @@ interface MessageListProps {
 
 export function MessageList({ messages, participants, typingPersonas = new Set() }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(messages.length);
+  const isUserScrollingRef = useRef(false);
 
-  // Auto-scroll to bottom when new messages arrive or typing indicators change
+  // Track when user manually scrolls
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px threshold
+    
+    // If user scrolls away from bottom, mark as manually scrolling
+    if (!isAtBottom) {
+      isUserScrollingRef.current = true;
+    } else {
+      // If user scrolls back to bottom, allow auto-scroll again
+      isUserScrollingRef.current = false;
+    }
+  };
+
+  // Auto-scroll to bottom only when new messages arrive and user hasn't manually scrolled up
   useEffect(() => {
-    if (scrollRef.current) {
+    if (!scrollRef.current) return;
+
+    const hasNewMessages = messages.length > prevMessageCountRef.current;
+    const shouldAutoScroll = hasNewMessages && !isUserScrollingRef.current;
+
+    if (shouldAutoScroll || typingPersonas.size > 0) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+
+    prevMessageCountRef.current = messages.length;
   }, [messages, typingPersonas]);
 
   // Create participant lookup for efficient access
@@ -36,7 +61,7 @@ export function MessageList({ messages, participants, typingPersonas = new Set()
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex flex-col">
+      <div className="h-full flex flex-col">
         {/* Empty state positioned in upper portion */}
         <div className="flex-1 flex items-center justify-center max-h-96 min-h-48">
           <div className="text-center">
@@ -53,9 +78,10 @@ export function MessageList({ messages, participants, typingPersonas = new Set()
   return (
     <div 
       ref={scrollRef}
-      className="flex-1 overflow-y-auto p-4 space-y-4"
+      className="h-full overflow-y-auto p-4 space-y-4"
       role="log"
       aria-label="Conversation messages"
+      onScroll={handleScroll}
     >
       {messages.map((message, index) => {
         const participant = participantMap.get(message.authorPersonaId);

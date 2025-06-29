@@ -43,10 +43,12 @@ describe('MessageInput', () => {
         />
       );
       
-      expect(screen.getByText('Press Enter to send, Shift+Enter for new line')).toBeInTheDocument();
+      expect(screen.getByText('Enter to send • Shift+Enter for new line')).toBeInTheDocument();
     });
 
-    it('displays character count', () => {
+    it('displays character count when typing', async () => {
+      const user = userEvent.setup();
+      
       render(
         <MessageInput 
           onSendMessage={mockOnSendMessage} 
@@ -54,7 +56,14 @@ describe('MessageInput', () => {
         />
       );
       
-      expect(screen.getByText('0/1000')).toBeInTheDocument();
+      // Character count should not be visible initially
+      expect(screen.queryByText('0/1000')).not.toBeInTheDocument();
+      
+      // Type something to make character count appear
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Hello');
+      
+      expect(screen.getByText('5/1000')).toBeInTheDocument();
     });
   });
 

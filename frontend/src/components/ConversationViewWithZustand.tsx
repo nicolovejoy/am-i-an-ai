@@ -96,9 +96,9 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
   // Note: typingParticipants functionality would be implemented when needed
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-[calc(100vh-4rem)] bg-white">
       {/* Header */}
-      <div className="border-b p-4">
+      <div className="flex-shrink-0 border-b p-4 bg-white">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">
@@ -122,8 +122,8 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-hidden">
+      {/* Messages - Scrollable area */}
+      <div className="flex-1 overflow-hidden min-h-0">
         <MessageList 
           messages={messages}
           participants={participants.map((p) => ({
@@ -138,15 +138,15 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
 
       {/* Error display */}
       {(messageError || messagesError) && (
-        <div className="px-4 py-2 bg-red-50 border-t border-red-200">
+        <div className="flex-shrink-0 px-4 py-2 bg-red-50 border-t border-red-200">
           <p className="text-sm text-red-600">
             {messageError || (messagesError instanceof Error ? messagesError.message : 'Error loading messages')}
           </p>
         </div>
       )}
 
-      {/* Input */}
-      <div className="border-t p-4">
+      {/* Input - Fixed at bottom with spacing */}
+      <div className="flex-shrink-0 border-t bg-white pb-4">
         <MessageInput
           onSendMessage={handleSendMessage}
           conversationStatus="active"
