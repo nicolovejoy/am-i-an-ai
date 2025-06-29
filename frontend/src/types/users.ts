@@ -2,6 +2,8 @@ export type SubscriptionTier = 'free' | 'basic' | 'premium' | 'enterprise';
 export type UserRole = 'user' | 'moderator' | 'admin';
 export type NotificationPreference = 'all' | 'important' | 'none';
 export type ThemePreference = 'light' | 'dark' | 'system';
+export type PrivacyLevel = 'connections' | 'network' | 'public';
+export type ConnectionStatus = 'pending' | 'accepted' | 'rejected' | 'blocked';
 
 export interface SubscriptionLimits {
   maxPersonas: number;
@@ -54,12 +56,17 @@ export interface User {
   id: string;
   email: string;
   displayName?: string;
-  avatar?: string;
+  bio?: string;
   
   // Account details
   role: UserRole;
   subscription: SubscriptionTier;
   subscriptionExpiresAt?: Date;
+  
+  // Privacy and trust
+  privacyLevel: PrivacyLevel;
+  trustScore: number;
+  connectionCount: number;
   
   // Preferences and settings
   preferences: UserPreferences;
@@ -92,26 +99,17 @@ export interface UserCreate {
 
 export interface UserUpdate {
   displayName?: string;
-  avatar?: string;
-  preferences?: Partial<UserPreferences>;
+  bio?: string;
 }
 
 export interface UserProfile {
   id: string;
   displayName?: string;
-  avatar?: string;
   bio?: string;
-  publicPersonas: Array<{
-    id: string;
-    name: string;
-    type: string;
-    description: string;
-    conversationCount: number;
-    rating: number;
-  }>;
-  stats: UserStats;
-  achievements: UserAchievement[];
+  trustScore: number;
+  connectionCount: number;
   joinedAt: Date;
+  lastSeen?: Date; // Only visible to connections
 }
 
 export interface UserAchievement {
@@ -143,6 +141,16 @@ export interface UserNotification {
   isRead: boolean;
   createdAt: Date;
   expiresAt?: Date;
+}
+
+export interface UserConnection {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  status: ConnectionStatus;
+  trustScore: number;
+  createdAt: Date;
+  confirmedAt?: Date;
 }
 
 export interface UserSession {

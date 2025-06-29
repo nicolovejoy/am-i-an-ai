@@ -2,6 +2,7 @@ import { APIGatewayProxyResult } from "aws-lambda";
 import { queryDatabase } from "../lib/database";
 import { AuthenticatedEvent } from '../middleware/cognito-auth';
 import { getUserWithSync } from '../services/userSync.js';
+import { isAdmin } from '../utils/adminConfig.js';
 
 export async function handlePersonas(
   event: AuthenticatedEvent,

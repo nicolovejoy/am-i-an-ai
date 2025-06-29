@@ -2,6 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda
 import { handleConversations } from './handlers/conversations';
 import { handlePersonas } from './handlers/personas';
 import { handleAI } from './handlers/ai';
+import { handleUsers } from './handlers/userRoutes';
 import { requireAdminAccess, requireAuthentication } from './middleware/cognito-auth';
 import { handleSecureAdmin } from './handlers/secureAdmin';
 
@@ -56,6 +57,15 @@ export const handler = async (
     if (path.startsWith('/api/admin')) {
       return await requireAdminAccess(event, context, async (authenticatedEvent) => {
         return await handleSecureAdmin(authenticatedEvent, corsHeaders);
+      });
+    }
+
+    if (path.startsWith('/api/users') || path.startsWith('/api/connections')) {
+      console.log('User routes matched for path:', path);
+      // User profile endpoints - need authentication for most operations
+      return await requireAuthentication(event, context, async (authenticatedEvent) => {
+        console.log('Authentication successful, calling handleUsers');
+        return await handleUsers(authenticatedEvent, corsHeaders);
       });
     }
 

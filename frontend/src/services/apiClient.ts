@@ -183,4 +183,19 @@ export const api = {
   ai: {
     generateResponse: (conversationId: string, data: any) => apiClient.post(`/api/ai/generate-response`, { conversationId, ...data }),
   },
+
+  // Users and Profiles
+  users: {
+    // Current user profile
+    me: () => apiClient.get('/api/users/me'),
+    updateMe: (data: { displayName?: string; bio?: string }) => apiClient.put('/api/users/me', data),
+    
+    // Public profile viewing
+    getProfile: (userId: string) => apiClient.get(`/api/users/${userId}/profile`, { skipAuth: true }),
+    
+    // Connection management
+    sendConnectionRequest: (userId: string) => apiClient.post(`/api/users/${userId}/connect`),
+    respondToConnection: (connectionId: string, status: 'accepted' | 'rejected') => 
+      apiClient.put(`/api/connections/${connectionId}`, { status }),
+  },
 };

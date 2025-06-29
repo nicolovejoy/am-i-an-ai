@@ -1,30 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "../../contexts/AuthContext";
 import { ProtectedRoute } from "../../components/auth/ProtectedRoute";
-import { cognitoService } from "../../services/cognito";
-import { AuthError } from "../../types/auth";
+import { api } from "../../services/apiClient";
+import { User, UserUpdate } from "../../types/users";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { ButtonLoader } from "../../components/LoadingSpinner";
 import { useToastContext } from "../../contexts/ToastContext";
 
 const profileSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  displayName: z.string().min(2, "Display name must be at least 2 characters").max(30, "Display name must be less than 30 characters"),
+  bio: z.string().max(160, "Bio must be less than 160 characters").optional(),
 });
 
 interface ProfileFormData {
-  email: string;
+  displayName: string;
+  bio?: string;
 }
 
 const ProfileContent = () => {
-  const { user, checkAuth } = useAuth();
+  const { user: authUser } = useAuth();
+  const [userProfile, setUserProfile] = useState<User | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<AuthError | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { success: showSuccess, error: showError } = useToastContext();
 
   const {
@@ -35,23 +39,57 @@ const ProfileContent = () => {
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      email: user?.email || "",
+      displayName: "",
+      bio: "",
     },
   });
+
+  // Load user profile on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setIsLoadingProfile(true);
+        const response = await api.users.me();
+        setUserProfile(response);
+        reset({
+          displayName: response.displayName || "",
+          bio: response.bio || "",
+        });
+      } catch (err) {
+        console.error("Failed to load profile:", err);
+        setError("Failed to load profile");
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    if (authUser) {
+      loadProfile();
+    }
+  }, [authUser, reset]);
 
   const onSubmit = async (data: ProfileFormData) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      await cognitoService.updateUserAttributes({ email: data.email });
-      await checkAuth();
+      const updateData: UserUpdate = {
+        displayName: data.displayName,
+        bio: data.bio || undefined,
+      };
+      
+      await api.users.updateMe(updateData);
+      
+      // Reload profile to get updated data
+      const response = await api.users.me();
+      setUserProfile(response);
+      
       showSuccess("Profile updated!", "Your profile has been updated successfully.");
       setIsEditing(false);
     } catch (err) {
-      const authError = err as AuthError;
-      setError(authError);
-      showError("Profile update failed", authError.message);
+      console.error("Profile update failed:", err);
+      setError("Failed to update profile");
+      showError("Profile update failed", "Please try again later.");
     } finally {
       setIsLoading(false);
     }
@@ -60,14 +98,34 @@ const ProfileContent = () => {
   const handleEdit = () => {
     setIsEditing(true);
     setError(null);
-    reset({ email: user?.email || "" });
+    reset({
+      displayName: userProfile?.displayName || "",
+      bio: userProfile?.bio || "",
+    });
   };
 
   const handleCancel = () => {
     setIsEditing(false);
     setError(null);
-    reset({ email: user?.email || "" });
+    reset({
+      displayName: userProfile?.displayName || "",
+      bio: userProfile?.bio || "",
+    });
   };
+
+  if (isLoadingProfile) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -88,7 +146,7 @@ const ProfileContent = () => {
 
         {error && (
           <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">
-            {error.message}
+            {error}
           </div>
         )}
 
@@ -96,19 +154,39 @@ const ProfileContent = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label
-                htmlFor="email"
+                htmlFor="displayName"
                 className="block text-sm font-medium text-gray-700"
               >
-                Email
+                Display Name
               </label>
               <input
-                type="email"
-                id="email"
-                {...register("email")}
+                type="text"
+                id="displayName"
+                {...register("displayName")}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                placeholder="Enter your display name"
               />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              {errors.displayName && (
+                <p className="mt-1 text-sm text-red-600">{errors.displayName.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="bio"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Bio <span className="text-gray-500">(optional, max 160 characters)</span>
+              </label>
+              <textarea
+                id="bio"
+                rows={3}
+                {...register("bio")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                placeholder="Tell others about yourself..."
+              />
+              {errors.bio && (
+                <p className="mt-1 text-sm text-red-600">{errors.bio.message}</p>
               )}
             </div>
 
@@ -137,18 +215,61 @@ const ProfileContent = () => {
             </div>
           </form>
         ) : (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <p className="mt-1 text-gray-900">{user?.email}</p>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Display Name
+                </label>
+                <p className="mt-1 text-gray-900">
+                  {userProfile?.displayName || "Not set"}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+                <p className="mt-1 text-gray-900">{userProfile?.email}</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                User ID
-              </label>
-              <p className="mt-1 text-gray-900 font-mono text-sm">{user?.sub}</p>
+
+            {userProfile?.bio && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Bio
+                </label>
+                <p className="mt-1 text-gray-900">{userProfile.bio}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Trust Score
+                </label>
+                <p className="mt-1 text-2xl font-semibold text-green-600">
+                  {userProfile?.trustScore}/100
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Connections
+                </label>
+                <p className="mt-1 text-2xl font-semibold text-blue-600">
+                  {userProfile?.connectionCount || 0}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Member Since
+                </label>
+                <p className="mt-1 text-gray-900">
+                  {userProfile?.createdAt 
+                    ? new Date(userProfile.createdAt).toLocaleDateString()
+                    : "Unknown"
+                  }
+                </p>
+              </div>
             </div>
           </div>
         )}
