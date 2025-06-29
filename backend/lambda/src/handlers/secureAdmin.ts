@@ -2,6 +2,7 @@ import { APIGatewayProxyResult } from 'aws-lambda';
 import { AuthenticatedEvent } from '../middleware/cognito-auth';
 import { getUserWithSync } from '../services/userSync';
 import { handleAdmin } from './admin';
+import { isAdmin, logAdminAccess } from '../utils/adminConfig';
 
 export async function handleSecureAdmin(
   event: AuthenticatedEvent,
@@ -29,10 +30,10 @@ export async function handleSecureAdmin(
       console.log('User found in database:', { email: dbUser?.email, role: dbUser?.role });
     } catch (error) {
       console.log('Error getting user from database:', error);
-      // If database tables don't exist yet, allow setup operations for known admin emails
-      const adminEmails = ['nlovejoy@me.com'];
-      if (adminEmails.includes(event.user.email || '')) {
-        console.log('Database not ready, but allowing admin email for setup operations');
+      // If database tables don't exist yet, allow setup operations for admin users
+      if (isAdmin(event.user)) {
+        console.log('Database not ready, but allowing admin user for setup operations');
+        logAdminAccess(event.user, 'database_setup', event.path);
         // Allow the admin operations to proceed
         return await handleAdmin(event, corsHeaders);
       } else {
@@ -51,11 +52,8 @@ export async function handleSecureAdmin(
       };
     }
 
-    // Check if user has admin role or is in admin email list
-    const adminEmails = ['nlovejoy@me.com'];
-    const isAdminEmail = adminEmails.includes(dbUser.email || '');
-    
-    if (dbUser.role !== 'admin' && !isAdminEmail) {
+    // Check if user has admin access using centralized admin configuration
+    if (!isAdmin(event.user, dbUser)) {
       console.warn(`Unauthorized admin access attempt by user ${dbUser.email} with role ${dbUser.role}`);
       return {
         statusCode: 403,
@@ -68,11 +66,11 @@ export async function handleSecureAdmin(
       };
     }
     
-    // If user is admin by email but not by role, update their role
-    if (isAdminEmail && dbUser.role !== 'admin') {
-      console.log(`Granting admin role to ${dbUser.email} based on email whitelist`);
+    // If user is admin by email/cognito but not by database role, log for potential update
+    if (isAdmin(event.user) && dbUser.role !== 'admin') {
+      console.log(`User ${dbUser.email} has admin access but database role is ${dbUser.role}`);
       // Note: We're not updating the database here to avoid circular dependencies
-      // The role will be updated on next sync
+      // The role could be updated on next sync or by admin management
     }
 
     // Log admin operation for audit trail

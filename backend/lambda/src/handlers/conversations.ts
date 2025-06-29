@@ -116,10 +116,12 @@ async function getConversation(
         c.can_add_messages, c.initiator_persona_id, c.created_at, c.updated_at,
         c.close_reason, c.closed_by, c.closed_at, c.message_count, c.total_characters, c.topic_tags,
         COALESCE(
-          c.participants,
           jsonb_agg(
             jsonb_build_object(
               'personaId', cp.persona_id,
+              'personaName', COALESCE(p.name, 'Unknown'),
+              'personaType', COALESCE(p.type, 'human'),
+              'ownerId', p.owner_id,
               'role', cp.role,
               'joinedAt', cp.joined_at,
               'isRevealed', cp.is_revealed
@@ -129,11 +131,12 @@ async function getConversation(
         ) as participants
       FROM conversations c
       LEFT JOIN conversation_participants cp ON c.id = cp.conversation_id
+      LEFT JOIN personas p ON cp.persona_id = p.id
       WHERE c.id = $1
       GROUP BY c.id, c.title, c.topic, c.description, c.status, c.metadata,
                c.can_add_messages, c.initiator_persona_id, c.created_at, c.updated_at,
                c.close_reason, c.closed_by, c.closed_at, c.message_count, c.total_characters, 
-               c.topic_tags, c.participants
+               c.topic_tags
     `;
     
     const result = await queryDatabase(conversationQuery, [conversationId]);
@@ -247,6 +250,9 @@ async function getConversations(
           jsonb_agg(
             jsonb_build_object(
               'personaId', cp.persona_id,
+              'personaName', COALESCE(p.name, 'Unknown'),
+              'personaType', COALESCE(p.type, 'human'),
+              'ownerId', p.owner_id,
               'role', cp.role,
               'joinedAt', cp.joined_at,
               'isRevealed', cp.is_revealed
@@ -258,6 +264,7 @@ async function getConversations(
         c.topic_tags
       FROM conversations c
       LEFT JOIN conversation_participants cp ON c.id = cp.conversation_id
+      LEFT JOIN personas p ON cp.persona_id = p.id
       GROUP BY c.id, c.title, c.topic, c.description, c.status, c.metadata,
                c.can_add_messages, c.initiator_persona_id, c.created_at, c.updated_at, 
                c.message_count, c.topic_tags
@@ -562,10 +569,25 @@ async function createMessage(
 
     // Get conversation details for permission checking
     const conversationQuery = `
-      SELECT id, title, topic, description, status, participants, metadata,
-             can_add_messages, initiator_persona_id, created_at, updated_at
-      FROM conversations
-      WHERE id = $1
+      SELECT 
+        c.id, c.title, c.topic, c.description, c.status, c.metadata,
+        c.can_add_messages, c.initiator_persona_id, c.created_at, c.updated_at,
+        COALESCE(
+          jsonb_agg(
+            jsonb_build_object(
+              'personaId', cp.persona_id,
+              'role', cp.role,
+              'joinedAt', cp.joined_at,
+              'isRevealed', cp.is_revealed
+            )
+          ) FILTER (WHERE cp.persona_id IS NOT NULL),
+          '[]'::jsonb
+        ) as participants
+      FROM conversations c
+      LEFT JOIN conversation_participants cp ON c.id = cp.conversation_id
+      WHERE c.id = $1
+      GROUP BY c.id, c.title, c.topic, c.description, c.status, c.metadata,
+               c.can_add_messages, c.initiator_persona_id, c.created_at, c.updated_at
     `;
     
     const convResult = await queryDatabase(conversationQuery, [conversationId]);

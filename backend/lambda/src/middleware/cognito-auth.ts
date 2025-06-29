@@ -1,5 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
+import { isAdmin, logAdminAccess } from '../utils/adminConfig';
 
 export interface UserContext {
   id: string | null;
@@ -227,9 +228,8 @@ export function createAdminEmailMiddleware() {
         };
       }
 
-      // Check if user email is admin
-      const adminEmails = ['nlovejoy@me.com']; // Add more admin emails here as needed
-      if (!adminEmails.includes(user.email || '')) {
+      // Check if user has admin access using centralized config
+      if (!isAdmin(user)) {
         return {
           statusCode: 403,
           headers: corsHeaders,
@@ -239,6 +239,9 @@ export function createAdminEmailMiddleware() {
           }),
         };
       }
+
+      // Log admin access for audit purposes
+      logAdminAccess(user, 'admin_access', event.path);
 
       // Add user context to event and proceed
       const authenticatedEvent: AuthenticatedEvent = {

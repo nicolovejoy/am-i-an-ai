@@ -1,352 +1,62 @@
 # Infrastructure Scripts
 
-### New Script Structure
+## Quick Start
 
-```
-infrastructure/scripts/
-├── deploy.sh                 # Main orchestrator script
-├── components/
-│   ├── state-backend.sh     # S3 + DynamoDB state management
-│   ├── cognito.sh           # Authentication (preserve option)
-│   ├── database.sh          # RDS PostgreSQL + secrets
-│   ├── networking.sh        # VPC + security groups
-│   ├── lambda.sh            # Lambda functions + API Gateway
-│   ├── frontend.sh          # S3 + CloudFront
-│   └── shared.sh            # Common functions
-└── destroy/
-    ├── destroy.sh           # Main destroy orchestrator
-    ├── destroy-selective.sh # Destroy with Cognito preservation
-    └── destroy-complete.sh  # Full teardown including state
-```
-
-### Terraform Module Structure
-
-```
-infrastructure/modules/
-├── cognito/
-│   ├── main.tf
-│   ├── variables.tf
-│   └── outputs.tf
-├── database/
-│   ├── main.tf
-│   ├── variables.tf
-│   └── outputs.tf
-├── networking/
-│   ├── main.tf
-│   ├── variables.tf
-│   └── outputs.tf
-├── lambda/
-│   ├── main.tf
-│   ├── variables.tf
-│   └── outputs.tf
-└── frontend/
-    ├── main.tf
-    ├── variables.tf
-    └── outputs.tf
-```
-
-## Implementation Phases
-
-### ✅ Phase 0: Planning & Documentation
-
-- [x] Document granular infrastructure plan
-- [x] Update destroy script for Cognito preservation prompt
-
-### ✅ Phase 1: Component Scripts (COMPLETED 2025-06-19)
-
-- [x] Extract common functions to `shared.sh`
-- [x] Create individual component deployment scripts (6 components)
-- [x] Create main orchestrator script `deploy.sh`
-- [x] Fix bash compatibility issues (associative arrays)
-- [x] Fix component script path resolution
-- [x] Fix terraform resource targeting for database and lambda
-- [x] Maintain backward compatibility with current monolithic approach
-- [x] **DEPLOYED AND VALIDATED**: All components successfully deployed to production
-
-### ✅ Phase 2: Production Deployment (COMPLETED 2025-06-19)
-
-- [x] State backend deployment working
-- [x] Networking component deployment working
-- [x] Cognito preservation working (user accounts maintained)
-- [x] Database component deployment working (PostgreSQL + secrets)
-- [x] Lambda component deployment working (API healthy)
-- [x] Frontend component deployment working (CloudFront + S3)
-- [x] Fix SSL certificate validation issues
-- [x] Component dependency validation working
-- [x] Update deprecated terraform backend configuration
-
-### 📋 Phase 3: Enhanced Modularization (FUTURE)
-
-- [ ] Split main.tf into focused modules
-- [ ] Add conditional resource creation for preservation scenarios
-- [ ] Test module dependencies and outputs
-- [ ] Update variable files and outputs
-
-### ✅ Phase 4: Documentation & Migration (COMPLETED)
-
-- [x] Update CLAUDE.md with new deployment commands
-- [x] Remove deprecated setup.sh and setup.sh.old scripts
-- [x] Update documentation with granular deployment examples
-- [x] Validate new deployment workflow
-
-## New Deployment Commands
-
-### Full Deployment (Current Behavior)
-
+### Deploy Everything
 ```bash
-# Deploy everything (replaces old setup.sh)
-./scripts/deploy.sh --all
-
-# Deploy with forced refresh
-./scripts/deploy.sh --all --force-refresh
-```
-
-### Selective Component Deployment
-
-```bash
-# Individual components with domane & github user name in one case:
- DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --lambda
-./scripts/deploy.sh --lambda           # Deploy just Lambda functions
-./scripts/deploy.sh --database         # Deploy just database
-./scripts/deploy.sh --frontend         # Deploy just frontend
-./scripts/deploy.sh --cognito          # Deploy just authentication
-
-# Component groups
-./scripts/deploy.sh --backend          # Lambda + Database + API Gateway
-./scripts/deploy.sh --infrastructure   # Networking + Core services (no app)
-./scripts/deploy.sh --application      # Lambda + Frontend (no infrastructure)
-```
-
-### Enhanced Destroy Options
-
-```bash
-# Preserve Cognito (DEFAULT - for user testing)
-./scripts/destroy.sh                   # Prompts, defaults to preserve Cognito
-
-# Explicit preservation
-./scripts/destroy.sh --preserve-cognito
-
-# Full destroy including Cognito
-./scripts/destroy.sh --complete
-
-# Selective component destroy
-./scripts/destroy.sh --lambda --database  # Keep frontend + cognito
-```
-
-## Cognito Preservation Strategy
-
-### Problem Statement
-
-During development iterations, we need to preserve Cognito user pools so that user testers can maintain their accounts across infrastructure rebuilds.
-
-### Solution: Conditional Terraform Resources
-
-```hcl
-# In cognito module
-variable "preserve_cognito" {
-  description = "Skip Cognito resources if preserving existing"
-  type        = bool
-  default     = false
-}
-
-variable "existing_cognito_pool_name" {
-  description = "Name of existing Cognito pool to reference"
-  type        = string
-  default     = "amianai-user-pool"
-}
-
-# Conditional resource creation
-resource "aws_cognito_user_pool" "main" {
-  count = var.preserve_cognito ? 0 : 1
-  # ... existing config
-}
-
-# Data source for existing resources
-data "aws_cognito_user_pool" "existing" {
-  count = var.preserve_cognito ? 1 : 0
-  name  = var.existing_cognito_pool_name
-}
-
-# Output that works for both scenarios
-output "user_pool_id" {
-  value = var.preserve_cognito ?
-    data.aws_cognito_user_pool.existing[0].id :
-    aws_cognito_user_pool.main[0].id
-}
-```
-
-### Destroy Script Enhancement
-
-The destroy script will prompt with Cognito preservation as the default:
-
-```bash
-echo "🔐 Preserve Cognito user pool? (keeps user accounts for testing)"
-echo "   [Y/n] (default: Yes)"
-read -r cognito_response
-
-# Default to preserve if empty response
-if [ -z "$cognito_response" ] || [ "$cognito_response" = "y" ] || [ "$cognito_response" = "Y" ]; then
-    PRESERVE_COGNITO=true
-    echo "✅ Cognito user pool will be preserved"
-else
-    PRESERVE_COGNITO=false
-    echo "❌ Cognito user pool will be destroyed"
-fi
-```
-
-## Benefits
-
-### Development Velocity
-
-- **Faster iterations**: Deploy only changed components
-- **Reduced deployment time**: Skip unchanged infrastructure
-- **Better debugging**: Isolate issues to specific components
-
-### Cost Optimization
-
-- **Selective teardown**: Destroy expensive resources (RDS) while keeping cheap ones
-- **Development flexibility**: Keep core infrastructure, iterate on application
-
-### User Experience
-
-- **Preserve user accounts**: Cognito pools maintained across rebuilds
-- **Continuous testing**: User testers don't lose access during development
-
-### Operational Excellence
-
-- **Modular maintenance**: Update components independently
-- **Clear dependencies**: Explicit component relationships
-- **Better rollbacks**: Revert specific components if needed
-
-## Migration Strategy
-
-### Migration Complete
-
-The old monolithic scripts have been replaced:
-
-```bash
-# OLD (deprecated/removed):
-# ./scripts/setup.sh
-# ./scripts/setup.sh.old
-
-# NEW (production-ready):
+cd infrastructure
 DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all
-DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --lambda
 ```
 
-### Migration Complete
+### Deploy Specific Components
+```bash
+./scripts/deploy.sh --lambda          # Backend code only (~2 min)
+./scripts/deploy.sh --frontend        # Frontend only
+./scripts/deploy.sh --database        # Database only
+./scripts/deploy.sh --cognito         # Auth only
+```
 
-1. **✅ Phase 1**: New granular scripts implemented and tested
-2. **✅ Phase 2**: Production deployment validated
-3. **✅ Phase 3**: Old monolithic scripts removed
-4. **✅ Phase 4**: Documentation updated with new commands
+### Destroy Infrastructure
+```bash
+./scripts/destroy.sh                  # Preserves Cognito users (default)
+./scripts/destroy.sh --complete       # Destroys everything including users
+```
 
-## Testing Strategy
+## Component Structure
 
-### Component Testing
+```
+scripts/
+├── deploy.sh              # Main deployment orchestrator
+├── destroy.sh             # Destruction with Cognito preservation
+└── components/
+    ├── state-backend.sh   # S3 + DynamoDB state
+    ├── cognito.sh         # Authentication
+    ├── database.sh        # RDS PostgreSQL
+    ├── networking.sh      # VPC + security groups
+    ├── lambda.sh          # API functions
+    ├── frontend.sh        # S3 + CloudFront
+    └── shared.sh          # Common utilities
+```
 
-- Each component script must be testable in isolation
-- Mock dependencies where possible
-- Validate outputs and state consistency
+## Deployment Times
 
-### Integration Testing
+- **Lambda only**: ~2 minutes
+- **Full deployment**: ~20 minutes
+- **Individual components**: ~5 minutes
 
-- Test component dependencies and ordering
-- Validate cross-component communications
-- End-to-end deployment validation
+## Recent Updates (2025-06-28)
 
-### Rollback Testing
+✅ **Authentication System Cleanup**
+- Removed legacy API services and auth middleware
+- Centralized admin role management
+- Enhanced security with audit logging
+- All 390 tests passing
 
-- Verify ability to rollback individual components
-- Test recovery from partial deployment failures
-- Validate state consistency after rollbacks
-
-## Security Considerations
-
-### State Management
-
-- Maintain secure state backend
-- Ensure component isolation doesn't compromise security
-- Validate permissions for selective deployments
-
-### Cognito Preservation
-
-- Secure handling of existing Cognito pool references
-- Prevent accidental exposure of user data
-- Maintain authentication security during transitions
-
-## Success Metrics
-
-### Performance
-
-- [ ] Component deployment time < 5 minutes
-- [ ] Full deployment time < 20 minutes (down from 40 minutes)
-- [ ] Lambda-only deployment < 2 minutes
-
-### Reliability
-
-- [ ] 100% backward compatibility maintained
-- [ ] Zero data loss during component updates
-- [ ] Successful Cognito preservation across rebuilds
-
-### Usability
-
-- [ ] Clear error messages for failed deployments
-- [ ] Intuitive command-line interface
-- [ ] Comprehensive documentation and examples
-
-## 🎉 **Implementation Complete - Production Ready!**
-
-### ✅ **Successfully Deployed (2025-06-19)**
-
-- [x] **Phase 0.1**: Create implementation plan documentation
-- [x] **Phase 0.2**: Update destroy script with Cognito preservation prompt
-- [x] **Phase 1.1**: Extract shared functions (`shared.sh`)
-- [x] **Phase 1.2**: Create component scripts (6 components)
-- [x] **Phase 1.3**: Create orchestration script (`deploy.sh`)
-- [x] **Phase 2.1**: Deploy all components to production successfully
-- [x] **Phase 2.2**: Validate Cognito preservation across rebuilds
-- [x] **Phase 2.3**: Fix terraform resource targeting and bash compatibility
-
-### ✅ **All Development Phases Complete (2025-06-28)**
-
-**Infrastructure & Application Layers Both Complete**:
-- ✅ **Infrastructure**: All components deployed and operational
-- ✅ **Application**: Full conversation system working end-to-end
-- ✅ **Database**: Schema, seeding, and migrations working correctly
-- ✅ **Admin Console**: Enhanced with user management and health monitoring
-- ✅ **Permission System**: Single source of truth implemented and tested
-- ✅ **Join System**: Complete participant management working
-
-### 📊 **Success Metrics Achieved**
-
-**Infrastructure Performance**:
-- ✅ Component deployment time < 5 minutes (vs 40 minutes full rebuild)
-- ✅ Full deployment time reduced to ~20 minutes
-- ✅ Lambda-only deployment < 2 minutes
-- ✅ 100% backward compatibility maintained
-- ✅ Zero data loss during component updates
-- ✅ Successful Cognito preservation across rebuilds
-
-**Application Functionality**:
-- ✅ All infrastructure healthy and operational
-- ✅ Full application functionality working end-to-end
-- ✅ AI integration operational with message persistence
-- ✅ Authentication working with proper token management
-- ✅ Conversation creation, listing, and access working
-- ✅ Persona management fully functional
-- ✅ Permission-based access control working correctly
-- ✅ Admin console with user tracking and database management
-
-### 🚀 **Production Ready Status**
-
-**Current State**: Platform is fully operational for production use
-- All core features implemented and tested
-- Database schema stable and migration-ready
-- Infrastructure scripts battle-tested and documented
-- Admin tools complete for ongoing management
+**Recommended**: Lambda-only deployment to apply auth fixes
+```bash
+./scripts/deploy.sh --lambda
+```
 
 ---
 
-_Last updated: 2025-06-28_  
-_Status: **PRODUCTION READY** - All systems operational_
+_Status: **Production Ready** - All systems operational_
