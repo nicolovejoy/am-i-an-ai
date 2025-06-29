@@ -1,5 +1,5 @@
 import React from 'react';
-import { ConversationView } from '@/components/ConversationView';
+import { ConversationViewWithZustand as ConversationView } from '@/components/ConversationViewWithZustand';
 
 interface ConversationPageProps {
   params: {

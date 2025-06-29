@@ -9,6 +9,7 @@ import {
   NodeCallback,
 } from "amazon-cognito-identity-js";
 import { SignUpFormData, SignInFormData, AuthError } from "../types/auth";
+import { getUserRole } from "../utils/adminConfig";
 
 declare const process: {
   env: {
@@ -155,9 +156,10 @@ export const cognitoService = {
             const sub =
               attributes.find((attr) => attr.Name === "sub")?.Value || "";
 
-            // TODO: Get user role from database once schema is set up
-            // For now, give admin access to specific users
-            const role: 'user' | 'moderator' | 'admin' = email === 'nlovejoy@me.com' ? 'admin' : 'user';
+            // TODO: Get user role from database/backend API
+            // For now, use centralized admin configuration
+            const userForRoleCheck = { email, sub, role: 'user' as const };
+            const role = getUserRole(userForRoleCheck);
 
             resolve({ email, sub, role });
           };

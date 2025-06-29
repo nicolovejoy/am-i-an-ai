@@ -30,12 +30,23 @@ export function useConversation(conversationId: string | null) {
       setLoadingConversation(true);
       try {
         const data = await api.conversations.get(conversationId);
-        if (data.success && data.conversation) {
+        
+        // Handle both response formats:
+        // 1. Backend returns: { conversation: {...}, permissions: {...} }
+        // 2. Some endpoints return: { success: true, conversation: {...}, permissions: {...} }
+        if (data.conversation) {
           const conversation = data.conversation;
           setActiveConversation(conversationId, conversation);
           return conversation;
         }
-        throw new Error(data.error || 'Failed to fetch conversation');
+        
+        // If we have success field but it's false, use the error
+        if (data.success === false) {
+          throw new Error(data.error || 'Failed to fetch conversation');
+        }
+        
+        // If we get here, no conversation data was returned
+        throw new Error('Conversation not found');
       } catch (error) {
         setConversationError(error instanceof Error ? error.message : 'Unknown error');
         throw error;
@@ -56,8 +67,11 @@ export function useConversation(conversationId: string | null) {
       setLoadingMessages(true);
       try {
         const data = await api.messages.list(conversationId);
-        if (data.success && data.messages) {
-          const transformedMessages: Message[] = data.messages.map((msg: {
+        
+        if (data.success) {
+          // Handle both empty arrays and populated message arrays
+          const messages = data.messages || [];
+          const transformedMessages: Message[] = messages.map((msg: {
             id: string;
             conversationId: string;
             authorPersonaId: string;
@@ -132,21 +146,51 @@ export function useConversation(conversationId: string | null) {
       
       addMessage(conversationId!, optimisticMessage);
       
-      const data = await api.messages.create(conversationId!, {
+      const messagePayload = {
         conversationId,
-        authorPersonaId: personaId,
+        personaId, // Backend expects 'personaId', not 'authorPersonaId'
         content,
         type: 'text'
-      });
+      };
+      
+      const data = await api.messages.create(conversationId!, messagePayload);
       
       if (!data.success) throw new Error(data.error || 'Failed to send message');
       
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       // Refetch messages to get the server response and any AI replies
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      
+      // Trigger AI responses for AI participants
+      if (activeConversation && data.messageId) {
+        const aiParticipants = activeConversation.participants?.filter(
+          (p: any) => p.personaType === 'ai_agent'
+        );
+        
+        if (aiParticipants && aiParticipants.length > 0) {
+          // Generate AI responses for each AI participant
+          for (const aiParticipant of aiParticipants) {
+            try {
+              setTimeout(async () => {
+                const aiResponse = await api.ai.generateResponse(conversationId!, {
+                  personaId: aiParticipant.personaId,
+                  triggerMessageId: data.messageId,
+                });
+                
+                if (aiResponse.success) {
+                  // Refetch messages to include the AI response
+                  queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+                }
+              }, 1000 + Math.random() * 2000); // Stagger AI responses with 1-3 second delay
+            } catch (error) {
+              // Failed to generate AI response - continue silently
+            }
+          }
+        }
+      }
     },
     onError: (error) => {
       setMessageError(error instanceof Error ? error.message : 'Failed to send message');
@@ -158,7 +202,7 @@ export function useConversation(conversationId: string | null) {
     }
   });
 
-  return {
+  const hookResult = {
     conversation: activeConversation || conversationQuery.data,
     messages: messages[conversationId!] || [],
     isLoadingConversation: conversationQuery.isLoading,
@@ -169,4 +213,7 @@ export function useConversation(conversationId: string | null) {
     sendMessage: sendMessageMutation.mutate,
     refetchMessages: messagesQuery.refetch
   };
+
+
+  return hookResult;
 }

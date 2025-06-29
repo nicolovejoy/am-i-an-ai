@@ -7,13 +7,14 @@ import { MessageInput } from './MessageInput';
 import { FullPageLoader } from './LoadingSpinner';
 import { useConversation } from '@/hooks/useConversation';
 import { useConversationStore } from '@/store';
-import type { PersonaInstance } from '@/types/conversations';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ConversationViewProps {
   conversationId: string;
 }
 
 export function ConversationViewWithZustand({ conversationId }: ConversationViewProps) {
+  const { user } = useAuth();
   const {
     conversation,
     messages,
@@ -29,10 +30,23 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
     setMessageError
   } = useConversationStore();
 
-  // Get the human participant (for sending messages)
+  // Get the human participant that the current user owns (for sending messages)
   const humanParticipant = conversation?.participants.find(
-    (p) => (p as any).personaType === 'human'
+    (p) => {
+      const personaType = (p as any).personaType || '';
+      const ownerId = (p as any).ownerId;
+      const currentUserId = user?.sub; // Cognito user ID
+      
+      // Must be a human persona AND owned by the current user
+      const isHumanPersona = personaType === 'human' || personaType === 'human_persona';
+      const isOwnedByUser = ownerId === currentUserId;
+      
+      return isHumanPersona && isOwnedByUser;
+    }
   );
+
+  // No fallback - user can only post as personas they own
+
 
   const handleSendMessage = async (content: string) => {
     if (!humanParticipant || !content.trim()) return;
@@ -41,7 +55,7 @@ export function ConversationViewWithZustand({ conversationId }: ConversationView
       setMessageError(null);
       sendMessage({ 
         content: content.trim(), 
-        personaId: humanParticipant?.personaId || '' 
+        personaId: humanParticipant.personaId || '' 
       });
     } catch (error) {
       // Error is handled by the mutation

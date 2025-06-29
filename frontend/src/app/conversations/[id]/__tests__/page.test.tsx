@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ConversationPage, { generateStaticParams } from '../page';
 
-// Mock the ConversationView component
-jest.mock('@/components/ConversationView', () => ({
-  ConversationView: ({ conversationId }: { conversationId: string }) => (
+// Mock the ConversationViewWithZustand component
+jest.mock('@/components/ConversationViewWithZustand', () => ({
+  ConversationViewWithZustand: ({ conversationId }: { conversationId: string }) => (
     <div data-testid="conversation-view">
       <span data-testid="conversation-id">{conversationId}</span>
     </div>

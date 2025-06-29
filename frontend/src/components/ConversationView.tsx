@@ -101,15 +101,20 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       setLoading(true);
       setError(null);
       
+      console.log('ConversationView: Starting to fetch conversation data', { conversationId });
+      
       // Validate conversationId
       if (!conversationId || conversationId === 'undefined') {
+        console.log('ConversationView: Invalid conversation ID', { conversationId });
         setError('Invalid conversation ID');
         setLoading(false);
         return;
       }
       
       // Fetch conversation details
+      console.log('ConversationView: Calling api.conversations.get', { conversationId });
       const conversationData = await api.conversations.get(conversationId);
+      console.log('ConversationView: Received conversation data', { success: conversationData.success, error: conversationData.error });
       
       if (!conversationData.success) {
         throw new Error(conversationData.error || 'Failed to load conversation');
