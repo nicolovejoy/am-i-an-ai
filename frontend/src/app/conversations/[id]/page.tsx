@@ -7,35 +7,15 @@ interface ConversationPageProps {
   };
 }
 
-// Generate static params for build-time pre-rendering
+// Generate static params using real conversation IDs from seeded database
 export async function generateStaticParams() {
-  try {
-    // Fetch real conversation IDs from Lambda API for static generation
-    const response = await fetch('https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/conversations');
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch conversations');
-    }
-    
-    const data = await response.json();
-    
-    if (data.success && Array.isArray(data.conversations)) {
-      return data.conversations.map((conv: { id: string }) => ({
-        id: conv.id
-      }));
-    }
-    
-    throw new Error('Invalid conversations response format');
-  } catch (error) {
-    // Failed to fetch conversations, using fallback
-    
-    // Fallback to mock conversation IDs for static generation
-    return [
-      { id: '01234567-1111-1111-1111-012345678901' },
-      { id: '01234567-4444-4444-4444-012345678901' },
-      { id: '01234567-7777-7777-7777-012345678901' },
-    ];
-  }
+  // These are the actual conversation IDs from your seeded database
+  // From database-seed.sql and seed.sql files
+  return [
+    { id: '770e8400-e29b-41d4-a716-446655440001' }, // Creative Writing Discussion
+    { id: '770e8400-e29b-41d4-a716-446655440002' }, // Philosophy of AI Consciousness  
+    { id: '770e8400-e29b-41d4-a716-446655440003' }, // Technology Trends 2024
+  ];
 }
 
 // Allow dynamic params for conversations created at runtime
