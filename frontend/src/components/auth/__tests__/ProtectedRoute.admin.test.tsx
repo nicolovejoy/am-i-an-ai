@@ -58,7 +58,7 @@ describe('ProtectedRoute Admin Access', () => {
       isModerator: () => false,
       isUser: () => false,
       canModerate: () => false,
-      userRole: null,
+      userRole: 'user',
     });
 
     jest.clearAllMocks();
