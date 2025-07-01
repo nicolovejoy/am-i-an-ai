@@ -34,7 +34,7 @@ async function canViewProfile(viewerId: string | null, targetUserId: string): Pr
     case 'public':
       return true;
     
-    case 'network':
+    case 'network': {
       // Check if viewer is in network (direct connection or friend-of-friend)
       const networkResult = await queryDatabase(`
         WITH RECURSIVE network_users AS (
@@ -68,9 +68,10 @@ async function canViewProfile(viewerId: string | null, targetUserId: string): Pr
       `, [viewerId, targetUserId]);
       
       return networkResult.rows.length > 0;
+    }
     
     case 'connections':
-    default:
+    default: {
       // Check if they are direct connections
       const connectionResult = await queryDatabase(`
         SELECT 1 FROM user_connections 
@@ -80,6 +81,7 @@ async function canViewProfile(viewerId: string | null, targetUserId: string): Pr
       `, [viewerId, targetUserId]);
       
       return connectionResult.rows.length > 0;
+    }
   }
 }
 

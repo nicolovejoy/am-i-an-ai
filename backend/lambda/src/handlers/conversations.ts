@@ -17,7 +17,7 @@ export async function handleConversations(
     const conversationId = pathMatch ? pathMatch[1] : null;
 
     switch (method) {
-      case 'GET':
+      case 'GET': {
         if (conversationId) {
           // Check if this is a messages endpoint
           const messagesMatch = path.match(/^\/api\/conversations\/([^/]+)\/messages$/);
@@ -32,8 +32,9 @@ export async function handleConversations(
           // GET /api/conversations
           return await getConversations(event, corsHeaders);
         }
+      }
 
-      case 'POST':
+      case 'POST': {
         if (conversationId) {
           // Handle messages endpoint
           const messagesMatch = path.match(/^\/api\/conversations\/([^/]+)\/messages$/);
@@ -64,6 +65,7 @@ export async function handleConversations(
           // POST /api/conversations
           return await createConversation(event, corsHeaders);
         }
+      }
 
       case 'PUT':
         if (conversationId) {
@@ -351,7 +353,10 @@ async function createConversation(
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   try {
+    console.log('createConversation called with user:', event.user.id);
+    
     if (!event.body) {
+      console.log('No request body provided');
       return {
         statusCode: 400,
         headers: corsHeaders,
@@ -360,6 +365,8 @@ async function createConversation(
     }
 
     const body = JSON.parse(event.body);
+    console.log('Request body parsed:', JSON.stringify(body, null, 2));
+    
     const { title, topic, description, selectedPersonas, goals, topicTags } = body;
 
     // Basic validation
@@ -1403,8 +1410,10 @@ async function generateAIResponse(
     // Create a mock event for the AI handler
     const aiEvent = {
       httpMethod: 'POST',
+      path: '/api/ai/generate-response',
       pathParameters: { conversationId },
       body: JSON.stringify({
+        conversationId,
         personaId,
         triggerMessageId
       }),
