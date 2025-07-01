@@ -101,32 +101,39 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       setLoading(true);
       setError(null);
       
-      console.log('ConversationView: Starting to fetch conversation data', { conversationId });
       
       // Validate conversationId
       if (!conversationId || conversationId === 'undefined') {
-        console.log('ConversationView: Invalid conversation ID', { conversationId });
         setError('Invalid conversation ID');
         setLoading(false);
         return;
       }
       
       // Fetch conversation details
-      console.log('ConversationView: Calling api.conversations.get', { conversationId });
-      const conversationData = await api.conversations.get(conversationId);
-      console.log('ConversationView: Received conversation data', { success: conversationData.success, error: conversationData.error });
+      const rawData = await api.conversations.get(conversationId);
       
-      if (!conversationData.success) {
-        throw new Error(conversationData.error || 'Failed to load conversation');
-      }
+      // Handle both wrapped and unwrapped response formats
+      // The Lambda returns { conversation: {...}, permissions: {...} }
+      const conversationData = rawData.conversation ? {
+        success: true,
+        conversation: rawData.conversation,
+        permissions: rawData.permissions
+      } : { 
+        success: true, 
+        conversation: rawData,
+        permissions: undefined 
+      };
       
       // Check if conversation exists
-      if (!conversationData.conversation) {
+      if (!conversationData.conversation && !(rawData as any).id) {
         throw new Error('Conversation data not found');
       }
+      
+      // If the data is not wrapped, use it directly
+      const conv = conversationData.conversation || (rawData as any) as Conversation;
 
       // Fetch conversation participants with persona details
-      const participantPromises = (conversationData.conversation.participants as any[]).map(async (participant: Record<string, unknown>) => {
+      const participantPromises = ((conv as any).participants as any[]).map(async (participant: Record<string, unknown>) => {
         try {
           const personaData = await api.personas.get(participant.personaId as string);
           if (personaData.success) {
@@ -134,8 +141,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
               personaId: participant.personaId as string,
               role: (participant.role as ParticipantRole) || 'responder',
               isRevealed: (participant.isRevealed as boolean) !== false,
-              joinedAt: new Date(participant.joinedAt as string || conversationData.conversation!.createdAt),
-              lastActiveAt: new Date(participant.lastActiveAt as string || conversationData.conversation!.createdAt),
+              joinedAt: new Date(participant.joinedAt as string || (conv as any).createdAt),
+              lastActiveAt: new Date(participant.lastActiveAt as string || (conv as any).createdAt),
               personaName: personaData.persona.name,
               personaType: personaData.persona.type === 'ai_agent' ? 'ai_agent' as const : 'human' as const
             };
@@ -147,8 +154,8 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
           personaId: participant.personaId as string,
           role: (participant.role as ParticipantRole) || 'responder',
           isRevealed: (participant.isRevealed as boolean) !== false,
-          joinedAt: new Date(participant.joinedAt as string || conversationData.conversation!.createdAt),
-          lastActiveAt: new Date(participant.lastActiveAt as string || conversationData.conversation!.createdAt),
+          joinedAt: new Date(participant.joinedAt as string || (conv as any).createdAt),
+          lastActiveAt: new Date(participant.lastActiveAt as string || (conv as any).createdAt),
           personaName: 'Unknown Persona',
           personaType: 'human' as const
         };
@@ -156,46 +163,52 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       
       const participants = await Promise.all(participantPromises);
       
-      const conv = conversationData.conversation;
-      
       // Transform to ConversationData format
       const conversation: ConversationData = {
-        id: conv.id,
-        title: conv.title,
-        topic: conv.topic,
-        description: conv.description,
-        status: conv.status,
+        id: (conv as any).id,
+        title: (conv as any).title,
+        topic: (conv as any).topic,
+        description: (conv as any).description,
+        status: (conv as any).status,
         participants: participants,
-        messageCount: conv.messageCount || 0,
-        currentTurn: conv.messageCount || 0,
-        createdAt: new Date(conv.createdAt),
-        startedAt: conv.startedAt ? new Date(conv.startedAt) : undefined,
-        topicTags: conv.topicTags || [],
-        totalCharacters: conv.totalCharacters || 0,
-        averageResponseTime: conv.averageResponseTime || 0,
-        qualityScore: conv.qualityScore,
-        canAddMessages: conv.canAddMessages !== false, // Default to true if not provided
-        closeReason: conv.closeReason,
-        closedBy: conv.closedBy,
-        closedAt: conv.closedAt ? new Date(conv.closedAt) : undefined,
-        createdBy: conv.createdBy || 'unknown',
-        constraints: conv.constraints || {
+        messageCount: (conv as any).messageCount || 0,
+        currentTurn: (conv as any).messageCount || 0,
+        createdAt: new Date((conv as any).createdAt),
+        startedAt: (conv as any).startedAt ? new Date((conv as any).startedAt) : undefined,
+        topicTags: (conv as any).topicTags || [],
+        totalCharacters: (conv as any).totalCharacters || 0,
+        averageResponseTime: (conv as any).averageResponseTime || 0,
+        qualityScore: (conv as any).qualityScore,
+        canAddMessages: (conv as any).canAddMessages !== false, // Default to true if not provided
+        closeReason: (conv as any).closeReason,
+        closedBy: (conv as any).closedBy,
+        closedAt: (conv as any).closedAt ? new Date((conv as any).closedAt) : undefined,
+        createdBy: (conv as any).createdBy || 'unknown',
+        constraints: (conv as any).constraints || {
           maxMessages: undefined,
           maxDuration: undefined,
-          allowedTopics: conv.topicTags || [],
+          allowedTopics: (conv as any).topicTags || [],
           endConditions: []
         },
-        permissions: conversationData.permissions // Add permissions from API response
+        permissions: conversationData.permissions || (rawData as any).permissions || {
+          canView: true,
+          canAddMessage: true,
+          canJoin: false,
+          canClose: false,
+          canAddParticipant: false,
+          canRemoveParticipant: false,
+          canDelete: false
+        } // Add permissions from API response with fallback
       };
       
       setConversation(conversation);
       
       // Set participants for the ConversationParticipants component
       // Transform participants to match ConversationParticipant interface
-      const formattedParticipants: ConversationParticipant[] = conv.participants.map((p: any) => ({
+      const formattedParticipants: ConversationParticipant[] = (conv as any).participants.map((p: any) => ({
         persona_id: p.personaId || p.persona_id,
         role: p.role || 'guest',
-        joined_at: new Date(p.joinedAt || p.joined_at || conv.createdAt),
+        joined_at: new Date(p.joinedAt || p.joined_at || (conv as any).createdAt),
         is_revealed: p.isRevealed !== false,
         left_at: p.leftAt ? new Date(p.leftAt) : null,
         permissions: p.permissions || ['read', 'write'],
@@ -236,6 +249,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
         setMessages([]);
       }
     } catch (err) {
+      console.error('ConversationView: Error fetching data', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -679,7 +693,7 @@ export function ConversationView({ conversationId }: ConversationViewProps) {
       <MessageInput 
         onSendMessage={handleSendMessage}
         conversationStatus={conversation.status}
-        disabled={!(conversation.permissions?.canAddMessage ?? conversation.canAddMessages)}
+        disabled={!(conversation.permissions?.canAddMessage ?? conversation.canAddMessages ?? (conversation.status === 'active'))}
       />
 
       {/* Close Conversation Modal */}

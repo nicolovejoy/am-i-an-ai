@@ -124,6 +124,15 @@ export function PersonaCard({ persona, onEdit, onDelete }: PersonaCardProps) {
             <p className="text-gray-600 text-sm line-clamp-2">
               {persona.description}
             </p>
+            
+            {/* Owner info */}
+            <div className="mt-2 text-xs text-gray-500">
+              {persona.ownerId ? (
+                <span>Owner: {persona.ownerId}</span>
+              ) : (
+                <span>System persona</span>
+              )}
+            </div>
           </div>
         </div>
 

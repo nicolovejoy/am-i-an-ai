@@ -7,6 +7,7 @@ import { PersonaFormAdmin } from '@/components/PersonaFormAdmin';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { api } from '@/services/apiClient';
 import type { Persona } from '@/types/personas';
 
@@ -21,6 +22,7 @@ export default function PersonasPage() {
   useEffect(() => {
     loadPersonas();
   }, []);
+
 
   const loadPersonas = async () => {
     try {
@@ -171,9 +173,10 @@ export default function PersonasPage() {
   }
 
   return (
-    <ErrorBoundary>
-      <main className="min-h-screen bg-[#F8F6F3]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <ProtectedRoute>
+      <ErrorBoundary>
+        <main className="min-h-screen bg-[#F8F6F3]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Demo Mode Banner */}
           {personas && personas.length > 0 && personas[0]?.id?.startsWith('mock-') && (
             <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
@@ -201,42 +204,51 @@ export default function PersonasPage() {
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Personas</h1>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {showCreateForm ? (
+                    <span className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          setShowCreateForm(false);
+                          setEditingPersona(null);
+                        }}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Back to personas"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      {editingPersona ? 'edit persona' : 'create persona'}
+                    </span>
+                  ) : (
+                    'personas'
+                  )}
+                </h1>
                 <p className="mt-2 text-gray-600">
-                  Create and manage conversation personas for richer interactions
+                  {showCreateForm 
+                    ? (editingPersona ? 'Modify an existing persona' : 'Create a new conversation persona')
+                    : 'Create and manage conversation personas for richer interactions'
+                  }
                 </p>
               </div>
-              <button
-                onClick={() => setShowCreateForm(true)}
-                className="px-4 py-2 bg-[#8B6B4A] text-white rounded-lg hover:bg-[#7A5D42] transition-colors flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Create Persona
-              </button>
+              {!showCreateForm && (
+                <button
+                  onClick={() => setShowCreateForm(true)}
+                  className="px-4 py-2 bg-[#8B6B4A] text-white rounded-lg hover:bg-[#7A5D42] transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create Persona
+                </button>
+              )}
             </div>
           </div>
 
           {/* Main Content */}
           {showCreateForm ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {editingPersona ? 'Edit Persona' : 'Create New Persona'}
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setEditingPersona(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
               {isAdmin() ? (
                 <PersonaFormAdmin
                   persona={editingPersona}
@@ -264,8 +276,9 @@ export default function PersonasPage() {
               onDelete={handleDeletePersona}
             />
           )}
-        </div>
-      </main>
-    </ErrorBoundary>
+          </div>
+        </main>
+      </ErrorBoundary>
+    </ProtectedRoute>
   );
 }

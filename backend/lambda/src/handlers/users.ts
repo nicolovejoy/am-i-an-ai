@@ -153,7 +153,7 @@ export const getCurrentUser = async (
         privacyLevel: user.privacy_level,
         trustScore: user.trust_score,
         connectionCount: parseInt(user.connection_count),
-        joinedAt: user.created_at,
+        createdAt: user.created_at,
         lastSeen: user.last_login_at,
       }),
     };
@@ -314,7 +314,7 @@ export const getUserProfile = async (
         bio: user.bio,
         trustScore: user.trust_score,
         connectionCount: parseInt(user.connection_count),
-        joinedAt: user.created_at,
+        createdAt: user.created_at,
       }),
     };
   } catch (error) {

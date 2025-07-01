@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { PersonaCard } from './PersonaCard';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Persona, PersonaType, KnowledgeDomain, CommunicationStyle } from '@/types/personas';
 
 interface PersonaListProps {
@@ -11,9 +12,10 @@ interface PersonaListProps {
 }
 
 type SortOption = 'name' | 'created' | 'rating' | 'usage';
-type FilterType = 'all' | PersonaType;
+type FilterType = 'all' | 'mine' | PersonaType;
 
 export function PersonaList({ personas, onEdit, onDelete }: PersonaListProps) {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('created');
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -29,7 +31,9 @@ export function PersonaList({ personas, onEdit, onDelete }: PersonaListProps) {
         persona.description.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Type filter
-      const matchesType = filterType === 'all' || persona.type === filterType;
+      const matchesType = filterType === 'all' || 
+        filterType === 'mine' ? persona.ownerId === user?.sub :
+        persona.type === filterType;
 
       // Knowledge domain filter
       const matchesKnowledge = selectedKnowledge === '' || 
@@ -125,6 +129,7 @@ export function PersonaList({ personas, onEdit, onDelete }: PersonaListProps) {
                 className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B6B4A] focus:border-[#8B6B4A] transition-colors"
               >
                 <option value="all">All Types</option>
+                <option value="mine">My Personas</option>
                 <option value="human_persona">Human Persona</option>
                 <option value="ai_agent">AI Agent</option>
                 <option value="ai_ambiguous">AI Ambiguous</option>

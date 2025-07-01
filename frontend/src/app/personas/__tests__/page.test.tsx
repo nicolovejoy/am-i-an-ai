@@ -110,7 +110,7 @@ describe('PersonasPage', () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByText('Personas')).toBeInTheDocument();
+      expect(screen.getByText('personas')).toBeInTheDocument();
     });
     
     expect(screen.getByText('Create and manage conversation personas for richer interactions')).toBeInTheDocument();

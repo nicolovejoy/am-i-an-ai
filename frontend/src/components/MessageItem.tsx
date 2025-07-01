@@ -8,7 +8,7 @@ interface MessageItemProps {
   participant?: {
     personaId: string;
     personaName: string;
-    personaType: 'human' | 'ai_agent';
+    personaType: 'human' | 'ai_agent' | 'ai_ambiguous';
     isRevealed: boolean;
   };
   isConsecutive?: boolean;
@@ -33,9 +33,8 @@ export function MessageItem({ message, participant, isConsecutive = false }: Mes
     return `${minutes}m read`;
   };
 
-  // Alternate message alignment for visual variety
-  const isEvenMessage = message.sequenceNumber % 2 === 0;
-  const alignLeft = !isEvenMessage;
+  // Align messages based on persona type: AI on left, human on right
+  const alignLeft = participant.personaType === 'ai_agent' || participant.personaType === 'ai_ambiguous';
 
   return (
     <div className={`flex ${alignLeft ? 'justify-start' : 'justify-end'} mb-4`}>

@@ -1,6 +1,7 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
 import { queryDatabase } from '../lib/database';
 import { randomUUID } from 'crypto';
+import { createAIOrchestrator, ConversationContext, MessageContext, PersonaProfile } from '../services/aiOrchestrator';
 import { AuthenticatedEvent } from '../middleware/cognito-auth';
 
 export async function handleConversations(
@@ -386,6 +387,36 @@ async function createConversation(
       };
     }
 
+    // Validate that user owns all selected personas (except AI personas)
+    const personasQuery = `
+      SELECT id, name, type, owner_id 
+      FROM personas 
+      WHERE id = ANY($1::uuid[])
+    `;
+    
+    const personasResult = await queryDatabase(personasQuery, [selectedPersonas]);
+    const foundPersonas = personasResult.rows;
+    
+    // Check if all personas exist
+    if (foundPersonas.length !== selectedPersonas.length) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'One or more selected personas do not exist' }),
+      };
+    }
+    
+    // Check ownership - user must own human personas
+    for (const persona of foundPersonas) {
+      if (persona.type === 'human_persona' && persona.owner_id !== event.user.id) {
+        return {
+          statusCode: 403,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: `You do not own the persona: ${persona.name}` }),
+        };
+      }
+    }
+
     // Create conversation in database
     const conversationId = randomUUID();
     const createdBy = event.user.id; // Use authenticated user ID
@@ -531,6 +562,7 @@ async function createMessage(
   corsHeaders: Record<string, string>
 ): Promise<APIGatewayProxyResult> {
   try {
+    console.log('createMessage called:', { conversationId, userId: event.user?.id });
     if (!event.body) {
       return {
         statusCode: 400,
@@ -619,6 +651,15 @@ async function createMessage(
       updated_at: new Date(row.updated_at),
     };
 
+    // Debug conversation and user info
+    console.log('Message creation debug:', {
+      conversationId,
+      personaId,
+      userId: user.id,
+      conversationParticipants: conversation.participants,
+      userPersonas: userPersonas.map(p => ({ id: p.id, name: p.name }))
+    });
+
     // Check if user can post a message as this persona
     const canPost = await permissionEngine.canUserPostMessage(user, conversation, personaId, userPersonas);
     if (!canPost) {
@@ -629,6 +670,13 @@ async function createMessage(
         resource: conversation,
         resourceType: 'conversation',
         metadata: { userPersonas, personaId },
+      });
+      
+      console.log('Permission denied:', {
+        reason: permissions.reason,
+        permissions: permissions.permissions,
+        personaId,
+        userOwnsPersona: userPersonas.some(p => p.id === personaId)
       });
       
       return {
@@ -715,6 +763,31 @@ async function createMessage(
     await queryDatabase(updateParticipantQuery, [conversationId, personaId]);
     
     console.log('Message created successfully:', messageId);
+    console.log('About to trigger AI responses for conversation:', conversation.id);
+    console.log('Conversation participants count:', conversation.participants?.length || 0);
+    console.log('First participant:', conversation.participants?.[0]);
+
+    // Trigger AI responses asynchronously (don't block the response)
+    try {
+      // Use async execution that doesn't block the response but completes within Lambda timeout
+      triggerAIResponses(conversation, {
+        id: message.id,
+        conversationId: message.conversation_id,
+        authorPersonaId: message.author_persona_id,
+        content: message.content,
+        type: message.type,
+        sequenceNumber: message.sequence_number,
+        timestamp: message.timestamp,
+        metadata: message.metadata,
+      }).catch(error => {
+        console.error('=== AI RESPONSE ERROR ===');
+        console.error('Error triggering AI responses:', error);
+        console.error('Stack trace:', error.stack);
+        // Don't fail the message creation - log and continue
+      });
+    } catch (error) {
+      console.error('Error starting AI response trigger:', error);
+    }
 
     return {
       statusCode: 201,
@@ -1218,5 +1291,138 @@ async function joinConversation(
         message: 'Failed to join conversation',
       }),
     };
+  }
+}
+
+/**
+ * Trigger AI responses for a conversation after a new message
+ */
+async function triggerAIResponses(
+  conversation: any,
+  newMessage: MessageContext
+): Promise<void> {
+  try {
+    console.log('=== TRIGGER AI RESPONSES START ===');
+    console.log('Triggering AI responses for conversation:', conversation.id);
+    console.log('New message:', newMessage);
+    
+    // Get all personas in the conversation
+    const personaIds = conversation.participants.map((p: any) => p.personaId || p.persona_id);
+    
+    console.log('Conversation participants:', conversation.participants);
+    console.log('Extracted persona IDs:', personaIds);
+    
+    if (personaIds.length === 0) {
+      console.log('No participants found in conversation');
+      return;
+    }
+
+    // Fetch persona details
+    const personasQuery = `
+      SELECT id, name, type, description, personality, knowledge, 
+             communication_style, model_config, system_prompt, allowed_interactions
+      FROM personas 
+      WHERE id = ANY($1::uuid[])
+    `;
+    
+    const personasResult = await queryDatabase(personasQuery, [personaIds]);
+    console.log('Found personas from database:', personasResult.rows.map((r: any) => ({ id: r.id, name: r.name, type: r.type })));
+    
+    const personas: PersonaProfile[] = personasResult.rows.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      description: row.description,
+      personality: row.personality,
+      knowledge: row.knowledge,
+      communicationStyle: row.communication_style,
+      modelConfig: row.model_config,
+      systemPrompt: row.system_prompt,
+      allowedInteractions: row.allowed_interactions
+    }));
+
+    // Convert conversation to context format
+    const conversationContext: ConversationContext = {
+      id: conversation.id,
+      title: conversation.title,
+      topic: conversation.topic,
+      status: conversation.status,
+      participants: conversation.participants,
+      messageCount: 0 // Will be calculated by orchestrator if needed
+    };
+
+    // Analyze AI response triggers
+    const orchestrator = createAIOrchestrator();
+    const triggers = await orchestrator.analyzeAIResponseTriggers(
+      conversationContext,
+      newMessage,
+      personas
+    );
+
+    console.log(`Found ${triggers.length} AI response triggers:`, triggers.map(t => ({
+      personaId: t.personaId,
+      shouldRespond: t.shouldRespond,
+      reason: t.triggerReason
+    })));
+
+    // Schedule AI responses
+    for (const trigger of triggers) {
+      if (trigger.shouldRespond) {
+        console.log(`Scheduling AI response for persona ${trigger.personaId} with delay ${trigger.responseDelay}ms`);
+        
+        setTimeout(async () => {
+          try {
+            await generateAIResponse(conversation.id, trigger.personaId, newMessage.id);
+          } catch (error) {
+            console.error(`Error generating AI response for persona ${trigger.personaId}:`, error);
+          }
+        }, trigger.responseDelay);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error in triggerAIResponses:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate a single AI response
+ */
+async function generateAIResponse(
+  conversationId: string,
+  personaId: string,
+  triggerMessageId: string
+): Promise<void> {
+  try {
+    console.log(`Generating AI response for persona ${personaId} in conversation ${conversationId}`);
+    
+    // Call the AI handler to generate response
+    const { handleAI } = await import('./ai');
+    
+    // Create a mock event for the AI handler
+    const aiEvent = {
+      httpMethod: 'POST',
+      pathParameters: { conversationId },
+      body: JSON.stringify({
+        personaId,
+        triggerMessageId
+      }),
+      headers: {},
+      requestContext: {},
+      user: { id: 'system', role: 'admin' } // System-generated request
+    } as any;
+
+    const result = await handleAI(aiEvent, {});
+    
+    if (result.statusCode === 200) {
+      console.log(`AI response generated successfully for persona ${personaId}`);
+    } else {
+      console.error(`AI response generation failed for persona ${personaId}:`, result.body);
+    }
+
+  } catch (error) {
+    console.error(`Error generating AI response for persona ${personaId}:`, error);
+    throw error;
   }
 }

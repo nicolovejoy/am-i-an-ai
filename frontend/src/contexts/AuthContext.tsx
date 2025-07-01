@@ -7,6 +7,7 @@ import React, {
   useState,
   ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import { cognitoService } from "../services/cognito";
 import { AuthUser } from "../types/auth";
 import { useConversationStore } from "../store/conversationStore";
@@ -27,6 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const router = useRouter();
 
   const checkAuth = async () => {
     try {
@@ -65,6 +67,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window !== 'undefined') {
       window.sessionStorage.clear();
     }
+    
+    // Redirect to home page
+    router.push('/');
   };
 
   useEffect(() => {

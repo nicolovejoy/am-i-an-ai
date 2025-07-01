@@ -159,38 +159,13 @@ export function useConversation(conversationId: string | null) {
       
       return data;
     },
-    onSuccess: async (data) => {
+    onSuccess: async () => {
       // Refetch messages to get the server response and any AI replies
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       
-      // Trigger AI responses for AI participants
-      if (activeConversation && data.messageId) {
-        const aiParticipants = activeConversation.participants?.filter(
-          (p: any) => p.personaType === 'ai_agent'
-        );
-        
-        if (aiParticipants && aiParticipants.length > 0) {
-          // Generate AI responses for each AI participant
-          for (const aiParticipant of aiParticipants) {
-            try {
-              setTimeout(async () => {
-                const aiResponse = await api.ai.generateResponse(conversationId!, {
-                  personaId: aiParticipant.personaId,
-                  triggerMessageId: data.messageId,
-                });
-                
-                if (aiResponse.success) {
-                  // Refetch messages to include the AI response
-                  queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-                }
-              }, 1000 + Math.random() * 2000); // Stagger AI responses with 1-3 second delay
-            } catch (error) {
-              // Failed to generate AI response - continue silently
-            }
-          }
-        }
-      }
+      // AI responses are now triggered server-side automatically
+      // No client-side AI orchestration needed
     },
     onError: (error) => {
       setMessageError(error instanceof Error ? error.message : 'Failed to send message');

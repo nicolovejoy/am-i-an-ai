@@ -9,7 +9,7 @@ interface MessageListProps {
   participants: Array<{
     personaId: string;
     personaName: string;
-    personaType: 'human' | 'ai_agent';
+    personaType: 'human' | 'ai_agent' | 'ai_ambiguous';
     isRevealed: boolean;
   }>;
   typingPersonas?: Set<string>;

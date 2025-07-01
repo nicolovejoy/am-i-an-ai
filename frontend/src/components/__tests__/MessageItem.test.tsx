@@ -310,21 +310,21 @@ describe('MessageItem', () => {
       // No errors should occur and no side effects
     });
 
-    it('applies different button colors for left vs right aligned messages', () => {
-      const leftMessage = createMockMessage('msg-1', 'Left', new Date(), 1);
-      const rightMessage = createMockMessage('msg-2', 'Right', new Date(), 2);
+    it('applies different button colors for AI vs human messages', () => {
+      const humanMessage = createMockMessage('msg-1', 'Human message', new Date(), 1);
+      const aiMessage = createMockMessage('msg-2', 'AI message', new Date(), 2);
 
       const { rerender } = render(
-        <MessageItem message={leftMessage} participant={mockHumanParticipant} />
+        <MessageItem message={humanMessage} participant={mockHumanParticipant} />
       );
       
-      const leftReplyButton = screen.getByTitle('Reply (coming soon)');
-      expect(leftReplyButton).toHaveClass('text-gray-400', 'hover:text-gray-600');
+      const humanReplyButton = screen.getByTitle('Reply (coming soon)');
+      expect(humanReplyButton).toHaveClass('text-[#D4B59F]', 'hover:text-white');
       
-      rerender(<MessageItem message={rightMessage} participant={mockHumanParticipant} />);
+      rerender(<MessageItem message={aiMessage} participant={mockAIParticipant} />);
       
-      const rightReplyButton = screen.getByTitle('Reply (coming soon)');
-      expect(rightReplyButton).toHaveClass('text-[#D4B59F]', 'hover:text-white');
+      const aiReplyButton = screen.getByTitle('Reply (coming soon)');
+      expect(aiReplyButton).toHaveClass('text-gray-400', 'hover:text-gray-600');
     });
   });
 
