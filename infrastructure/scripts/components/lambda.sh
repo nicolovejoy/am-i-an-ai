@@ -25,7 +25,6 @@ deploy_lambda() {
         -target="aws_iam_role.lambda_execution" \
         -target="aws_iam_policy.lambda_policy" \
         -target="aws_iam_role_policy_attachment.lambda_policy" \
-        -target="aws_iam_role_policy_attachment.lambda_vpc_execution" \
         -target="aws_cloudwatch_log_group.lambda_logs" \
         -target="aws_lambda_function.api" \
         -target="aws_api_gateway_rest_api.main" \

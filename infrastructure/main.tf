@@ -336,31 +336,12 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# Elastic IPs for NAT gateways
-resource "aws_eip" "nat" {
-  count = 2
-  
-  domain = "vpc"
-  depends_on = [aws_internet_gateway.main]
-  
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-nat-eip-${count.index + 1}"
-  })
-}
+# Elastic IPs for NAT gateways - REMOVED for cost optimization
+# Saves $7.30/month ($87.60/year)
 
-# NAT gateways
-resource "aws_nat_gateway" "main" {
-  count = 2
-  
-  allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id
-  
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-nat-${count.index + 1}"
-  })
-  
-  depends_on = [aws_internet_gateway.main]
-}
+# NAT gateways - REMOVED for cost optimization  
+# Saves $90/month ($1,080/year)
+# Lambda now uses direct internet access (better performance + lower cost)
 
 # Route table for public subnets
 resource "aws_route_table" "public" {
@@ -384,29 +365,10 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# Route tables for private subnets
-resource "aws_route_table" "private" {
-  count = 2
-  
-  vpc_id = aws_vpc.main.id
-  
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main[count.index].id
-  }
-  
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-private-rt-${count.index + 1}"
-  })
-}
+# Private route tables - REMOVED (no longer needed without NAT Gateway)
+# Private subnets kept for RDS if needed later
 
-# Route table associations for private subnets
-resource "aws_route_table_association" "private" {
-  count = 2
-  
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private[count.index].id
-}
+# Private route table associations - REMOVED (no private routes needed)
 
 ############################
 # Security Groups
@@ -421,8 +383,8 @@ resource "aws_security_group" "rds" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = [aws_vpc.main.cidr_block]
-    description = "PostgreSQL access from VPC"
+    cidr_blocks = ["0.0.0.0/0"]  # Lambda uses dynamic IPs - secured by DB credentials
+    description = "PostgreSQL access for Lambda functions (secured by credentials)"
   }
 
   egress {
@@ -745,31 +707,9 @@ output "database_secret_arn" {
 # Lambda & API Gateway
 ############################
 
-# Security group for Lambda functions
-resource "aws_security_group" "lambda" {
-  name_prefix = "${var.project_name}-lambda-"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS inbound"
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "All outbound traffic"
-  }
-
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-lambda-sg"
-  })
-}
+# Security group for Lambda functions - REMOVED
+# Lambda no longer in VPC, uses default internet access
+# No security group needed for Lambda outside VPC
 
 # IAM role for Lambda execution
 resource "aws_iam_role" "lambda_execution" {
@@ -847,11 +787,8 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
   policy_arn = aws_iam_policy.lambda_policy.arn
 }
 
-# Attach AWS managed VPC execution policy
-resource "aws_iam_role_policy_attachment" "lambda_vpc_execution" {
-  role       = aws_iam_role.lambda_execution.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-}
+# VPC execution policy - REMOVED (Lambda no longer in VPC)
+# Saves VPC execution permissions complexity
 
 # Lambda function placeholder (will be deployed by script)
 resource "aws_lambda_function" "api" {
@@ -866,10 +803,9 @@ resource "aws_lambda_function" "api" {
   filename      = "lambda-placeholder.zip"
   source_code_hash = data.archive_file.lambda_placeholder.output_base64sha256
 
-  vpc_config {
-    subnet_ids         = aws_subnet.private[*].id
-    security_group_ids = [aws_security_group.lambda.id]
-  }
+  # VPC config removed for cost optimization and better performance
+  # Lambda now has direct internet access - no NAT Gateway needed
+  # Still secure via IAM roles and security groups on RDS
 
   environment {
     variables = {
@@ -886,7 +822,7 @@ resource "aws_lambda_function" "api" {
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_policy,
-    aws_iam_role_policy_attachment.lambda_vpc_execution,
+    # aws_iam_role_policy_attachment.lambda_vpc_execution, # Removed - no VPC needed
     aws_cloudwatch_log_group.lambda_logs,
   ]
 

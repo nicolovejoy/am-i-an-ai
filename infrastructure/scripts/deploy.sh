@@ -155,10 +155,9 @@ validate_dependencies() {
                 fi
                 ;;
             "lambda")
-                if ! [[ " ${SELECTED_COMPONENTS[*]} " =~ " networking " ]] && ! terraform state list | grep -q "aws_vpc.main"; then
-                    log_error "Lambda component requires networking to be deployed first"
-                    exit 1
-                fi
+                # Lambda no longer requires VPC networking (cost optimization)
+                # Can be deployed independently with direct internet access
+                log_info "Lambda will use direct internet access (no VPC required)"
                 ;;
             "frontend")
                 # Frontend can be deployed independently, but warn if no backend

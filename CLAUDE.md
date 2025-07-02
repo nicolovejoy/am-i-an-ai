@@ -2,7 +2,10 @@
 
 ## Project Overview
 
-Multi-persona conversation system where humans and AI agents can interact through ambiguous personas. Built with Next.js frontend, PostgreSQL database, and AWS infrastructure.
+**v1**: Multi-persona conversation system (Next.js + PostgreSQL + VPC)
+**v2**: 2H+2AI real-time conversations (React + DynamoDB + WebSocket) - **CURRENT FOCUS**
+
+Two parallel systems: v1 (complex, production) and v2 (simplified, TDD prototype).
 
 ## Development Workflow
 
@@ -26,10 +29,17 @@ Multi-persona conversation system where humans and AI agents can interact throug
 
 ### Architecture
 
+**v1 (Production):**
 - **Frontend**: Next.js app deployed to S3/CloudFront
-- **Database**: PostgreSQL on AWS RDS (not DynamoDB)
+- **Database**: PostgreSQL on AWS RDS
 - **Auth**: AWS Cognito
-- **Infrastructure**: Terraform with VPC, security groups, secrets management
+- **Infrastructure**: VPC + NAT Gateway ($90/month)
+
+**v2 (Prototype - CURRENT):**
+- **Frontend**: React app (simplified)
+- **Database**: DynamoDB (serverless)
+- **WebSocket**: API Gateway WebSocket + Lambda
+- **Infrastructure**: No VPC (~$5/month, 95% cost savings)
 
 ### Key Commands
 
@@ -117,15 +127,17 @@ npx tsc --noEmit      # Explicit TypeScript type checking
 
 ## Current Status
 
-- ✅ Infrastructure: PostgreSQL-based, deployed to AWS (`eeyore-postgres` RDS instance running)
-- ✅ Database: Schema deployed and seeded with sample data (3 users, 6 personas, 3 conversations, 7 messages)
-- ✅ Frontend: Next.js with comprehensive type system (200+ interfaces)
-- ✅ Core UI: Complete conversation and persona management system
-- ✅ Deployment: Static export working with S3 deployment and demo mode fallback
-- ✅ Testing: 388 tests passing with comprehensive coverage (recent production fixes tested)
-- ✅ Authentication: Cognito JWT working end-to-end with proper token management
-- ✅ Message System: Human messages and AI responses working with database persistence
-- ✅ Admin Tools: CLI and webapp admin console fully functional
+### **v1 (Production System)**
+- ✅ Complete: PostgreSQL + VPC + Cognito + 15,000+ lines
+- ✅ Working: Conversations, AI responses, persona management
+- ✅ Deployed: amianai.com (full production system)
+
+### **v2 (2H+2AI Prototype - ACTIVE DEVELOPMENT)**
+- ✅ **TDD Complete**: 8/8 tests passing, 240 lines Lambda code
+- ✅ **Core Features**: WebSocket + DynamoDB + A/B/C/D anonymity + 10min timer
+- ✅ **Infrastructure Ready**: Terraform configs created for deployment
+- 🚧 **Next**: User deploying DynamoDB + WebSocket Lambda
+- 🚧 **Then**: Simplified React frontend
 
 ## PLATFORM COMPLETION STATUS
 
@@ -161,35 +173,34 @@ OpenAI integration is fully operational! AI personas respond to messages and sav
 - ✅ Automatic AI responses triggered by human messages
 - ✅ AI personas with distinct personalities and communication styles
 
-### **Available Development Tools**
+## **v2 Development Focus (Current Session)**
+
+**User Request**: Build 2H+2AI prototype with radical simplification  
+**Completed**: TDD backend (8/8 tests), infrastructure configs  
+**Current**: User deploying WebSocket + DynamoDB  
+**Next**: Create simplified React frontend following `/frontend` patterns
+
+**Key Constraints**:
+- User handles ALL deployments (never run deploy commands)
+- Follow TDD: tests first, minimal code
+- Target <2,000 lines total (vs v1's 15,000+)
+- Real-time WebSocket focus (vs REST API)
+
+### **Development Commands**
 
 ```bash
-# Database operations
-npm run db:setup      # Create fresh database schema
-npm run db:seed       # Seed production database
-npm run db:show       # View current data
-npm run db:reset      # Reset production database
+# v1 (Production System)
+cd infrastructure && ./scripts/deploy.sh --lambda  # User handles all deploys
+npm run test && npm run lint && npm run build      # Pre-commit checks
 
-# Development and testing
-npm run dev           # Local development server
-npm run test          # Run test suite
-npm run lint          # Code quality checks
-npm run build         # Production build with static export
-
-# Deployment (automated via GitHub Actions)
-npm run build:static  # Creates frontend/out/ for S3 deployment
+# v2 (Prototype Development)
+cd v2 && npm test                    # TDD cycle
+cd v2 && ./scripts/deploy.sh --all   # User handles deployment
+wscat -c wss://websocket-url         # Test WebSocket connection
 ```
 
-### **Database Management Options**
-
-1. **DBeaver GUI** - Visual database management (USER ACTIVELY USES THIS)
-   - Host: `eeyore-postgres.cw92m20s8ece.us-east-1.rds.amazonaws.com:5432`
-   - Database: `amianai`, User: `amianai_admin`
-   - **NOTE**: User can directly view and modify database data using DBeaver
-   - Useful for quick fixes, data inspection, and manual operations
-2. **Production API Endpoints** - Working Lambda functions (recommended for app)
-   - Health: `GET https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/health`
-   - Database Status: `GET https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/admin/database-status`
-   - Personas: `GET https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/personas`
-   - Conversations: `GET https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod/api/conversations`
-3. **Direct Scripts** - `npm run db:setup`, `npm run db:seed`, `npm run db:show`
+### **Key URLs**
+- **v1 Production**: https://amianai.com
+- **v1 API**: https://vk64sh5aq5.execute-api.us-east-1.amazonaws.com/prod
+- **v2 WebSocket**: (deployed by user)
+- **Database**: DBeaver → eeyore-postgres.cw92m20s8ece.us-east-1.rds.amazonaws.com:5432
