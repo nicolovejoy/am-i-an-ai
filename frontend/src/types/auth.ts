@@ -18,8 +18,6 @@ export interface AuthUser {
   email: string;
   sub: string;
   role?: 'user' | 'moderator' | 'admin';
-  isFirstLogin?: boolean;
-  lastLoginAt?: string;
 }
 
 export interface AuthState {

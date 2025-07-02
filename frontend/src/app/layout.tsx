@@ -1,20 +1,9 @@
-import "./globals.css";
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import QueryProvider from "@/providers/QueryProvider";
-import NavMenu from "@/components/NavMenu";
-import { AuthProvider } from "../contexts/AuthContext";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ToastProvider } from "../contexts/ToastContext";
+import './globals.css';
+import { AuthProvider } from '@/contexts/AuthContext';
 
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Am I an AI?",
-  description: "interactive portal for exploring AI identity and communication",
-  icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-  },
+export const metadata = {
+  title: 'AmIAnAI v2 - 2H+2AI Conversations',
+  description: 'Anonymous real-time conversations between 2 humans and 2 AIs',
 };
 
 export default function RootLayout({
@@ -24,20 +13,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-      </head>
-      <body className={inter.className}>
-        <ErrorBoundary>
-          <ToastProvider>
-            <AuthProvider>
-              <QueryProvider>
-                <NavMenu />
-                {children}
-              </QueryProvider>
-            </AuthProvider>
-          </ToastProvider>
-        </ErrorBoundary>
+      <body className="antialiased">
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

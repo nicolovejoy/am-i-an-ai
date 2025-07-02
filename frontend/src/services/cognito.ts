@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   CognitoUserPool,
@@ -7,9 +7,8 @@ import {
   AuthenticationDetails,
   ISignUpResult,
   NodeCallback,
-} from "amazon-cognito-identity-js";
-import { SignUpFormData, SignInFormData, AuthError } from "../types/auth";
-import { getUserRole } from "../utils/adminConfig";
+} from 'amazon-cognito-identity-js';
+import { SignUpFormData, SignInFormData, AuthError, AuthUser } from '../types/auth';
 
 declare const process: {
   env: {
@@ -22,9 +21,10 @@ interface CognitoError extends Error {
   code?: string;
 }
 
+// Use existing v1 Cognito pool - reuse same user pool
 const userPool = new CognitoUserPool({
-  UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,
-  ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
+  UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || 'us-east-1_example', // Will be set via env
+  ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || 'example', // Will be set via env
 });
 
 export const cognitoService = {
@@ -32,7 +32,7 @@ export const cognitoService = {
     return new Promise((resolve, reject) => {
       const attributeList = [
         new CognitoUserAttribute({
-          Name: "email",
+          Name: 'email',
           Value: email,
         }),
       ];
@@ -41,8 +41,8 @@ export const cognitoService = {
         if (err) {
           const cognitoErr = err as CognitoError;
           reject({
-            code: cognitoErr.code || "UnknownError",
-            message: err.message || "An unknown error occurred",
+            code: cognitoErr.code || 'UnknownError',
+            message: err.message || 'An unknown error occurred',
           } as AuthError);
           return;
         }
@@ -64,29 +64,8 @@ export const cognitoService = {
         if (err) {
           const cognitoErr = err as CognitoError;
           reject({
-            code: cognitoErr.code || "UnknownError",
-            message: err.message || "An unknown error occurred",
-          } as AuthError);
-          return;
-        }
-        resolve();
-      });
-    });
-  },
-
-  resendConfirmationCode: async (email: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const cognitoUser = new CognitoUser({
-        Username: email,
-        Pool: userPool,
-      });
-
-      cognitoUser.resendConfirmationCode((err: Error | undefined) => {
-        if (err) {
-          const cognitoErr = err as CognitoError;
-          reject({
-            code: cognitoErr.code || "UnknownError",
-            message: err.message || "An unknown error occurred",
+            code: cognitoErr.code || 'UnknownError',
+            message: err.message || 'An unknown error occurred',
           } as AuthError);
           return;
         }
@@ -108,129 +87,82 @@ export const cognitoService = {
       });
 
       cognitoUser.authenticateUser(authenticationDetails, {
-        onSuccess: () => resolve(),
+        onSuccess: () => {
+          resolve();
+        },
         onFailure: (err: Error) => {
           const cognitoErr = err as CognitoError;
           reject({
-            code: cognitoErr.code || "UnknownError",
-            message: err.message || "An unknown error occurred",
+            code: cognitoErr.code || 'UnknownError',
+            message: err.message || 'An unknown error occurred',
           } as AuthError);
         },
       });
     });
   },
 
-  signOut: () => {
-    const currentUser = userPool.getCurrentUser();
-    if (currentUser) {
-      currentUser.signOut();
-    }
-  },
-
-  getCurrentUser: async (): Promise<{ email: string; sub: string; role?: 'user' | 'moderator' | 'admin' } | null> => {
+  getCurrentUser: async (): Promise<AuthUser | null> => {
     return new Promise((resolve) => {
-      const currentUser = userPool.getCurrentUser();
-      if (!currentUser) {
+      const cognitoUser = userPool.getCurrentUser();
+      
+      if (!cognitoUser) {
         resolve(null);
         return;
       }
 
-      currentUser.getSession(
-        async (err: Error | null, session: { isValid: () => boolean } | null) => {
-          if (err || !session || !session.isValid()) {
-            resolve(null);
-            return;
-          }
-
-          const callback: NodeCallback<Error, CognitoUserAttribute[]> = async (
-            err,
-            attributes
-          ) => {
-            if (err || !attributes) {
-              resolve(null);
-              return;
-            }
-
-            const email =
-              attributes.find((attr) => attr.Name === "email")?.Value || "";
-            const sub =
-              attributes.find((attr) => attr.Name === "sub")?.Value || "";
-
-            // TODO: Get user role from database/backend API
-            // For now, use centralized admin configuration
-            const userForRoleCheck = { email, sub, role: 'user' as const };
-            const role = getUserRole(userForRoleCheck);
-
-            resolve({ email, sub, role });
-          };
-
-          currentUser.getUserAttributes(callback);
-        }
-      );
-    });
-  },
-
-  getIdToken: (): Promise<string | null> => {
-    return new Promise((resolve) => {
-      const currentUser = userPool.getCurrentUser();
-      if (!currentUser) {
-        resolve(null);
-        return;
-      }
-
-      currentUser.getSession(
-        (err: Error | null, session: any) => {
-          if (err) {
-            resolve(null);
-            return;
-          }
-          
-          if (!session) {
-            resolve(null);
-            return;
-          }
-          
-          if (!session.isValid()) {
-            resolve(null);
-            return;
-          }
-
-          const idToken = session.getIdToken().getJwtToken();
-          resolve(idToken);
-        }
-      );
-    });
-  },
-
-  updateUserAttributes: async (attributes: { [key: string]: string }): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const currentUser = userPool.getCurrentUser();
-      if (!currentUser) {
-        reject(new Error("No user is currently signed in"));
-        return;
-      }
-
-      currentUser.getSession((err: Error | null, session: { isValid: () => boolean } | null) => {
-        if (err || !session) {
-          reject(err || new Error("No valid session"));
+      cognitoUser.getSession((err: Error | undefined, session: any) => {
+        if (err || !session || !session.isValid()) {
+          resolve(null);
           return;
         }
 
-        const attributeList = Object.entries(attributes).map(
-          ([name, value]) => new CognitoUserAttribute({ Name: name, Value: value })
-        );
-
-        currentUser.updateAttributes(attributeList, (err: Error | undefined) => {
-          if (err) {
-            const cognitoErr = err as CognitoError;
-            reject({
-              code: cognitoErr.code || "UnknownError",
-              message: err.message || "An unknown error occurred",
-            } as AuthError);
+        cognitoUser.getUserAttributes((err: Error | undefined, attributes: any) => {
+          if (err || !attributes) {
+            resolve(null);
             return;
           }
-          resolve();
+
+          const email = attributes.find((attr: any) => attr.getName() === 'email')?.getValue();
+          const sub = attributes.find((attr: any) => attr.getName() === 'sub')?.getValue();
+
+          if (!email || !sub) {
+            resolve(null);
+            return;
+          }
+
+          resolve({
+            email,
+            sub,
+            role: 'user', // Simplified for v2
+          });
         });
+      });
+    });
+  },
+
+  signOut: (): void => {
+    const cognitoUser = userPool.getCurrentUser();
+    if (cognitoUser) {
+      cognitoUser.signOut();
+    }
+  },
+
+  getIdToken: async (): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const cognitoUser = userPool.getCurrentUser();
+      
+      if (!cognitoUser) {
+        resolve(null);
+        return;
+      }
+
+      cognitoUser.getSession((err: Error | undefined, session: any) => {
+        if (err || !session || !session.isValid()) {
+          resolve(null);
+          return;
+        }
+
+        resolve(session.getIdToken().getJwtToken());
       });
     });
   },

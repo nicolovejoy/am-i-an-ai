@@ -2,52 +2,34 @@
 set -e
 
 # Source shared functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/shared.sh"
+DATABASE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DATABASE_SCRIPT_DIR/shared.sh"
 
-# Database component deployment (RDS PostgreSQL + Secrets)
+# Deploy DynamoDB table
 deploy_database() {
-    log_info "🗄️  Deploying database component..."
+    log_info "📦 Deploying DynamoDB table..."
     
-    ensure_infrastructure_directory
-    check_prerequisites
+    # Change to infrastructure directory if not already there
+    if [[ "$(basename "$PWD")" != "infrastructure" ]]; then
+        cd infrastructure
+    fi
     check_environment_variables
     verify_aws_credentials
     
-    # Initialize Terraform if not already done
+    # Initialize Terraform if needed
     if [ ! -d ".terraform" ]; then
         init_terraform
     fi
     
-    # Plan and apply database resources
-    log_info "Planning database infrastructure..."
+    # Plan and apply DynamoDB resources
+    log_info "Planning DynamoDB infrastructure..."
     terraform plan \
-        -target="random_password.db_password" \
-        -target="aws_secretsmanager_secret.db_password" \
-        -target="aws_secretsmanager_secret_version.db_password" \
-        -target="aws_db_parameter_group.main" \
-        -target="aws_db_subnet_group.main" \
-        -target="aws_db_instance.main" \
-        -target="aws_iam_role.rds_monitoring" \
-        -target="aws_iam_role_policy_attachment.rds_monitoring" \
-        -var="github_username=${GITHUB_USERNAME}" \
+        -target="aws_dynamodb_table.sessions" \
+        -var="domain_name=${DOMAIN_NAME}" \
         -out=database-plan
     
-    log_info "Applying database infrastructure..."
+    log_info "Applying DynamoDB infrastructure..."
     terraform apply database-plan
-    
-    # Verify database deployment
-    local db_endpoint=$(get_terraform_output "database_endpoint")
-    local db_secret_arn=$(get_terraform_output "database_secret_arn")
-    
-    if [ -z "$db_endpoint" ] || [ -z "$db_secret_arn" ]; then
-        log_error "Database deployment verification failed!"
-        mark_component_failed "database"
-        exit 1
-    fi
-    
-    log_info "Database endpoint: ${db_endpoint}"
-    log_info "Database secret ARN: ${db_secret_arn}"
     
     # Cleanup plan file
     rm -f database-plan
@@ -55,49 +37,33 @@ deploy_database() {
     mark_component_complete "database"
 }
 
-# Initialize database schema and seed data
-init_database_schema() {
-    log_info "🌱 Initializing database schema..."
+# Test DynamoDB table
+test_database() {
+    log_info "🧪 Testing DynamoDB table..."
     
-    local api_gateway_url=$(get_terraform_output "api_gateway_url")
+    local table_name=$(get_terraform_output "dynamodb_table_name")
     
-    if [ -z "$api_gateway_url" ]; then
-        log_error "API Gateway URL not available. Deploy Lambda component first."
-        exit 1
+    if [ -z "$table_name" ]; then
+        log_error "DynamoDB table name not found in Terraform outputs"
+        return 1
     fi
     
-    log_info "Setting up database schema..."
-    curl -X POST "${api_gateway_url}/api/admin/setup-database" || {
-        log_warn "Database schema setup failed or already exists"
-    }
+    # Test table exists and is active
+    local table_status=$(aws dynamodb describe-table \
+        --table-name "$table_name" \
+        --query 'Table.TableStatus' \
+        --output text 2>/dev/null || echo "NOT_FOUND")
     
-    log_info "Seeding database with sample data..."
-    curl -X POST "${api_gateway_url}/api/admin/seed-database" || {
-        log_warn "Database seeding failed or data already exists"
-    }
-    
-    log_info "✅ Database initialization complete"
+    if [ "$table_status" = "ACTIVE" ]; then
+        log_info "✅ DynamoDB table '$table_name' is active"
+    else
+        log_error "❌ DynamoDB table '$table_name' status: $table_status"
+        return 1
+    fi
 }
 
 # Main execution
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
-    case "${1:-deploy}" in
-        "deploy")
-            deploy_database
-            ;;
-        "init")
-            init_database_schema
-            ;;
-        "full")
-            deploy_database
-            init_database_schema
-            ;;
-        *)
-            echo "Usage: $0 [deploy|init|full]"
-            echo "  deploy - Deploy database infrastructure"
-            echo "  init   - Initialize schema and seed data"
-            echo "  full   - Deploy and initialize"
-            exit 1
-            ;;
-    esac
+    deploy_database
+    test_database
 fi

@@ -1,719 +1,68 @@
+# AmIAnAI v2 - Simplified 2H+2AI Infrastructure
+# DynamoDB + WebSocket API + Lambda (No VPC, No RDS)
+
 terraform {
+  required_version = ">= 1.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.1"
-    }
   }
-  
-  required_version = ">= 1.2.0"
 }
 
 provider "aws" {
-  region = "us-east-1"  # Single region for everything
+  region = var.aws_region
 }
 
-# Get current AWS region
-data "aws_region" "current" {}
 
-# S3 bucket for website hosting
-resource "aws_s3_bucket" "website" {
-  bucket        = var.domain_name
-  force_destroy = true
-  tags          = var.tags
-}
-
-# S3 bucket ownership controls
-resource "aws_s3_bucket_ownership_controls" "website" {
-  bucket = aws_s3_bucket.website.id
+locals {
+  project_name = "amianai-v2"
   
-  rule {
-    object_ownership = "BucketOwnerPreferred"
+  tags = {
+    Project     = local.project_name
+    Environment = "production"
+    Version     = "2.0"
+    Purpose     = "2H+2AI-real-time-conversations"
   }
-}
-
-# S3 bucket public access block configuration
-resource "aws_s3_bucket_public_access_block" "website" {
-  bucket = aws_s3_bucket.website.id
-
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
-
-# S3 bucket configuration
-resource "aws_s3_bucket_website_configuration" "website" {
-  bucket = aws_s3_bucket.website.id
-
-  index_document { suffix = "index.html" }
-  error_document { key    = "index.html" }
-}
-
-# CloudFront distribution
-resource "aws_cloudfront_distribution" "website" {
-  enabled             = true
-  is_ipv6_enabled    = true
-  default_root_object = "index.html"
-  aliases            = ["amianai.com"]
-  
-  origin {
-    domain_name = aws_s3_bucket.website.bucket_regional_domain_name
-    origin_id   = "S3-${aws_s3_bucket.website.bucket}"
-
-    s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.website.cloudfront_access_identity_path
-    }
-  }
-
-  default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-${aws_s3_bucket.website.bucket}"
-    viewer_protocol_policy = "redirect-to-https"
-    compress              = true
-
-    forwarded_values {
-      query_string = false
-      cookies { forward = "none" }
-    }
-
-    min_ttl     = 0
-    default_ttl = 3600
-    max_ttl     = 86400
-  }
-
-  restrictions {
-    geo_restriction { restriction_type = "none" }
-  }
-
-  viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate.website.arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
-  }
-
-  # Custom error responses to handle client-side routing
-  custom_error_response {
-    error_code            = 403
-    response_code         = 200
-    response_page_path    = "/index.html"
-    error_caching_min_ttl = 10
-  }
-
-  custom_error_response {
-    error_code            = 404
-    response_code         = 200
-    response_page_path    = "/index.html"
-    error_caching_min_ttl = 10
-  }
-
-  custom_error_response {
-    error_code            = 500
-    response_code         = 200
-    response_page_path    = "/index.html"
-    error_caching_min_ttl = 10
-  }
-
-  tags = var.tags
-}
-
-# CloudFront Origin Access Identity
-resource "aws_cloudfront_origin_access_identity" "website" {
-  comment = "Access identity for amianai.com"
-}
-
-# S3 bucket policy
-resource "aws_s3_bucket_policy" "website" {
-  bucket = aws_s3_bucket.website.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Sid       = "AllowCloudFrontAccess"
-      Effect    = "Allow"
-      Principal = { AWS = aws_cloudfront_origin_access_identity.website.iam_arn }
-      Action    = "s3:GetObject"
-      Resource  = "${aws_s3_bucket.website.arn}/*"
-    }]
-  })
-}
-
-# SSL Certificate
-resource "aws_acm_certificate" "website" {
-  domain_name       = var.domain_name
-  subject_alternative_names = ["api.${var.domain_name}"]
-  validation_method = "DNS"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = var.tags
-}
-
-# DNS zone data source
-data "aws_route53_zone" "website" {
-  name = "amianai.com"
-}
-
-# Certificate validation records
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.website.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = data.aws_route53_zone.website.zone_id
-}
-
-# Certificate validation
-resource "aws_acm_certificate_validation" "website" {
-  certificate_arn         = aws_acm_certificate.website.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
-}
-
-# Website DNS record
-resource "aws_route53_record" "website" {
-  zone_id = data.aws_route53_zone.website.zone_id
-  name    = "amianai.com"
-  type    = "A"
-
-  alias {
-    name                   = aws_cloudfront_distribution.website.domain_name
-    zone_id                = aws_cloudfront_distribution.website.hosted_zone_id
-    evaluate_target_health = false
-  }
-}
-
-# GitHub OIDC Provider
-resource "aws_iam_openid_connect_provider" "github" {
-  url = "https://token.actions.githubusercontent.com"
-  
-  client_id_list = ["sts.amazonaws.com"]
-  
-  # Updated thumbprint list from GitHub docs
-  thumbprint_list = [
-    "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
-  ]
-
-  tags = var.tags
-}
-
-# GitHub Actions Role
-resource "aws_iam_role" "github_actions" {
-  name = "github-actions"
-  
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Federated = aws_iam_openid_connect_provider.github.arn
-        }
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Condition = {
-          StringEquals = {
-            "${aws_iam_openid_connect_provider.github.url}:aud": "sts.amazonaws.com"
-          }
-          StringLike = {
-            "${aws_iam_openid_connect_provider.github.url}:sub": "repo:nicolovejoy/am-i-an-ai:*"
-          }
-        }
-      }
-    ]
-  })
-
-  tags = var.tags
-}
-
-# GitHub Actions Policy
-resource "aws_iam_role_policy" "github_actions" {
-  name = "github-actions-deploy"
-  role = aws_iam_role.github_actions.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:ListBucket",
-          "s3:DeleteObject"
-        ]
-        Resource = [
-          aws_s3_bucket.website.arn,
-          "${aws_s3_bucket.website.arn}/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "cloudfront:CreateInvalidation",
-          "cloudfront:GetDistribution",
-          "cloudfront:ListDistributions"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "cognito-idp:ListUserPools",
-          "cognito-idp:ListUserPoolClients"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
 }
 
 ############################
-# VPC and Networking
+# DynamoDB Table
 ############################
 
-resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-  
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-vpc"
-  })
-}
+resource "aws_dynamodb_table" "sessions" {
+  name           = "${local.project_name}-sessions"
+  billing_mode   = "PAY_PER_REQUEST"  # Serverless pricing
+  hash_key       = "sessionId"
+  range_key      = "connectionId"
 
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-  
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-igw"
-  })
-}
-
-# Public subnets for NAT gateways
-resource "aws_subnet" "public" {
-  count = 2
-  
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.${count.index + 1}.0/24"
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
-  map_public_ip_on_launch = true
-  
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-public-${count.index + 1}"
-    Type = "public"
-  })
-}
-
-# Private subnets for RDS
-resource "aws_subnet" "private" {
-  count = 2
-  
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.${count.index + 10}.0/24"
-  availability_zone = data.aws_availability_zones.available.names[count.index]
-  
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-private-${count.index + 1}"
-    Type = "private"
-  })
-}
-
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
-# Elastic IPs for NAT gateways - REMOVED for cost optimization
-# Saves $7.30/month ($87.60/year)
-
-# NAT gateways - REMOVED for cost optimization  
-# Saves $90/month ($1,080/year)
-# Lambda now uses direct internet access (better performance + lower cost)
-
-# Route table for public subnets
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-  
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-  
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-public-rt"
-  })
-}
-
-# Route table associations for public subnets
-resource "aws_route_table_association" "public" {
-  count = 2
-  
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
-}
-
-# Private route tables - REMOVED (no longer needed without NAT Gateway)
-# Private subnets kept for RDS if needed later
-
-# Private route table associations - REMOVED (no private routes needed)
-
-############################
-# Security Groups
-############################
-
-# Security group for RDS
-resource "aws_security_group" "rds" {
-  name_prefix = "${var.project_name}-rds-"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Lambda uses dynamic IPs - secured by DB credentials
-    description = "PostgreSQL access for Lambda functions (secured by credentials)"
+  attribute {
+    name = "sessionId"
+    type = "S"
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  attribute {
+    name = "connectionId"
+    type = "S"
   }
 
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-rds-sg"
-  })
-}
-
-############################
-# RDS PostgreSQL Database
-############################
-
-# DB subnet group
-resource "aws_db_subnet_group" "main" {
-  name       = "${var.project_name}-db-subnet-group"
-  subnet_ids = aws_subnet.public[*].id
-
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-db-subnet-group"
-  })
-}
-
-# RDS parameter group
-resource "aws_db_parameter_group" "main" {
-  family = "postgres16"
-  name   = "${var.project_name}-db-params"
-
-  parameter {
-    name  = "log_statement"
-    value = "all"
+  # TTL for automatic session cleanup
+  ttl {
+    attribute_name = "expiresAt"
+    enabled        = true
   }
 
-  parameter {
-    name  = "log_min_duration_statement"
-    value = "1000"
-  }
-
-  tags = var.tags
-}
-
-# Generate random password for RDS
-resource "random_password" "db_password" {
-  length  = 32
-  special = true
-  # Exclude characters that RDS doesn't allow: / @ " (space)
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
-# Store database password in AWS Secrets Manager
-resource "aws_secretsmanager_secret" "db_password" {
-  name                    = "${var.project_name}-db-password"
-  description             = "Database password for PostgreSQL"
-  recovery_window_in_days = 0  # Allow immediate deletion for dev
-
-  tags = var.tags
-}
-
-resource "aws_secretsmanager_secret_version" "db_password" {
-  secret_id     = aws_secretsmanager_secret.db_password.id
-  secret_string = jsonencode({
-    username = "amianai_admin"
-    password = random_password.db_password.result
-    engine   = "postgres"
-    host     = aws_db_instance.main.address
-    port     = aws_db_instance.main.port
-    dbname   = aws_db_instance.main.db_name
-  })
-}
-
-# Store OpenAI API key in AWS Secrets Manager
-resource "aws_secretsmanager_secret" "openai_api_key" {
-  name                    = "${var.project_name}-openai-api-key"
-  description             = "OpenAI API key for AI persona responses"
-  recovery_window_in_days = 0  # Allow immediate deletion for dev
-
-  tags = var.tags
-}
-
-resource "aws_secretsmanager_secret_version" "openai_api_key" {
-  secret_id     = aws_secretsmanager_secret.openai_api_key.id
-  secret_string = jsonencode({
-    api_key = var.openai_api_key
-  })
-}
-
-# RDS PostgreSQL instance
-resource "aws_db_instance" "main" {
-  identifier = "${var.project_name}-postgres"
-
-  # Engine configuration
-  engine         = "postgres"
-  engine_version = "16.9"
-  instance_class = "db.t3.micro"
-
-  # Storage configuration
-  allocated_storage     = 20
-  max_allocated_storage = 100
-  storage_type          = "gp3"
-  storage_encrypted     = true
-
-  # Database configuration
-  db_name  = "amianai"
-  username = "amianai_admin"
-  password = random_password.db_password.result
-
-  # Network configuration
-  db_subnet_group_name   = aws_db_subnet_group.main.name
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  publicly_accessible    = true
-
-  # Backup configuration
-  backup_retention_period = 7
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "sun:04:00-sun:05:00"
-
-  # Performance and monitoring
-  parameter_group_name   = aws_db_parameter_group.main.name
-  monitoring_interval    = 60
-  monitoring_role_arn    = aws_iam_role.rds_monitoring.arn
-  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
-
-  # Deletion protection
-  skip_final_snapshot       = true
-  delete_automated_backups  = true
-  deletion_protection       = false
-
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-postgres"
-  })
-}
-
-# IAM role for RDS monitoring
-resource "aws_iam_role" "rds_monitoring" {
-  name = "${var.project_name}-rds-monitoring-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "monitoring.rds.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = var.tags
-}
-
-resource "aws_iam_role_policy_attachment" "rds_monitoring" {
-  role       = aws_iam_role.rds_monitoring.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+  tags = local.tags
 }
 
 ############################
-# Cognito User Pool
+# Lambda Function
 ############################
 
-resource "aws_cognito_user_pool" "main" {
-  name = "${var.project_name}-user-pool"
-  
-  password_policy {
-    minimum_length    = 8
-    require_lowercase = true
-    require_numbers   = true
-    require_symbols   = true
-    require_uppercase = true
-  }
-  
-  auto_verified_attributes = ["email"]
-  
-  verification_message_template {
-    default_email_option = "CONFIRM_WITH_CODE"
-    email_subject       = "Your verification code"
-    email_message       = "Your verification code is {####}"
-  }
-  
-  schema {
-    attribute_data_type = "String"
-    name               = "email"
-    required           = true
-    mutable           = true
-
-    string_attribute_constraints {
-      min_length = 1
-      max_length = 256
-    }
-  }
-  
-  tags = var.tags
-}
-
-resource "aws_cognito_user_pool_domain" "main" {
-  domain       = "auth-amianai"
-  user_pool_id = aws_cognito_user_pool.main.id
-}
-
-resource "aws_cognito_user_pool_client" "main" {
-  name         = "${var.project_name}-client"
-  user_pool_id = aws_cognito_user_pool.main.id
-  
-  generate_secret = false
-  
-  explicit_auth_flows = [
-    "ALLOW_USER_SRP_AUTH",
-    "ALLOW_REFRESH_TOKEN_AUTH",
-    "ALLOW_USER_PASSWORD_AUTH",
-    "ALLOW_ADMIN_USER_PASSWORD_AUTH"
-  ]
-  
-  supported_identity_providers = ["COGNITO"]
-  
-  callback_urls = ["https://${var.domain_name}/auth/callback"]
-  logout_urls   = ["https://${var.domain_name}/"]
-  
-  allowed_oauth_flows_user_pool_client = true
-  allowed_oauth_flows                  = ["code", "implicit"]
-  allowed_oauth_scopes                 = ["email", "openid", "profile"]
-}
-
-# Cognito User Pool Groups
-resource "aws_cognito_user_group" "admin" {
-  name         = "admin"
-  user_pool_id = aws_cognito_user_pool.main.id
-  description  = "Admin users with full platform access"
-  precedence   = 1
-}
-
-resource "aws_cognito_user_group" "user" {
-  name         = "user"
-  user_pool_id = aws_cognito_user_pool.main.id
-  description  = "Regular users"
-  precedence   = 10
-}
-
-############################
-# Outputs
-############################
-
-output "github_actions_role_arn" {
-  value       = aws_iam_role.github_actions.arn
-  description = "ARN of the GitHub Actions role"
-}
-
-output "website_url" {
-  value       = "https://${var.domain_name}"
-  description = "Website URL"
-}
-
-output "s3_bucket_name" {
-  value       = aws_s3_bucket.website.bucket
-  description = "S3 bucket name"
-}
-
-output "cloudfront_distribution_id" {
-  value       = aws_cloudfront_distribution.website.id
-  description = "CloudFront distribution ID"
-}
-
-output "cognito_user_pool_id" {
-  description = "The ID of the Cognito User Pool"
-  value       = aws_cognito_user_pool.main.id
-}
-
-output "cognito_client_id" {
-  description = "The ID of the Cognito User Pool Client"
-  value       = aws_cognito_user_pool_client.main.id
-}
-
-output "cognito_domain" {
-  description = "The domain of the Cognito User Pool"
-  value       = aws_cognito_user_pool_domain.main.domain
-}
-
-output "cognito_region" {
-  description = "The AWS region where Cognito is deployed"
-  value       = data.aws_region.current.name
-}
-
-output "cognito_admin_group_name" {
-  description = "The name of the admin Cognito group"
-  value       = aws_cognito_user_group.admin.name
-}
-
-output "cognito_user_group_name" {
-  description = "The name of the user Cognito group"
-  value       = aws_cognito_user_group.user.name
-}
-
-output "database_endpoint" {
-  description = "The RDS instance endpoint"
-  value       = aws_db_instance.main.endpoint
-  sensitive   = true
-}
-
-output "database_port" {
-  description = "The RDS instance port"
-  value       = aws_db_instance.main.port
-}
-
-output "database_name" {
-  description = "The RDS instance database name"
-  value       = aws_db_instance.main.db_name
-}
-
-output "database_secret_arn" {
-  description = "ARN of the secret containing database credentials"
-  value       = aws_secretsmanager_secret.db_password.arn
-}
-
-############################
-# Lambda & API Gateway
-############################
-
-# Security group for Lambda functions - REMOVED
-# Lambda no longer in VPC, uses default internet access
-# No security group needed for Lambda outside VPC
-
-# IAM role for Lambda execution
-resource "aws_iam_role" "lambda_execution" {
-  name_prefix = "${var.project_name}-lambda-execution-"
+# IAM role for Lambda
+resource "aws_iam_role" "websocket_lambda" {
+  name = "${local.project_name}-websocket-lambda"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -728,13 +77,18 @@ resource "aws_iam_role" "lambda_execution" {
     ]
   })
 
-  tags = var.tags
+  tags = local.tags
 }
 
-# IAM policy for Lambda to access VPC, RDS, and Secrets Manager
-resource "aws_iam_policy" "lambda_policy" {
-  name_prefix = "${var.project_name}-lambda-policy-"
-  description = "IAM policy for Lambda function"
+# Lambda basic execution policy
+resource "aws_iam_role_policy_attachment" "lambda_basic" {
+  role       = aws_iam_role.websocket_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# DynamoDB access policy
+resource "aws_iam_policy" "dynamodb_access" {
+  name = "${local.project_name}-dynamodb-access"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -742,239 +96,188 @@ resource "aws_iam_policy" "lambda_policy" {
       {
         Effect = "Allow"
         Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
         ]
-        Resource = "arn:aws:logs:*:*:*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ec2:CreateNetworkInterface",
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DeleteNetworkInterface"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ]
-        Resource = [
-          aws_secretsmanager_secret.db_password.arn,
-          aws_secretsmanager_secret.openai_api_key.arn
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "rds:DescribeDBInstances",
-          "rds:DescribeDBClusters"
-        ]
-        Resource = "*"
+        Resource = aws_dynamodb_table.sessions.arn
       }
     ]
   })
 
-  tags = var.tags
+  tags = local.tags
 }
 
-# Attach policy to Lambda execution role
-resource "aws_iam_role_policy_attachment" "lambda_policy" {
-  role       = aws_iam_role.lambda_execution.name
-  policy_arn = aws_iam_policy.lambda_policy.arn
+resource "aws_iam_role_policy_attachment" "lambda_dynamodb" {
+  role       = aws_iam_role.websocket_lambda.name
+  policy_arn = aws_iam_policy.dynamodb_access.arn
 }
 
-# VPC execution policy - REMOVED (Lambda no longer in VPC)
-# Saves VPC execution permissions complexity
+# API Gateway Management policy for WebSocket
+resource "aws_iam_policy" "apigateway_management" {
+  name = "${local.project_name}-apigateway-management"
 
-# Lambda function placeholder (will be deployed by script)
-resource "aws_lambda_function" "api" {
-  function_name = "${var.project_name}-api"
-  role         = aws_iam_role.lambda_execution.arn
-  handler      = "index.handler"
-  runtime      = "nodejs20.x"
-  timeout      = 30
-  memory_size  = 512
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "execute-api:ManageConnections"
+        ]
+        Resource = "arn:aws:execute-api:${var.aws_region}:*:*/@connections/*"
+      }
+    ]
+  })
+
+  tags = local.tags
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_apigateway" {
+  role       = aws_iam_role.websocket_lambda.name
+  policy_arn = aws_iam_policy.apigateway_management.arn
+}
+
+# Lambda function
+resource "aws_lambda_function" "websocket" {
+  function_name = "${local.project_name}-websocket"
+  role          = aws_iam_role.websocket_lambda.arn
+  handler       = "handler.handler"
+  runtime       = "nodejs20.x"
+  timeout       = 30
+  memory_size   = 256
 
   # Placeholder code - will be replaced by deployment script
-  filename      = "lambda-placeholder.zip"
-  source_code_hash = data.archive_file.lambda_placeholder.output_base64sha256
-
-  # VPC config removed for cost optimization and better performance
-  # Lambda now has direct internet access - no NAT Gateway needed
-  # Still secure via IAM roles and security groups on RDS
+  filename         = "websocket-placeholder.zip"
+  source_code_hash = data.archive_file.websocket_placeholder.output_base64sha256
 
   environment {
     variables = {
-      DB_SECRET_ARN = aws_secretsmanager_secret.db_password.arn
-      DB_HOST       = aws_db_instance.main.address
-      DB_PORT       = "5432"
-      DB_NAME       = aws_db_instance.main.db_name
-      NODE_ENV      = "production"
-      OPENAI_SECRET_ARN = aws_secretsmanager_secret.openai_api_key.arn
-      COGNITO_USER_POOL_ID = aws_cognito_user_pool.main.id
-      COGNITO_CLIENT_ID = aws_cognito_user_pool_client.main.id
+      DYNAMODB_TABLE = aws_dynamodb_table.sessions.name
     }
   }
 
-  depends_on = [
-    aws_iam_role_policy_attachment.lambda_policy,
-    # aws_iam_role_policy_attachment.lambda_vpc_execution, # Removed - no VPC needed
-    aws_cloudwatch_log_group.lambda_logs,
-  ]
-
-  tags = var.tags
+  tags = local.tags
 }
 
 # Create placeholder Lambda deployment package
-data "archive_file" "lambda_placeholder" {
+data "archive_file" "websocket_placeholder" {
   type        = "zip"
-  output_path = "lambda-placeholder.zip"
+  output_path = "websocket-placeholder.zip"
   
   source {
     content = jsonencode({
       exports = {
-        handler = "async (event) => ({ statusCode: 200, body: JSON.stringify({ message: 'Placeholder Lambda' }) })"
+        handler = "async (event) => ({ statusCode: 200, body: JSON.stringify({ message: 'Placeholder WebSocket Lambda' }) })"
       }
     })
     filename = "index.js"
   }
 }
 
-# CloudWatch Log Group for Lambda
-resource "aws_cloudwatch_log_group" "lambda_logs" {
-  name              = "/aws/lambda/${var.project_name}-api"
-  retention_in_days = 14
-  tags              = var.tags
+# CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "websocket_logs" {
+  name              = "/aws/lambda/${local.project_name}-websocket"
+  retention_in_days = 7
+  tags              = local.tags
 }
 
-# API Gateway REST API
-resource "aws_api_gateway_rest_api" "main" {
-  name        = "${var.project_name}-api"
-  description = "AmIAnAI API Gateway"
-  
-  endpoint_configuration {
-    types = ["REGIONAL"]
-  }
+############################
+# WebSocket API Gateway
+############################
 
-  tags = var.tags
+resource "aws_apigatewayv2_api" "websocket" {
+  name                       = "${local.project_name}-websocket-api"
+  protocol_type              = "WEBSOCKET"
+  route_selection_expression = "$request.body.action"
+
+  tags = local.tags
 }
 
-# API Gateway resource for proxy integration
-resource "aws_api_gateway_resource" "proxy" {
-  rest_api_id = aws_api_gateway_rest_api.main.id
-  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
-  path_part   = "{proxy+}"
+# Lambda integration
+resource "aws_apigatewayv2_integration" "websocket_lambda" {
+  api_id             = aws_apigatewayv2_api.websocket.id
+  integration_type   = "AWS_PROXY"
+  integration_method = "POST"
+  integration_uri    = aws_lambda_function.websocket.invoke_arn
 }
 
-# API Gateway method for ANY requests
-resource "aws_api_gateway_method" "proxy" {
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  resource_id   = aws_api_gateway_resource.proxy.id
-  http_method   = "ANY"
-  authorization = "NONE"
+# Routes
+resource "aws_apigatewayv2_route" "connect" {
+  api_id    = aws_apigatewayv2_api.websocket.id
+  route_key = "$connect"
+  target    = "integrations/${aws_apigatewayv2_integration.websocket_lambda.id}"
 }
 
-# API Gateway method for root path
-resource "aws_api_gateway_method" "proxy_root" {
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  resource_id   = aws_api_gateway_rest_api.main.root_resource_id
-  http_method   = "ANY"
-  authorization = "NONE"
+resource "aws_apigatewayv2_route" "disconnect" {
+  api_id    = aws_apigatewayv2_api.websocket.id
+  route_key = "$disconnect"
+  target    = "integrations/${aws_apigatewayv2_integration.websocket_lambda.id}"
 }
 
-# API Gateway integration with Lambda
-resource "aws_api_gateway_integration" "lambda" {
-  rest_api_id = aws_api_gateway_rest_api.main.id
-  resource_id = aws_api_gateway_method.proxy.resource_id
-  http_method = aws_api_gateway_method.proxy.http_method
-
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
+resource "aws_apigatewayv2_route" "message" {
+  api_id    = aws_apigatewayv2_api.websocket.id
+  route_key = "message"
+  target    = "integrations/${aws_apigatewayv2_integration.websocket_lambda.id}"
 }
 
-# API Gateway integration for root path
-resource "aws_api_gateway_integration" "lambda_root" {
-  rest_api_id = aws_api_gateway_rest_api.main.id
-  resource_id = aws_api_gateway_method.proxy_root.resource_id
-  http_method = aws_api_gateway_method.proxy_root.http_method
-
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
+resource "aws_apigatewayv2_route" "default" {
+  api_id    = aws_apigatewayv2_api.websocket.id
+  route_key = "$default"
+  target    = "integrations/${aws_apigatewayv2_integration.websocket_lambda.id}"
 }
 
-# Lambda permission for API Gateway
-resource "aws_lambda_permission" "api_gw" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  principal     = "apigateway.amazonaws.com"
+# Deployment
+resource "aws_apigatewayv2_deployment" "websocket" {
+  api_id = aws_apigatewayv2_api.websocket.id
 
-  source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
-}
-
-# API Gateway deployment
-resource "aws_api_gateway_deployment" "main" {
   depends_on = [
-    aws_api_gateway_integration.lambda,
-    aws_api_gateway_integration.lambda_root,
+    aws_apigatewayv2_route.connect,
+    aws_apigatewayv2_route.disconnect,
+    aws_apigatewayv2_route.message,
+    aws_apigatewayv2_route.default
   ]
-
-  rest_api_id = aws_api_gateway_rest_api.main.id
-
-  # Force new deployment on changes
-  triggers = {
-    redeployment = sha1(jsonencode([
-      aws_api_gateway_resource.proxy.id,
-      aws_api_gateway_method.proxy.id,
-      aws_api_gateway_method.proxy_root.id,
-      aws_api_gateway_integration.lambda.id,
-      aws_api_gateway_integration.lambda_root.id,
-    ]))
-  }
 
   lifecycle {
     create_before_destroy = true
   }
 }
 
-# API Gateway stage
-resource "aws_api_gateway_stage" "prod" {
-  deployment_id = aws_api_gateway_deployment.main.id
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  stage_name    = "prod"
+resource "aws_apigatewayv2_stage" "prod" {
+  api_id        = aws_apigatewayv2_api.websocket.id
+  deployment_id = aws_apigatewayv2_deployment.websocket.id
+  name          = "prod"
 
-  tags = var.tags
+  tags = local.tags
 }
 
-# Note: Custom domain temporarily disabled due to certificate conflicts
-# Using default API Gateway URL for now
-
-############################
-# Lambda & API Gateway Outputs
-############################
-
-output "api_gateway_url" {
-  description = "The URL of the API Gateway"
-  value       = aws_api_gateway_stage.prod.invoke_url
+# Lambda permission for API Gateway
+resource "aws_lambda_permission" "websocket_apigateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.websocket.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.websocket.execution_arn}/*/*"
 }
 
-output "api_custom_domain_url" {
-  description = "The custom domain URL for the API (disabled)"
-  value       = "Custom domain disabled - using default API Gateway URL"
+############################
+# Outputs
+############################
+
+output "websocket_url" {
+  description = "WebSocket API Gateway URL"
+  value       = "${aws_apigatewayv2_api.websocket.api_endpoint}/prod"
+}
+
+output "dynamodb_table_name" {
+  description = "DynamoDB table name"
+  value       = aws_dynamodb_table.sessions.name
 }
 
 output "lambda_function_name" {
-  description = "Name of the Lambda function"
-  value       = aws_lambda_function.api.function_name
-}
-
-output "lambda_function_arn" {
-  description = "ARN of the Lambda function"
-  value       = aws_lambda_function.api.arn
+  description = "Lambda function name"
+  value       = aws_lambda_function.websocket.function_name
 }

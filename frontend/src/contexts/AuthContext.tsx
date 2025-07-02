@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, {
   createContext,
@@ -6,13 +6,11 @@ import React, {
   useEffect,
   useState,
   ReactNode,
-} from "react";
-import { useRouter } from "next/navigation";
-import { cognitoService } from "../services/cognito";
-import { AuthUser } from "../types/auth";
-import { useConversationStore } from "../store/conversationStore";
-import { useConversationsListStore } from "../store/conversationsListStore";
-import { usePersonaStore } from "../store/personaStore";
+} from 'react';
+import { useRouter } from 'next/navigation';
+import { cognitoService } from '../services/cognito';
+import { AuthUser } from '../types/auth';
+import { useSessionStore } from '../store/sessionStore';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -54,22 +52,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAuthenticated(false);
     setUser(null);
     
-    // Clear all user data from stores
-    const conversationStore = useConversationStore.getState();
-    const conversationsListStore = useConversationsListStore.getState();
-    const personaStore = usePersonaStore.getState();
+    // Clear session data
+    const sessionStore = useSessionStore.getState();
+    sessionStore.reset();
     
-    conversationStore.clearAllData();
-    conversationsListStore.clearAllData();
-    personaStore.clearAllData();
-    
-    // Clear session storage
+    // Clear local storage
     if (typeof window !== 'undefined') {
+      window.localStorage.clear();
       window.sessionStorage.clear();
     }
     
-    // Redirect to home page
-    router.push('/');
+    // Redirect to sign in
+    router.push('/auth/signin');
   };
 
   useEffect(() => {
@@ -78,7 +72,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, isLoading, user, checkAuth, signOut }}
+      value={{
+        isAuthenticated,
+        isLoading,
+        user,
+        checkAuth,
+        signOut,
+      }}
     >
       {children}
     </AuthContext.Provider>
@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
