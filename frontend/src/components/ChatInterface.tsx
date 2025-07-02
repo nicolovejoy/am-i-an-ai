@@ -15,6 +15,8 @@ export default function ChatInterface() {
   
   const {
     connectionStatus,
+    retryCount,
+    lastError,
     myIdentity,
     isSessionActive,
     isRevealed,
@@ -70,9 +72,16 @@ export default function ChatInterface() {
           <h2 className="text-xl font-semibold mb-2">
             {connectionStatus === 'disconnected' ? 'Connecting...' : 'Joining Session...'}
           </h2>
-          <p className="text-gray-600">
-            Connecting to 2H+2AI conversation
-          </p>
+          <div className="text-gray-600 space-y-1">
+            <p>
+              Connecting to table for four conversation
+            </p>
+            {retryCount > 0 && (
+              <p className="text-sm">
+                Reconnecting... (attempt {retryCount + 1})
+              </p>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -84,22 +93,40 @@ export default function ChatInterface() {
         <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
           <div className="text-4xl mb-4">🔌</div>
           <h2 className="text-xl font-semibold text-red-600 mb-2">Connection Error</h2>
-          <p className="text-gray-600 mb-4">
-            Failed to connect to the WebSocket server. 
-            Check the browser console for more details.
-          </p>
+          <div className="text-gray-600 mb-4 space-y-2">
+            <p>
+              {lastError || 'Failed to connect to the WebSocket server.'}
+            </p>
+            {retryCount > 0 && (
+              <p className="text-sm">
+                Retry attempts: {retryCount}/5
+              </p>
+            )}
+            <p className="text-sm">
+              Please check your internet connection and try again.
+            </p>
+          </div>
           <div className="space-y-2">
             <button
-              onClick={connect}
+              onClick={() => {
+                reset();
+                setTimeout(() => connect(), 100);
+              }}
               className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 w-full"
             >
-              Retry Connection
+              Reset & Retry Connection
             </button>
             <button
               onClick={() => window.location.reload()}
               className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 w-full"
             >
               Reload Page
+            </button>
+            <button
+              onClick={signOut}
+              className="text-gray-500 hover:text-gray-700 text-sm w-full"
+            >
+              Sign Out
             </button>
           </div>
         </div>

@@ -12,7 +12,6 @@ export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
-  const [success, setSuccess] = useState(false);
   const router = useRouter();
 
   const {
@@ -30,7 +29,7 @@ export default function SignUpForm() {
 
     try {
       await cognitoService.signUp(data);
-      setSuccess(true);
+      router.push(`/auth/verify?email=${encodeURIComponent(data.email)}`);
     } catch (err) {
       setError(err as AuthError);
     } finally {
@@ -38,30 +37,6 @@ export default function SignUpForm() {
     }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <div className="mx-auto h-12 w-12 text-green-600 text-4xl">✓</div>
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-              Check your email
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              We&apos;ve sent a verification link to your email address.
-              Click the link to verify your account.
-            </p>
-            <button
-              onClick={() => router.push('/auth/signin')}
-              className="mt-4 text-primary-600 hover:text-primary-500"
-            >
-              Back to sign in
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -96,7 +71,7 @@ export default function SignUpForm() {
                   },
                 })}
                 type="email"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 placeholder="your@email.com"
               />
               {errors.email && (
@@ -118,7 +93,7 @@ export default function SignUpForm() {
                     },
                   })}
                   type={showPassword ? 'text' : 'password'}
-                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Choose a strong password"
                 />
                 <button
@@ -150,7 +125,7 @@ export default function SignUpForm() {
                       value === watchPassword || 'Passwords do not match',
                   })}
                   type={showConfirmPassword ? 'text' : 'password'}
-                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Confirm your password"
                 />
                 <button

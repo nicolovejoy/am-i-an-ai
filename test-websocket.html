@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AmIAnAI v2 WebSocket Test</title>
+    <title>am I an AI? - WebSocket Test</title>
     <style>
         body { font-family: monospace; padding: 20px; }
         #messages { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 10px; margin: 10px 0; }
@@ -13,7 +13,7 @@
     </style>
 </head>
 <body>
-    <h1>AmIAnAI v2 WebSocket Test</h1>
+    <h1>am I an AI? - WebSocket Test</h1>
     <div id="status">Disconnected</div>
     <div id="messages"></div>
     <input type="text" id="messageInput" placeholder="Type a message..." disabled>
@@ -21,7 +21,7 @@
     <button id="connectBtn">Connect</button>
 
     <script>
-        const wsUrl = 'wss://i5csamj3a8.execute-api.us-east-1.amazonaws.com/prod';
+        const wsUrl = 'wss://ip1n2fcaw2.execute-api.us-east-1.amazonaws.com/prod';
         let ws = null;
 
         const status = document.getElementById('status');

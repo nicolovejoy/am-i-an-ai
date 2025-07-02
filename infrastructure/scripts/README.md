@@ -1,23 +1,46 @@
-# AmIAnAI v2 - 2H+2AI Deployment Scripts
+# am I an AI? - Deployment Guide
 
-## Quick Start
+## **When to Use Scripts vs Terraform Directly**
 
-### Deploy Everything
+### **Use Terraform Directly For:**
+- ✅ **Infrastructure changes** (adding Cognito, IAM roles, etc.)
+- ✅ **Resource configuration updates** 
+- ✅ **Quick iteration on terraform files**
+- ✅ **Simple resource additions** (no build steps needed)
+
 ```bash
-cd v2
-DOMAIN_NAME=amianai.com ./scripts/deploy.sh --all
+cd infrastructure
+terraform plan    # Review changes
+terraform apply   # Deploy infrastructure
 ```
 
-### Deploy Specific Components
+### **Use Deployment Scripts For:**
+- ✅ **Lambda code updates** (requires build + package)
+- ✅ **Frontend deployments** (requires build + S3 upload)
+- ✅ **Full system deployments** (coordinates multiple components)
+
 ```bash
-./scripts/deploy.sh --websocket      # WebSocket Lambda only (~2 min)
-./scripts/deploy.sh --frontend       # Frontend only (~3 min)
-./scripts/deploy.sh --database       # DynamoDB only (~1 min)
+cd infrastructure
+DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --websocket  # Lambda only
+DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --frontend   # Frontend only  
+DOMAIN_NAME=amianai.com GITHUB_USERNAME=nicolovejoy ./scripts/deploy.sh --all        # Everything
 ```
 
-### Destroy Infrastructure
+## **Component-Specific Deployment**
+
+### **WebSocket Lambda** (Use Script)
 ```bash
-./scripts/destroy.sh                 # Complete teardown (~2 min)
+./scripts/deploy.sh --websocket      # Builds TypeScript, packages, deploys (~2 min)
+```
+
+### **Frontend React App** (Use Script)  
+```bash
+./scripts/deploy.sh --frontend       # Builds Next.js, uploads to S3 (~3 min)
+```
+
+### **Infrastructure Only** (Use Terraform)
+```bash
+terraform apply                      # Cognito, IAM, DynamoDB, API Gateway (~1 min)
 ```
 
 ## Component Structure

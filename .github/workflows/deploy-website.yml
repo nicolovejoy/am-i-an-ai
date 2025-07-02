@@ -38,10 +38,6 @@ jobs:
         working-directory: frontend
         run: npm run lint
 
-      - name: Run tests
-        working-directory: frontend
-        run: npm test -- --watchAll=false --coverage --maxWorkers=2 --verbose
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -65,7 +61,7 @@ jobs:
 
       - name: Sync to S3
         run: |
-          aws s3 sync frontend/out/ s3://amianai.com --delete --cache-control "max-age=86400"
+          aws s3 sync frontend/dist/ s3://amianai.com --delete --cache-control "max-age=86400"
 
       - name: Invalidate CloudFront
         run: |

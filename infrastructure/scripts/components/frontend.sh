@@ -9,8 +9,10 @@ source "$SCRIPT_DIR/shared.sh"
 deploy_frontend() {
     log_info "🌐 Deploying frontend component..."
     
-    ensure_infrastructure_directory
-    check_prerequisites
+    # Change to infrastructure directory if not already there
+    if [[ "$(basename "$PWD")" != "infrastructure" ]]; then
+        cd infrastructure
+    fi
     check_environment_variables
     verify_aws_credentials
     

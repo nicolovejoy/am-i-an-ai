@@ -69,7 +69,7 @@ export default function SignInForm() {
                   },
                 })}
                 type="email"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 placeholder="your@email.com"
               />
               {errors.email && (
@@ -87,7 +87,7 @@ export default function SignInForm() {
                     required: 'Password is required',
                   })}
                   type={showPassword ? 'text' : 'password'}
-                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Your password"
                 />
                 <button

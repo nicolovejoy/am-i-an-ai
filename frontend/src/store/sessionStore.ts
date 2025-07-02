@@ -21,6 +21,8 @@ export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'er
 interface SessionState {
   // Connection
   connectionStatus: ConnectionStatus;
+  retryCount: number;
+  lastError: string | null;
   ws: WebSocket | null;
   
   // Session data
@@ -57,14 +59,16 @@ interface SessionState {
 }
 
 const WEBSOCKET_URL = process.env.NODE_ENV === 'development' 
-  ? 'wss://i5csamj3a8.execute-api.us-east-1.amazonaws.com/prod'
-  : 'wss://i5csamj3a8.execute-api.us-east-1.amazonaws.com/prod';
+  ? 'wss://ip1n2fcaw2.execute-api.us-east-1.amazonaws.com/prod'
+  : 'wss://ip1n2fcaw2.execute-api.us-east-1.amazonaws.com/prod';
 
 export const useSessionStore = create<SessionState>()(
   devtools(
     (set, get) => ({
       // Initial state
       connectionStatus: 'disconnected',
+      retryCount: 0,
+      lastError: null,
       ws: null,
       sessionId: null,
       myIdentity: null,
@@ -80,7 +84,7 @@ export const useSessionStore = create<SessionState>()(
         const state = get();
         if (state.ws?.readyState === WebSocket.OPEN) return;
 
-        set({ connectionStatus: 'connecting' });
+        set({ connectionStatus: 'connecting', lastError: null });
 
         console.log('Attempting WebSocket connection to:', WEBSOCKET_URL);
 
@@ -125,22 +129,37 @@ export const useSessionStore = create<SessionState>()(
           ws.onerror = (error) => {
             console.error('❌ WebSocket error:', error);
             console.error('WebSocket readyState:', ws.readyState);
-            set({ connectionStatus: 'error' });
+            const currentRetryCount = get().retryCount;
+            set({ 
+              connectionStatus: 'error',
+              retryCount: currentRetryCount + 1,
+              lastError: `Connection failed (attempt ${currentRetryCount + 1})`
+            });
           };
 
           ws.onclose = (event) => {
             console.log('🔌 WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
             set({ connectionStatus: 'disconnected', ws: null });
             
-            // Auto-retry after 3 seconds if not a manual disconnect
-            if (event.code !== 1000) {
-              console.log('🔄 Retrying connection in 3 seconds...');
+            // Auto-retry with exponential backoff if not a manual disconnect and under retry limit
+            const currentRetryCount = get().retryCount;
+            const isManualDisconnect = event.code === 1000;
+            const maxRetries = 5;
+            
+            if (!isManualDisconnect && currentRetryCount < maxRetries) {
+              const retryDelay = Math.min(1000 * Math.pow(2, currentRetryCount), 30000); // Max 30 seconds
+              console.log(`🔄 Retrying connection in ${retryDelay/1000} seconds... (attempt ${currentRetryCount + 1}/${maxRetries})`);
               setTimeout(() => {
                 const currentState = get();
                 if (currentState.connectionStatus === 'disconnected') {
                   currentState.connect();
                 }
-              }, 3000);
+              }, retryDelay);
+            } else if (!isManualDisconnect && currentRetryCount >= maxRetries) {
+              set({ 
+                connectionStatus: 'error',
+                lastError: `Failed to connect after ${maxRetries} attempts. Please check your internet connection.`
+              });
             }
           };
 
@@ -162,10 +181,12 @@ export const useSessionStore = create<SessionState>()(
       disconnect: () => {
         const { ws } = get();
         if (ws) {
-          ws.close();
+          ws.close(1000);
         }
         set({ 
           connectionStatus: 'disconnected',
+          retryCount: 0,
+          lastError: null,
           ws: null 
         });
       },
@@ -228,6 +249,8 @@ export const useSessionStore = create<SessionState>()(
         
         set({
           connectionStatus: 'disconnected',
+          retryCount: 0,
+          lastError: null,
           ws: null,
           sessionId: null,
           myIdentity: null,

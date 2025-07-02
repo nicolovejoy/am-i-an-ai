@@ -28,6 +28,69 @@ locals {
 }
 
 ############################
+# AUTHENTICATION (Cognito)
+############################
+
+# Cognito User Pool for authentication
+resource "aws_cognito_user_pool" "main" {
+  name = "${local.project_name}-users"
+
+  # Password policy
+  password_policy {
+    minimum_length    = 8
+    require_lowercase = true
+    require_uppercase = true
+    require_numbers   = true
+    require_symbols   = false
+  }
+
+  # Allow email as username
+  username_attributes = ["email"]
+  
+  # Auto-verify email
+  auto_verified_attributes = ["email"]
+
+  # Account recovery
+  account_recovery_setting {
+    recovery_mechanism {
+      name     = "verified_email"
+      priority = 1
+    }
+  }
+
+  tags = local.tags
+}
+
+# Cognito User Pool Client
+resource "aws_cognito_user_pool_client" "main" {
+  name         = "${local.project_name}-client"
+  user_pool_id = aws_cognito_user_pool.main.id
+
+  # Client settings
+  generate_secret = false
+  
+  # Auth flows
+  explicit_auth_flows = [
+    "ALLOW_USER_SRP_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH"
+  ]
+
+  # Token validity
+  access_token_validity  = 24   # hours
+  id_token_validity     = 24   # hours
+  refresh_token_validity = 30  # days
+
+  token_validity_units {
+    access_token  = "hours"
+    id_token     = "hours"
+    refresh_token = "days"
+  }
+
+  # Prevent user existence errors
+  prevent_user_existence_errors = "ENABLED"
+}
+
+############################
 # DynamoDB Table
 ############################
 
@@ -280,4 +343,14 @@ output "dynamodb_table_name" {
 output "lambda_function_name" {
   description = "Lambda function name"
   value       = aws_lambda_function.websocket.function_name
+}
+
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  value       = aws_cognito_user_pool.main.id
+}
+
+output "cognito_client_id" {
+  description = "Cognito User Pool Client ID"
+  value       = aws_cognito_user_pool_client.main.id
 }
