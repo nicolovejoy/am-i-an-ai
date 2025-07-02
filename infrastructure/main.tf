@@ -354,3 +354,29 @@ output "cognito_client_id" {
   description = "Cognito User Pool Client ID"
   value       = aws_cognito_user_pool_client.main.id
 }
+
+# Frontend outputs
+output "website_url" {
+  description = "The website URL"
+  value       = "https://${var.domain_name}"
+}
+
+output "cloudfront_distribution_id" {
+  description = "The CloudFront distribution ID"
+  value       = aws_cloudfront_distribution.website.id
+}
+
+output "s3_bucket_name" {
+  description = "The S3 bucket name for the website"
+  value       = aws_s3_bucket.website.id
+}
+
+output "route53_zone_id" {
+  description = "The Route 53 hosted zone ID"
+  value       = aws_route53_zone.main.zone_id
+}
+
+output "route53_nameservers" {
+  description = "Name servers for the Route 53 hosted zone"
+  value       = aws_route53_zone.main.name_servers
+}

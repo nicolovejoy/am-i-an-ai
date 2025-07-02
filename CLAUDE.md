@@ -135,9 +135,10 @@ npx tsc --noEmit      # Explicit TypeScript type checking
 ### **v2 (2H+2AI Prototype - ACTIVE DEVELOPMENT)**
 - ✅ **TDD Complete**: 8/8 tests passing, 240 lines Lambda code
 - ✅ **Core Features**: WebSocket + DynamoDB + A/B/C/D anonymity + 10min timer
-- ✅ **Infrastructure Ready**: Terraform configs created for deployment
-- 🚧 **Next**: User deploying DynamoDB + WebSocket Lambda
-- 🚧 **Then**: Simplified React frontend
+- ✅ **Production Mode**: 2 humans + 2 AI participants (the actual game experience)
+- ✅ **Testing Mode**: 1 human + 3 AI participants (for development/testing)
+- ✅ **Infrastructure Ready**: Backend deployed and working
+- 🚧 **Current Focus**: Enhanced UX with styled components
 
 ## PLATFORM COMPLETION STATUS
 
@@ -176,9 +177,17 @@ OpenAI integration is fully operational! AI personas respond to messages and sav
 ## **v2 Development Focus (Current Session)**
 
 **User Request**: Build 2H+2AI prototype with radical simplification  
-**Completed**: TDD backend (8/8 tests), infrastructure configs  
-**Current**: User deploying WebSocket + DynamoDB  
-**Next**: Create simplified React frontend following `/frontend` patterns
+**Completed**: 
+- TDD backend (8/8 tests), infrastructure configs
+- WebSocket + DynamoDB deployed and working
+- Configurable session limits implemented:
+  - **Testing mode (1H+3AI)**: 3 minutes OR 10 messages
+  - **Production mode (2H+2AI)**: 5 minutes OR 20 messages
+
+**Current Focus**: User management and permissions
+- User profiles with settings
+- Admin vs regular user permissions
+- Admin console for data viewing
 
 **Key Constraints**:
 - User handles ALL deployments (never run deploy commands)

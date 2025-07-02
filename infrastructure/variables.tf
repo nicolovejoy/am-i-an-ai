@@ -29,6 +29,8 @@ variable "tags" {
 variable "github_username" {
   type        = string
   description = "GitHub username for the repository"
+  default     = "nicolovejoy"  
+
 }
 
 variable "project_name" {

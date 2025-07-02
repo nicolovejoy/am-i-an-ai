@@ -17,21 +17,18 @@
 ### **Core Features Ready:**
 
 - Real-time 4-person conversations (A/B/C/D identities)
-- 2 AI participants with different personalities
-- 10-minute session timer with identity reveal
+- **Production mode**: 2 humans + 2 AI participants
+  - Time limit: 5 minutes OR 20 messages (whichever comes first)
+- **Testing mode**: 1 human + 3 AI participants
+  - Time limit: 3 minutes OR 10 messages (whichever comes first)
+- Configurable session limits
 - Anonymous WebSocket connections
 - Session management and cleanup
 
 ---
 
-**Authentication Status:**
-
-- Complete signup → verify → signin flow working
-- All form inputs have proper text visibility
-- Connection failures show helpful retry information
-- CI/CD pipeline fixed and passing (almost!)
-
----
+Route 53 not working properly, even when github workflow deployed the site to s3
+review our testing approach
 
 ## 🎯 **CURRENT FOCUS: UX ENHANCEMENT**
 
@@ -66,6 +63,14 @@
 - Connect OpenAI API to Lambda for AI responses
 - Create distinct AI personalities
 - Add natural response timing and conversation flow
+
+### **6. User Management & Permissions**
+
+- User profiles with customizable settings
+- Permission levels: regular users vs admin users
+- Admin console for viewing all conversation data
+- User stats and conversation history
+- Profile management interface
 
 ---
 
