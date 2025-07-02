@@ -8,6 +8,7 @@ import MessageList from './MessageList';
 import ParticipantBar from './ParticipantBar';
 import SessionTimer from './SessionTimer';
 import { BUILD_TIMESTAMP } from '../build-timestamp';
+import { Card, Button } from './ui';
 
 export default function ChatInterface() {
   const [messageInput, setMessageInput] = useState('');
@@ -18,6 +19,7 @@ export default function ChatInterface() {
     retryCount,
     lastError,
     myIdentity,
+    messages,
     isSessionActive,
     isRevealed,
     connect,
@@ -64,15 +66,15 @@ export default function ChatInterface() {
 
   if (connectionStatus === 'disconnected' || connectionStatus === 'connecting') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="text-center max-w-md w-full mx-4">
           <div className="mb-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           </div>
           <h2 className="text-xl font-semibold mb-2">
             {connectionStatus === 'disconnected' ? 'Connecting...' : 'Joining Session...'}
           </h2>
-          <div className="text-gray-600 space-y-1">
+          <div className="text-slate-600 space-y-1">
             <p>
               Connecting to table for four conversation
             </p>
@@ -82,18 +84,18 @@ export default function ChatInterface() {
               </p>
             )}
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
 
   if (connectionStatus === 'error') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="text-center max-w-md w-full mx-4">
           <div className="text-4xl mb-4">🔌</div>
           <h2 className="text-xl font-semibold text-red-600 mb-2">Connection Error</h2>
-          <div className="text-gray-600 mb-4 space-y-2">
+          <div className="text-slate-600 mb-4 space-y-2">
             <p>
               {lastError || 'Failed to connect to the WebSocket server.'}
             </p>
@@ -107,124 +109,133 @@ export default function ChatInterface() {
             </p>
           </div>
           <div className="space-y-2">
-            <button
+            <Button
               onClick={() => {
                 reset();
                 setTimeout(() => connect(), 100);
               }}
-              className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 w-full"
+              fullWidth
             >
               Reset & Retry Connection
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => window.location.reload()}
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 w-full"
+              variant="secondary"
+              fullWidth
             >
               Reload Page
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={signOut}
-              className="text-gray-500 hover:text-gray-700 text-sm w-full"
+              variant="ghost"
+              size="sm"
+              fullWidth
             >
               Sign Out
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
 
   if (isRevealed) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4">
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="text-center max-w-2xl w-full mx-4">
           <h2 className="text-2xl font-bold mb-4">Session Complete! 🎭</h2>
-          <p className="text-lg text-gray-700 mb-6">
+          <p className="text-lg text-slate-700 mb-6">
             Time&apos;s up! Here&apos;s who was who:
           </p>
           
           {/* Identity reveal will be implemented here */}
-          <div className="mb-6 p-4 bg-gray-100 rounded">
-            <p className="text-sm text-gray-600">Identity reveal coming soon...</p>
+          <div className="mb-6 p-4 bg-slate-100 rounded-lg">
+            <p className="text-sm text-slate-600">Identity reveal coming soon...</p>
           </div>
           
-          <button
+          <Button
             onClick={handleNewSession}
-            className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 font-medium"
+            size="lg"
           >
             Start New Session
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen max-w-4xl mx-auto p-2 gap-2">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">am I an AI? v.2 ({BUILD_TIMESTAMP})</h1>
-            <p className="text-sm text-gray-600">
-              Welcome, {user?.email} • You are participant <span className="font-mono font-bold text-primary-600">{myIdentity}</span>
+      <Card className="text-center" padding="sm">
+        <div className="flex items-center justify-between">
+          <div className="text-left">
+            <h1 className="text-lg font-bold text-slate-900">am I an AI?</h1>
+            <p className="text-xs text-slate-600">
+              Figure out who&apos;s human and who&apos;s AI
             </p>
           </div>
           <div className="flex items-center gap-4">
             <SessionTimer />
-            <button
+            <Button
               onClick={disconnect}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              variant="ghost"
+              size="sm"
             >
               Leave Session
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={signOut}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+              variant="ghost"
+              size="sm"
             >
               <FiLogOut size={16} />
               Sign Out
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+        
+        {/* Game info */}
+        <div className="flex justify-between items-center text-xs text-slate-600 mt-2 pt-2 border-t border-slate-200">
+          <span>Round 1 of 1</span>
+          <span>💬 {messages?.length || 0} messages</span>
+          <span>You are participant <span className="font-semibold text-blue-600">{myIdentity}</span></span>
+        </div>
+      </Card>
 
-      {/* Participants */}
-      <ParticipantBar />
-
-      {/* Messages */}
-      <div className="flex-1 overflow-hidden">
-        <MessageList />
-      </div>
+      {/* Main Chat */}
+      <Card className="flex-1 flex flex-direction-column overflow-hidden" padding="md">
+        <div className="flex-1 overflow-y-auto">
+          <MessageList />
+        </div>
+      </Card>
 
       {/* Input */}
       {isSessionActive && (
-        <div className="bg-white border-t border-gray-200 p-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex gap-2">
-              <input
-                ref={inputRef}
-                type="text"
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your message..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white"
-                maxLength={280}
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={!messageInput.trim()}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FiSend size={20} />
-              </button>
-            </div>
-            <div className="text-right text-xs text-gray-500 mt-1">
-              {messageInput.length}/280
-            </div>
+        <Card padding="md">
+          <div className="flex gap-3">
+            <input
+              ref={inputRef}
+              type="text"
+              value={messageInput}
+              onChange={(e) => setMessageInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message..."
+              className="flex-1 px-4 py-3 border border-slate-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder-slate-500"
+              maxLength={280}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!messageInput.trim()}
+              className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105"
+            >
+              <FiSend size={20} />
+            </button>
           </div>
-        </div>
+          <div className="text-right text-xs text-slate-500 mt-1">
+            {messageInput.length}/280
+          </div>
+        </Card>
       )}
     </div>
   );

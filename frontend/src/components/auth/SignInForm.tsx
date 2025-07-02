@@ -7,6 +7,7 @@ import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { cognitoService } from '../../services/cognito';
 import { useAuth } from '../../contexts/AuthContext';
 import { SignInFormData, AuthError } from '../../types/auth';
+import { Card, Button, Input } from '../ui';
 
 export default function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -37,98 +38,88 @@ export default function SignInForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to AmIAnAI
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="max-w-md w-full space-y-6">
+        <div className="text-center">
+          <h2 className="text-3xl font-extrabold text-slate-900">
+            Sign in to am I an AI?
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Join anonymous conversations with AI
+          <p className="mt-2 text-sm text-slate-600">
+            Join conversations about trust
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
               <p className="text-sm text-red-600">{error.message}</p>
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email address',
-                  },
-                })}
-                type="email"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                placeholder="your@email.com"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  {...register('password', {
-                    required: 'Password is required',
-                  })}
-                  type={showPassword ? 'text' : 'password'}
-                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Your password"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <FiEyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <FiEye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-              )}
-            </div>
-          </div>
+          <Input
+            {...register('email', {
+              required: 'Email is required',
+              pattern: {
+                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                message: 'Invalid email address',
+              },
+            })}
+            type="email"
+            label="Email address"
+            placeholder="your@email.com"
+            error={errors.email?.message}
+          />
 
           <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Signing in...' : 'Sign in'}
-            </button>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                {...register('password', {
+                  required: 'Password is required',
+                })}
+                type={showPassword ? 'text' : 'password'}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 pr-10 text-slate-900 bg-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Your password"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <FiEyeOff className="h-5 w-5 text-slate-400" />
+                ) : (
+                  <FiEye className="h-5 w-5 text-slate-400" />
+                )}
+              </button>
+            </div>
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+            )}
           </div>
 
+          <Button
+            type="submit"
+            disabled={isLoading}
+            fullWidth
+          >
+            {isLoading ? 'Signing in...' : 'Sign in'}
+          </Button>
+
           <div className="text-center">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => router.push('/auth/signup')}
-              className="text-primary-600 hover:text-primary-500 text-sm"
             >
               Don&apos;t have an account? Sign up
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }
