@@ -72,8 +72,10 @@ class MatchManager {
             return;
         const usedIdentities = new Set(match.participants.map(p => p.identity));
         const availableIdentities = ['A', 'B', 'C', 'D'].filter(id => !usedIdentities.has(id));
-        const aiPersonalities = ['curious_student', 'witty_professional'];
-        for (let i = 0; i < 2 && i < availableIdentities.length; i++) {
+        const aiPersonalities = ['curious_student', 'witty_professional', 'friendly_skeptic'];
+        // Add AI participants to fill up to 4 total participants
+        const targetAIs = 4 - match.participants.length;
+        for (let i = 0; i < targetAIs && i < availableIdentities.length; i++) {
             const aiParticipant = {
                 id: `ai-${Date.now()}-${i}`,
                 connectionId: null,

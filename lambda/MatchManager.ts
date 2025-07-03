@@ -84,15 +84,17 @@ export class MatchManager {
   /**
    * Add AI participants to fill the match
    */
-  private addAIParticipants(matchId: string): void {
+  addAIParticipants(matchId: string): void {
     const match = this.getMatch(matchId);
     if (!match) return;
 
     const usedIdentities = new Set(match.participants.map(p => p.identity));
     const availableIdentities = (['A', 'B', 'C', 'D'] as const).filter(id => !usedIdentities.has(id));
-    const aiPersonalities: AIPersonality[] = ['curious_student', 'witty_professional'];
+    const aiPersonalities: AIPersonality[] = ['curious_student', 'witty_professional', 'friendly_skeptic'];
 
-    for (let i = 0; i < 2 && i < availableIdentities.length; i++) {
+    // Add AI participants to fill up to 4 total participants
+    const targetAIs = 4 - match.participants.length;
+    for (let i = 0; i < targetAIs && i < availableIdentities.length; i++) {
       const aiParticipant: Participant = {
         id: `ai-${Date.now()}-${i}`,
         connectionId: null,

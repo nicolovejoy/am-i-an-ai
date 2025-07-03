@@ -125,8 +125,12 @@ async function handleJoinMatch(connectionId: string, _message: JoinMatchMessage,
     match
   } as MatchStateMessage, event);
   
-  // If match is ready (4 participants), start it
-  if (match.participants.length === 4 && match.status === 'waiting') {
+  // For MVP testing: Auto-fill with AI participants and start match immediately
+  if (match.participants.filter(p => p.type === 'human').length === 1 && match.status === 'waiting') {
+    // Fill remaining slots with AI participants
+    matchManager.addAIParticipants(matchId);
+    
+    // Start the match
     const firstRound = matchManager.startMatch(matchId);
     
     await broadcastToMatch(match, {
