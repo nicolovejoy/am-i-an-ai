@@ -81,12 +81,14 @@ interface SessionState {
   // WebSocket event handlers (called by WebSocket events)
   handleConnect: (data: any) => void;
   handleMessage: (data: Message) => void; // Keep for backward compatibility
+  handleMatchState: (data: any) => void;
   handleRoundStart: (data: any) => void;
   handleResponseSubmitted: (data: any) => void;
   handleRoundVoting: (data: any) => void;
   handleRoundComplete: (data: any) => void;
   handleMatchComplete: (data: any) => void;
   handleParticipantUpdate: (participants: Participant[]) => void;
+  handleError: (data: any) => void;
   
   // Timer
   updateTimer: (seconds: number) => void;
@@ -153,7 +155,10 @@ export const useSessionStore = create<SessionState>()(
                 case 'match_joined':
                   get().handleConnect(data);
                   break;
-                case 'round_started':
+                case 'match_state':
+                  get().handleMatchState(data);
+                  break;
+                case 'round_start':
                   get().handleRoundStart(data);
                   break;
                 case 'response_submitted':
@@ -170,6 +175,9 @@ export const useSessionStore = create<SessionState>()(
                   break;
                 case 'participants':
                   get().handleParticipantUpdate(data.participants);
+                  break;
+                case 'error':
+                  get().handleError(data);
                   break;
                 default:
                   console.log('Unknown message:', data);
@@ -376,8 +384,8 @@ export const useSessionStore = create<SessionState>()(
 
       handleConnect: (data) => {
         // Handle match_joined event
-        const match: Match = {
-          matchId: data.matchId,
+        const match: Match = data.match || {
+          matchId: data.matchId || 'unknown',
           status: data.status || 'waiting',
           currentRound: data.currentRound || 1,
           totalRounds: data.totalRounds || 5,
@@ -394,6 +402,23 @@ export const useSessionStore = create<SessionState>()(
         });
       },
 
+      handleMatchState: (data) => {
+        // Handle match_state updates
+        const state = get();
+        if (data.match) {
+          set({
+            match: data.match
+          });
+        }
+      },
+
+      handleError: (data) => {
+        console.error('WebSocket error:', data.message);
+        set({
+          lastError: data.message
+        });
+      },
+
       handleRoundStart: (data) => {
         set({
           currentPrompt: data.prompt,
@@ -401,7 +426,7 @@ export const useSessionStore = create<SessionState>()(
           hasSubmittedResponse: false,
           roundResponses: {},
           hasSubmittedVote: false,
-          timeRemaining: 90 // 90 seconds to respond
+          timeRemaining: data.timeLimit || 90 // 90 seconds to respond
         });
       },
 
