@@ -1,127 +1,119 @@
 # am I an AI? - Next Steps
 
-## ✅ **BACKEND DEPLOYMENT COMPLETE** (2025-07-02)
+## 🎉 **Current Status**
 
-**v2 "table for four - conversations about trust" backend is live!**
+✅ **Platform Live & Functional**: https://amianai.com with full AWS infrastructure  
+✅ **Real-time 4-Player Platform**: WebSocket + Lambda + DynamoDB infrastructure  
+✅ **Player UI System**: Proper names (Ashley/Brianna/Chloe/David), colors, user differentiation  
+✅ **Mock AI Testing**: TestingModeToggle working with 3 AI personas  
+⚠️ **Identity Assignment**: Not randomizing yet - user always gets same identity
+✅ **Comprehensive Test Coverage**: TDD approach with 18+ MessageBubble tests
+✅ **CloudTrail Integration**: AWS resource tracking and audit trail active
+✅ **MVP User Journey Planning**: Complete user flow documentation with refined round structure
+✅ **BACKEND REDESIGN COMPLETE**: New Match/Round architecture deployed and live
+✅ **Match/Round System**: 30+ tests passing, clean WebSocket actions (`join_match`, `submit_response`, `submit_vote`)
+✅ **TypeScript Foundation**: `match-handler.ts`, `MatchManager.ts`, `types.ts` with full test coverage
 
-### **What's Working:**
+## 🎯 **MVP Priorities** (Based on User Journey)
 
-- ✅ WebSocket API deployed and functional (`wss://ip1n2fcaw2.execute-api.us-east-1.amazonaws.com/prod`)
-- ✅ DynamoDB sessions table active (`amianai-v2-sessions`)
-- ✅ Lambda handler processing connections (8/8 tests passing)
-- ✅ Cognito User Pool deployed (`us-east-1_Orf6i2qSI`)
-- ✅ Clean repository structure (v2-only, ~800 lines vs v1's 15,000+)
-- ✅ 95% cost reduction: $90/month → $5/month
-- ✅ WebSocket connection test working (identity assignment A/B/C/D)
+### **Phase 1: Welcome Dashboard (1-2 sessions)**
+1. **Replace Landing Page** - Create WelcomeDashboard component with match options
+2. **Mock Match Browser** - Show "available matches to join" with sample data + "not fully implemented" badges
+3. **Quick Actions** - "Start Test Match" (active) + "Create Live Match" (inactive)
+4. **Recent Match History** - Display last 3-5 matches with accuracy scores (placeholder)
+5. **About Page** - Link from dashboard explaining the game
 
-### **Core Features Ready:**
+### **~~Phase 1.5: Backend Redesign~~ ✅ COMPLETED**
+6. ✅ **Match-Focused Data Model** - Lambda rebuilt with Match/Round terminology
+7. ✅ **Round State Management** - Full round transitions, timers, and vote collection implemented
+8. ✅ **Hardcoded Prompts** - 6 predefined prompts rotating through rounds
+9. ✅ **WebSocket Actions** - `join_match`, `submit_response`, `submit_vote` all implemented and tested
+10. ✅ **Live Deployment** - New backend deployed and running at production WebSocket endpoint
 
-- Real-time 4-person conversations (A/B/C/D identities)
-- **Production mode**: 2 humans + 2 AI participants
-  - Time limit: 5 minutes OR 20 messages (whichever comes first)
-- **Testing mode**: 1 human + 3 AI participants
-  - Time limit: 3 minutes OR 10 messages (whichever comes first)
-- Configurable session limits
-- Anonymous WebSocket connections
-- Session management and cleanup
+### **Phase 2: 5-Round Frontend (2-3 sessions)**
+11. **New Round Components** - RoundInterface, PromptDisplay, ResponseInput, RoundVoting
+12. **Match Store** - Rename sessionStore → matchStore with round state management
+13. **Real-Time Round Flow** - Connect to redesigned backend WebSocket actions
+14. **Random Identity Assignment** - Fix so user isn't always Ashley
+15. **Timer Display** - Show individual response time + cumulative round time (5min max)
 
----
+### **Phase 3: Match History Enhancement (1-2 sessions)**
+16. **Real Match History** - Replace mock data with DynamoDB queries
+17. **Match Detail View** - Full round-by-round transcript and voting patterns
+18. **User Profile Stats** - Total matches, average accuracy, streaks
 
-Route 53 not working properly, even when github workflow deployed the site to s3
-review our testing approach
+### **Future Features**
+- **OpenAI Integration** - Replace mock AI with real OpenAI responses and dynamic prompt generation
+- **Live Matches** - Join matches with other humans (2H+2AI)
+- **Admin Console** - Monitor active matches and user analytics
+- **Advanced Scoring** - More sophisticated voting mechanics and accuracy tracking
 
-## 🎯 **CURRENT FOCUS: UX ENHANCEMENT**
+## 📊 **Architecture**
 
-### **1. Design System Foundation (IN PROGRESS)**
-
-- Create reusable styled components with proper color contrast
-- Implement color palette from `UX_mock.html`:
-  - Background: `#f8fafc`, Cards: white with `#e2e8f0` borders
-  - Text: `#1e293b`, Participant colors: distinct pastels
-- Build `Card`, `Button`, `Input`, `MessageBubble` components
-
-### **2. Navigation & Game Structure**
-
-- Add navigation bar with user info and sign out
-- Implement game header showing round, timer, message count
-- Add current topic display
-
-### **3. Enhanced Chat Experience**
-
-- Replace A/B/C/D with "Participant 1/2/3" and "You"
-- Color-coded message bubbles per participant
-- Better message styling and typography
-
-### **4. Voting Mechanism**
-
-- Add voting phase after 10-minute timer
-- "Who do you think are the AIs?" interface
-- Results screen showing human vs AI reveal
-
-### **5. OpenAI Integration**
-
-- Connect OpenAI API to Lambda for AI responses
-- Create distinct AI personalities
-- Add natural response timing and conversation flow
-
-### **6. User Management & Permissions**
-
-- User profiles with customizable settings
-- Permission levels: regular users vs admin users
-- Admin console for viewing all conversation data
-- User stats and conversation history
-- Profile management interface
+- **Frontend:** https://amianai.com (Next.js + S3 + CloudFront)
+- **Backend:** WebSocket API Gateway + Lambda (Node.js 20.x) - **NEEDS REDESIGN**
+- **Database:** DynamoDB matches table (redesign from sessions schema)
+- **Monitoring:** CloudTrail + CloudWatch for resource tracking
+- **Cost:** ~$5-7/month (including CloudTrail)
 
 ---
 
-## 🚀 **FUTURE ENHANCEMENTS**
+## 🔄 **Terminology Migration**
 
-### **Phase 1: Enhanced AI Personalities**
+### **Frontend Updates Needed** (Phase 2)
+```typescript
+// FRONTEND UPDATES
+sessionStore.ts → matchStore.ts
+getConversations() → getMatches()
+ConversationInterface → MatchInterface
 
-- Configurable AI personas stored in DynamoDB
-- Varied response timing and patterns
-- Topic-specific expertise areas
+// BACKEND REDESIGN (Match/Round focused)
+interface Match {
+  matchId: string;
+  status: 'waiting' | 'round_active' | 'round_voting' | 'completed';
+  currentRound: number;
+  participants: Participant[];
+  rounds: Round[];
+  settings: MatchSettings;
+}
 
-### **Phase 2: Session Improvements**
+interface Round {
+  roundNumber: number;
+  prompt: string;
+  responses: Record<Identity, string>;
+  votes: Record<Identity, Identity>;
+  scores: Record<Identity, number>;
+}
 
-- Session matchmaking/lobby system
-- Conversation replay functionality
-- Enhanced identity reveal with statistics
+// WebSocket Actions (Renamed)
+'join' → 'join_match'
+'message' → 'submit_response'
+'vote' → 'submit_vote'
+```
 
-### **Phase 3: User Experience**
+### **Infrastructure Changes**
+- DynamoDB: `sessions` table → `matches` table with round structure
+- Lambda: Complete rewrite with Match/Round terminology
+- WebSocket: New action names aligned with round-based gameplay
 
-- Mobile-optimized interface
-- Session history and analytics
-- User preferences and settings
+**Rationale**: Early enough to fix architecture. Clean terminology prevents technical debt and enables proper round-based features.
 
 ---
 
-## 📊 **ARCHITECTURE SUMMARY**
+## ✅ **Success Metrics for MVP**
 
-**Current Infrastructure:**
+1. **User logs in → starts test match in <30 seconds**
+2. **Completes full 5-round match (prompt → response → vote x5 → results) in <8 minutes**
+   - 90 seconds max per response, 5 minute round limit
+   - 30 seconds per vote
+   - Quick round transitions with AI summaries
+3. **Returns to dashboard and starts another match** (engagement)
+4. **Browses match history** (retention indicator)
 
-- **Frontend:** React app with Cognito authentication
-- **Backend:** WebSocket API Gateway + Lambda (Node.js 20.x)
-- **Database:** DynamoDB sessions table
-- **Cost:** ~$5/month (vs $90/month for v1)
-
-**Key URLs:**
-
-- **WebSocket API:** Available from terraform output
-- **Frontend:** Will be deployed to S3/CloudFront
-- **Test Tool:** `test-websocket.html` for direct WebSocket testing
-
----
-
-## 🎉 **MILESTONE ACHIEVED**
-
-**The core vision is now reality:**
-
-- Anonymous real-time conversations work
-- AI participants blend seamlessly
-- Session management handles timing and reveals
-- Infrastructure costs reduced by 95%
-- Codebase simplified from 15,000 → 800 lines
-
-**Current Status:** Auth working, WebSocket connected, CI/CD passing  
-**Next Goal:** Transform basic chat into engaging "table for four" game experience
+**MAJOR MILESTONE**: Backend redesign complete! Clean Match/Round architecture deployed.
+**Current Priority**: Frontend integration with new WebSocket actions
+**Next Action**: 
+1. ✅ Backend redesign complete (Match/Round architecture deployed)
+2. **Update Frontend** - Replace old WebSocket actions with new `join_match`, `submit_response`, `submit_vote`
+3. **Build Round Components** - `RoundInterface`, `PromptDisplay`, `ResponseInput`, `RoundVoting`
+4. **Implement 5-Round Flow** - Complete prompt → response → vote → results cycle

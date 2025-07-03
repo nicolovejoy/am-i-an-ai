@@ -8,6 +8,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.1"
+    }
   }
 }
 
@@ -15,6 +19,8 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Get current AWS region
+data "aws_region" "current" {}
 
 locals {
   project_name = "amianai-v2"
@@ -208,7 +214,7 @@ resource "aws_iam_role_policy_attachment" "lambda_apigateway" {
 resource "aws_lambda_function" "websocket" {
   function_name = "${local.project_name}-websocket"
   role          = aws_iam_role.websocket_lambda.arn
-  handler       = "handler.handler"
+  handler       = "match-handler.handler"
   runtime       = "nodejs20.x"
   timeout       = 30
   memory_size   = 256
@@ -220,6 +226,7 @@ resource "aws_lambda_function" "websocket" {
   environment {
     variables = {
       DYNAMODB_TABLE = aws_dynamodb_table.sessions.name
+      WEBSOCKET_ENDPOINT = "https://${aws_apigatewayv2_api.websocket.id}.execute-api.${data.aws_region.current.name}.amazonaws.com/prod"
     }
   }
 
@@ -379,4 +386,14 @@ output "route53_zone_id" {
 output "route53_nameservers" {
   description = "Name servers for the Route 53 hosted zone"
   value       = aws_route53_zone.main.name_servers
+}
+
+output "cloudtrail_name" {
+  description = "CloudTrail trail name"
+  value       = aws_cloudtrail.main.name
+}
+
+output "cloudtrail_s3_bucket" {
+  description = "S3 bucket for CloudTrail logs"
+  value       = aws_s3_bucket.cloudtrail.bucket
 }

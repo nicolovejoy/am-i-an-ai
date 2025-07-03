@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Main deployment orchestrator for AmIAnAI v2
+# Main deployment orchestrator for AmIAnAI
 # Usage: ./scripts/deploy.sh [options]
 
 # Source shared functions
@@ -72,7 +72,7 @@ parse_arguments() {
 
 # Deploy components
 deploy_components() {
-    log_info "🚀 Starting v2 deployment: ${SELECTED_COMPONENTS[*]}"
+    log_info "🚀 Starting deployment: ${SELECTED_COMPONENTS[*]}"
     
     check_environment_variables
     verify_aws_credentials
@@ -107,7 +107,7 @@ deploy_components() {
 # Post-deployment summary
 print_summary() {
     echo ""
-    log_info "🎉 v2 Deployment Complete!"
+    log_info "🎉 Deployment Complete!"
     echo ""
     
     cd infrastructure 2>/dev/null || return
@@ -140,7 +140,7 @@ print_summary() {
 
 # Main execution
 main() {
-    log_info "🚀 AmIAnAI v2 - 2H+2AI Deployment"
+    log_info "🚀 AmIAnAI - 2H+2AI Deployment"
     echo ""
     
     parse_arguments "$@"

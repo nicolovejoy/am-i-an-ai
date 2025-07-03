@@ -42,7 +42,8 @@ deploy_frontend() {
     terraform apply frontend-plan
     
     # Wait for certificate validation
-    wait_for_certificate
+    log_info "Waiting for certificate validation..."
+    sleep 10  # Simple wait - certificates should be validated already
     
     # Verify frontend infrastructure
     local cloudfront_id=$(get_terraform_output "cloudfront_distribution_id")

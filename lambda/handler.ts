@@ -73,10 +73,11 @@ async function handleConnect(connectionId: string, _event: any) {
     return { statusCode: 403, body: 'Session full' };
   }
   
-  // Assign next available identity
+  // Assign random available identity
   const usedIdentities = new Set([...session.connections.values()].map(c => c.identity));
   const availableIdentities = (['A', 'B', 'C', 'D'] as const).filter(id => !usedIdentities.has(id));
-  const identity = availableIdentities[0];
+  const randomIndex = Math.floor(Math.random() * availableIdentities.length);
+  const identity = availableIdentities[randomIndex];
   
   // Store connection
   const connection: Connection = {
@@ -91,7 +92,7 @@ async function handleConnect(connectionId: string, _event: any) {
   
   // If we now have 2 humans, add 2 AI participants and start timer
   if (session.connections.size === 2) {
-    addAIParticipants(session);
+    await addAIParticipants(session, _event);
     startSessionTimer(session);
   }
   
@@ -161,6 +162,18 @@ async function handleMessage(connectionId: string, body: any, event: any) {
       console.error('Failed to send identity:', error);
     }
     
+    // Broadcast updated participant list to all participants
+    const participants = Array.from(session.connections.values()).map(conn => ({
+      identity: conn.identity,
+      isAI: conn.isAI || false,
+      connectionId: conn.connectionId
+    }));
+    
+    await broadcastToSession(session, {
+      action: 'participants',
+      participants
+    }, event);
+    
     return { statusCode: 200 };
   }
   
@@ -196,7 +209,7 @@ function createSession(id: string): Session {
   };
 }
 
-function addAIParticipants(session: Session) {
+async function addAIParticipants(session: Session, event?: any) {
   const aiPersonalities = ['analytical', 'creative'];
   const availableIdentities = (['A', 'B', 'C', 'D'] as const)
     .filter(id => ![...session.connections.values()].some(c => c.identity === id));
@@ -211,6 +224,20 @@ function addAIParticipants(session: Session) {
     };
     
     session.connections.set(aiConnection.connectionId, aiConnection);
+  }
+  
+  // Broadcast updated participant list after adding AI participants
+  if (event) {
+    const participants = Array.from(session.connections.values()).map(conn => ({
+      identity: conn.identity,
+      isAI: conn.isAI || false,
+      connectionId: conn.connectionId
+    }));
+    
+    await broadcastToSession(session, {
+      action: 'participants',
+      participants
+    }, event);
   }
 }
 

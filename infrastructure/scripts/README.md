@@ -72,24 +72,40 @@ scripts/
 - **WebSocket API**: Real-time messaging
 
 ### **Cost Comparison**
-- **v1**: ~$90/month (RDS + VPC + NAT Gateway)
-- **v2**: ~$5/month (DynamoDB + Lambda + S3)
+- **Previous**: ~$90/month (RDS + VPC + NAT Gateway)
+- **Current**: ~$5/month (DynamoDB + Lambda + S3)
 - **Savings**: ~$85/month ($1,020/year)
 
 ## Current Status
 
-**Phase 1 Complete:**
-✅ **WebSocket Lambda**: 240 lines, 8/8 tests passing  
-✅ **Core Features**: 2H+2AI, A/B/C/D anonymity, 10min timer  
-✅ **TDD Success**: <500 lines total, all functionality working  
+**Backend Redesign Complete:**
+✅ **Match/Round Architecture**: Clean terminology replacing session/message  
+✅ **MatchManager Class**: 21/21 tests passing, full round state management  
+✅ **New WebSocket Handler**: `join_match`, `submit_response`, `submit_vote` actions  
+✅ **5-Round System**: Prompt → Response → Reveal → Vote (x5) → Results  
+✅ **TypeScript Foundation**: Comprehensive type safety and test coverage  
 
 **Ready for Deployment:**
-- [ ] DynamoDB table creation
-- [ ] WebSocket API Gateway setup  
-- [ ] Lambda deployment
-- [ ] Frontend build and S3 deployment
-- [ ] v2.amianai.com subdomain
+- [x] Backend redesign with Match/Round terminology
+- [x] Comprehensive test coverage (30+ tests passing)
+- [ ] Deploy new Lambda handler (`match-handler.ts`)
+- [ ] Frontend integration with new WebSocket actions
+- [ ] 5-round UI components
 
 ---
 
-_Status: **Ready for Infrastructure** - Backend logic complete, deployment pending_
+_Status: **Backend Complete** - Ready to deploy new Match/Round architecture_
+
+## New Architecture Summary
+
+### **Match/Round System (vs old Session/Message)**
+- **Match**: 4-player game instance (1 human + 3 AI for testing)
+- **Round**: Structured prompt → response → vote cycle (5 rounds total)
+- **Scoring**: 1 point per correct human identification
+- **WebSocket Actions**: `join_match`, `submit_response`, `submit_vote`
+
+### **Key Files**
+- **`/lambda/match-handler.ts`**: New WebSocket handler (replaces `handler.ts`)
+- **`/lambda/MatchManager.ts`**: Core round state management
+- **`/lambda/types.ts`**: Clean TypeScript interfaces
+- **Tests**: 30+ tests covering all round transitions and edge cases

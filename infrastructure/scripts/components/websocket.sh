@@ -61,7 +61,7 @@ deploy_websocket() {
 
 # Build and package Lambda function
 build_and_package_lambda() {
-    log_info "Building v2 Lambda function..."
+    log_info "Building Lambda function..."
     
     # Go to Lambda directory
     cd ../lambda
@@ -72,15 +72,18 @@ build_and_package_lambda() {
         npm install --production
     fi
     
-    # v2 uses plain JavaScript - no compilation needed
+    # Compile TypeScript to JavaScript
+    log_info "Compiling TypeScript..."
+    npm run build 2>/dev/null || npx tsc
+    
     log_info "Packaging Lambda function..."
-    rm -f ../../infrastructure/websocket-function.zip
+    rm -f ../infrastructure/websocket-function.zip
     
-    # Package the JavaScript handler and dependencies
-    zip -r ../../infrastructure/websocket-function.zip . \
-        -x "*.test.*" "deploy.sh"
+    # Package the compiled JavaScript and dependencies
+    zip -r ../infrastructure/websocket-function.zip . \
+        -x "*.test.*" "*.ts" "tsconfig.json" "deploy.sh" "src/*" "dist/*"
     
-    cd ../../infrastructure
+    cd ../infrastructure
 }
 
 # Deploy Lambda function code
