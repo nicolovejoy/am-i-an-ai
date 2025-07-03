@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { mockAIService } from '@/services/mockAI';
 
 export type Identity = 'A' | 'B' | 'C' | 'D';
 
@@ -8,6 +9,24 @@ export interface Message {
   content: string;
   timestamp: number;
   action?: string;
+}
+
+export interface Round {
+  roundNumber: number;
+  prompt: string;
+  responses: Partial<Record<Identity, string>>;
+  votes: Partial<Record<Identity, Identity>>;
+  scores: Partial<Record<Identity, number>>;
+  status: 'waiting' | 'responding' | 'voting' | 'complete';
+}
+
+export interface Match {
+  matchId: string;
+  status: 'waiting' | 'round_active' | 'round_voting' | 'completed';
+  currentRound: number;
+  totalRounds: number;
+  participants: Participant[];
+  rounds: Round[];
 }
 
 export interface Participant {
@@ -25,31 +44,49 @@ interface SessionState {
   lastError: string | null;
   ws: WebSocket | null;
   
-  // Session data
-  sessionId: string | null;
+  // Match data
+  match: Match | null;
   myIdentity: Identity | null;
-  participants: Participant[];
-  messages: Message[];
+  messages: Message[]; // Keep for backward compatibility during transition
+  
+  // Current round state
+  currentPrompt: string | null;
+  myResponse: string | null;
+  hasSubmittedResponse: boolean;
+  roundResponses: Partial<Record<Identity, string>>;
+  hasSubmittedVote: boolean;
   
   // Timer
   sessionStartTime: number | null;
   timeRemaining: number | null; // in seconds
   isSessionActive: boolean;
   
-  // Reveal phase
+  // Match completion
   isRevealed: boolean;
   identityReveal: Record<Identity, { isAI: boolean; personality?: string }> | null;
+  
+  // Testing mode
+  testingMode: boolean;
+  identityMapping: Record<string, number>; // Maps A,B,C,D to player numbers 1,2,3,4
+  typingParticipants: Set<Identity>;
   
   // Actions
   connect: () => void;
   disconnect: () => void;
-  sendMessage: (content: string) => void;
+  sendMessage: (content: string) => void; // Keep for backward compatibility
+  submitResponse: (response: string) => void;
+  submitVote: (humanIdentity: Identity) => void;
+  startTestingMode: () => void;
   
   // WebSocket event handlers (called by WebSocket events)
   handleConnect: (data: any) => void;
-  handleMessage: (data: Message) => void;
+  handleMessage: (data: Message) => void; // Keep for backward compatibility
+  handleRoundStart: (data: any) => void;
+  handleResponseSubmitted: (data: any) => void;
+  handleRoundVoting: (data: any) => void;
+  handleRoundComplete: (data: any) => void;
+  handleMatchComplete: (data: any) => void;
   handleParticipantUpdate: (participants: Participant[]) => void;
-  handleSessionEnd: (reveal: any) => void;
   
   // Timer
   updateTimer: (seconds: number) => void;
@@ -70,19 +107,26 @@ export const useSessionStore = create<SessionState>()(
       retryCount: 0,
       lastError: null,
       ws: null,
-      sessionId: null,
+      match: null,
       myIdentity: null,
-      participants: [],
-      messages: [],
+      messages: [], // Keep for backward compatibility
+      currentPrompt: null,
+      myResponse: null,
+      hasSubmittedResponse: false,
+      roundResponses: {},
+      hasSubmittedVote: false,
       sessionStartTime: null,
       timeRemaining: null,
       isSessionActive: false,
       isRevealed: false,
       identityReveal: null,
+      testingMode: false,
+      identityMapping: { A: 1, B: 2, C: 3, D: 4 },
+      typingParticipants: new Set(),
 
       connect: () => {
         const state = get();
-        if (state.ws?.readyState === WebSocket.OPEN) return;
+        if (state.ws?.readyState === WebSocket.OPEN || state.testingMode) return;
 
         set({ connectionStatus: 'connecting', lastError: null });
 
@@ -95,9 +139,9 @@ export const useSessionStore = create<SessionState>()(
             console.log('✅ WebSocket connected successfully');
             set({ connectionStatus: 'connected', ws });
             
-            // Send join message to get identity
-            console.log('Sending join message...');
-            ws.send(JSON.stringify({ action: 'join' }));
+            // Send join_match message to get identity
+            console.log('Sending join_match message...');
+            ws.send(JSON.stringify({ action: 'join_match' }));
           };
 
           ws.onmessage = (event) => {
@@ -106,17 +150,26 @@ export const useSessionStore = create<SessionState>()(
               console.log('📨 Received:', data);
 
               switch (data.action) {
-                case 'connected':
+                case 'match_joined':
                   get().handleConnect(data);
                   break;
-                case 'message':
-                  get().handleMessage(data);
+                case 'round_started':
+                  get().handleRoundStart(data);
+                  break;
+                case 'response_submitted':
+                  get().handleResponseSubmitted(data);
+                  break;
+                case 'round_voting':
+                  get().handleRoundVoting(data);
+                  break;
+                case 'round_complete':
+                  get().handleRoundComplete(data);
+                  break;
+                case 'match_complete':
+                  get().handleMatchComplete(data);
                   break;
                 case 'participants':
                   get().handleParticipantUpdate(data.participants);
-                  break;
-                case 'session_end':
-                  get().handleSessionEnd(data.reveal);
                   break;
                 default:
                   console.log('Unknown message:', data);
@@ -145,17 +198,18 @@ export const useSessionStore = create<SessionState>()(
             const currentRetryCount = get().retryCount;
             const isManualDisconnect = event.code === 1000;
             const maxRetries = 5;
+            const currentState = get();
             
-            if (!isManualDisconnect && currentRetryCount < maxRetries) {
+            if (!isManualDisconnect && currentRetryCount < maxRetries && !currentState.testingMode) {
               const retryDelay = Math.min(1000 * Math.pow(2, currentRetryCount), 30000); // Max 30 seconds
               console.log(`🔄 Retrying connection in ${retryDelay/1000} seconds... (attempt ${currentRetryCount + 1}/${maxRetries})`);
               setTimeout(() => {
                 const currentState = get();
-                if (currentState.connectionStatus === 'disconnected') {
+                if (currentState.connectionStatus === 'disconnected' && !currentState.testingMode) {
                   currentState.connect();
                 }
               }, retryDelay);
-            } else if (!isManualDisconnect && currentRetryCount >= maxRetries) {
+            } else if (!isManualDisconnect && currentRetryCount >= maxRetries && !currentState.testingMode) {
               set({ 
                 connectionStatus: 'error',
                 lastError: `Failed to connect after ${maxRetries} attempts. Please check your internet connection.`
@@ -192,28 +246,209 @@ export const useSessionStore = create<SessionState>()(
       },
 
       sendMessage: (content: string) => {
-        const { ws } = get();
-        if (ws?.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            action: 'message',
-            content: content.trim()
+        // Backward compatibility - delegate to submitResponse
+        get().submitResponse(content);
+      },
+
+      submitResponse: (response: string) => {
+        const state = get();
+        
+        if (state.testingMode) {
+          // Testing mode - handle locally with mock AI
+          const message: Message = {
+            sender: state.myIdentity!,
+            content: response.trim(),
+            timestamp: Date.now()
+          };
+          
+          // Add human message
+          set(currentState => ({
+            messages: [...currentState.messages, message],
+            myResponse: response.trim(),
+            hasSubmittedResponse: true
           }));
+          
+          // Schedule AI responses
+          mockAIService.scheduleAIResponses(
+            response.trim(),
+            (identity) => {
+              // Start typing indicator
+              set(currentState => {
+                const newTyping = new Set(currentState.typingParticipants);
+                newTyping.add(identity as Identity);
+                return { typingParticipants: newTyping };
+              });
+            },
+            (identity) => {
+              // End typing indicator
+              set(currentState => {
+                const newTyping = new Set(currentState.typingParticipants);
+                newTyping.delete(identity as Identity);
+                return { typingParticipants: newTyping };
+              });
+            },
+            (identity, messageContent) => {
+              // Add AI message
+              const aiMessage: Message = {
+                sender: identity as Identity,
+                content: messageContent,
+                timestamp: Date.now()
+              };
+              
+              set(currentState => ({
+                messages: [...currentState.messages, aiMessage]
+              }));
+            }
+          );
+        } else {
+          // Normal WebSocket mode
+          const { ws, match } = state;
+          if (ws?.readyState === WebSocket.OPEN && match) {
+            ws.send(JSON.stringify({
+              action: 'submit_response',
+              roundNumber: match.currentRound,
+              response: response.trim()
+            }));
+            
+            // Update local state
+            set({
+              myResponse: response.trim(),
+              hasSubmittedResponse: true
+            });
+          }
         }
       },
 
+      submitVote: (humanIdentity: Identity) => {
+        const state = get();
+        const { ws, match } = state;
+        
+        if (ws?.readyState === WebSocket.OPEN && match) {
+          ws.send(JSON.stringify({
+            action: 'submit_vote',
+            roundNumber: match.currentRound,
+            humanIdentity
+          }));
+          
+          // Update local state
+          set({
+            hasSubmittedVote: true
+          });
+        }
+      },
+
+      startTestingMode: () => {
+        // Initialize testing mode with random human identity
+        const identities: Identity[] = ['A', 'B', 'C', 'D'];
+        const humanIdentity: Identity = identities[Math.floor(Math.random() * 4)];
+        const allParticipants: Participant[] = [
+          { identity: 'A', isAI: humanIdentity !== 'A', isConnected: true },
+          { identity: 'B', isAI: humanIdentity !== 'B', isConnected: true },
+          { identity: 'C', isAI: humanIdentity !== 'C', isConnected: true },
+          { identity: 'D', isAI: humanIdentity !== 'D', isConnected: true }
+        ];
+        
+        // Create test match
+        const testMatch: Match = {
+          matchId: `test-${Date.now()}`,
+          status: 'round_active',
+          currentRound: 1,
+          totalRounds: 5,
+          participants: allParticipants,
+          rounds: []
+        };
+        
+        // Initialize mock AI service
+        mockAIService.initializeAIs(humanIdentity, get().identityMapping);
+        
+        // Set testing mode state
+        set({
+          testingMode: true,
+          connectionStatus: 'connected',
+          myIdentity: humanIdentity,
+          match: testMatch,
+          isSessionActive: true,
+          sessionStartTime: Date.now(),
+          timeRemaining: 180, // 3 minutes for testing mode
+          currentPrompt: "What's one thing that recently surprised you in a good way?"
+        });
+      },
+
       handleConnect: (data) => {
-        // Calculate time remaining based on server session start time
-        const serverTime = data.serverTime || Date.now();
-        const sessionStartTime = data.sessionStartTime || serverTime;
-        const timeSinceStart = (serverTime - sessionStartTime) / 1000; // seconds
-        const timeRemaining = Math.max(0, 600 - timeSinceStart); // 10 minutes total
+        // Handle match_joined event
+        const match: Match = {
+          matchId: data.matchId,
+          status: data.status || 'waiting',
+          currentRound: data.currentRound || 1,
+          totalRounds: data.totalRounds || 5,
+          participants: data.participants || [],
+          rounds: data.rounds || []
+        };
         
         set({
           myIdentity: data.identity,
-          sessionId: data.sessionId,
-          sessionStartTime: sessionStartTime,
+          match,
+          sessionStartTime: Date.now(),
           isSessionActive: true,
-          timeRemaining: Math.floor(timeRemaining)
+          timeRemaining: 300 // 5 minutes per round
+        });
+      },
+
+      handleRoundStart: (data) => {
+        set({
+          currentPrompt: data.prompt,
+          myResponse: null,
+          hasSubmittedResponse: false,
+          roundResponses: {},
+          hasSubmittedVote: false,
+          timeRemaining: 90 // 90 seconds to respond
+        });
+      },
+
+      handleResponseSubmitted: (data) => {
+        // Update the responses for the current round
+        set(state => ({
+          roundResponses: {
+            ...state.roundResponses,
+            [data.identity]: data.response
+          }
+        }));
+      },
+
+      handleRoundVoting: (data) => {
+        // All responses are in, time to vote
+        set({
+          roundResponses: data.responses,
+          timeRemaining: 30 // 30 seconds to vote
+        });
+      },
+
+      handleRoundComplete: (data) => {
+        // Round is complete, show results and prepare for next round
+        const state = get();
+        if (state.match) {
+          const updatedMatch = {
+            ...state.match,
+            currentRound: data.nextRound || state.match.currentRound + 1
+          };
+          
+          set({
+            match: updatedMatch,
+            currentPrompt: null,
+            myResponse: null,
+            hasSubmittedResponse: false,
+            roundResponses: {},
+            hasSubmittedVote: false
+          });
+        }
+      },
+
+      handleMatchComplete: (data) => {
+        set({
+          isSessionActive: false,
+          isRevealed: true,
+          identityReveal: data.reveal,
+          timeRemaining: 0
         });
       },
 
@@ -224,10 +459,17 @@ export const useSessionStore = create<SessionState>()(
       },
 
       handleParticipantUpdate: (participants) => {
-        set({ participants });
+        const state = get();
+        if (state.match) {
+          const updatedMatch = {
+            ...state.match,
+            participants
+          };
+          set({ match: updatedMatch });
+        }
       },
 
-      handleSessionEnd: (reveal) => {
+      handleSessionEnd: (reveal: any) => {
         set({
           isSessionActive: false,
           isRevealed: true,
@@ -247,20 +489,30 @@ export const useSessionStore = create<SessionState>()(
         const { ws } = get();
         if (ws) ws.close();
         
+        // Clear mock AI timers
+        mockAIService.clearAllTimers();
+        
         set({
           connectionStatus: 'disconnected',
           retryCount: 0,
           lastError: null,
           ws: null,
-          sessionId: null,
+          match: null,
           myIdentity: null,
-          participants: [],
           messages: [],
+          currentPrompt: null,
+          myResponse: null,
+          hasSubmittedResponse: false,
+          roundResponses: {},
+          hasSubmittedVote: false,
           sessionStartTime: null,
           timeRemaining: null,
           isSessionActive: false,
           isRevealed: false,
-          identityReveal: null
+          identityReveal: null,
+          testingMode: false,
+          identityMapping: { A: 1, B: 2, C: 3, D: 4 },
+          typingParticipants: new Set()
         });
       }
     }),

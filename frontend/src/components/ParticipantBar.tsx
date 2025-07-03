@@ -3,7 +3,8 @@
 import { useSessionStore, Identity } from '@/store/sessionStore';
 
 export default function ParticipantBar() {
-  const { participants, myIdentity } = useSessionStore();
+  const { match, myIdentity } = useSessionStore();
+  const participants = match?.participants || [];
 
   const getIdentityColor = (identity: Identity) => {
     const colors = {
