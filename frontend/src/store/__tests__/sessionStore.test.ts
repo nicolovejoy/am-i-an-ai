@@ -52,62 +52,40 @@ describe('sessionStore', () => {
   });
 
   describe('Identity Assignment', () => {
-    it('should assign identities randomly (not always A)', async () => {
-      // Mock Math.random to return different values
-      const randomValues = [0.2, 0.5, 0.8, 0.1];
-      let callIndex = 0;
-      jest.spyOn(Math, 'random').mockImplementation(() => randomValues[callIndex++ % randomValues.length]);
+    it('should assign identities randomly (not always A)', () => {
+      const identities = [];
       
-      const identities: string[] = [];
+      // Mock Math.random to return different values  
+      const mockRandom = jest.spyOn(Math, 'random');
+      mockRandom
+        .mockReturnValueOnce(0.8) // D (3)
+        .mockReturnValueOnce(0.2) // A (0)
+        .mockReturnValueOnce(0.5) // C (2)
+        .mockReturnValueOnce(0.1); // A (0)
       
-      // Simulate multiple connections to check randomization
       for (let i = 0; i < 4; i++) {
         const { result } = renderHook(() => useSessionStore());
         
         act(() => {
-          result.current.connect();
+          result.current.reset();
         });
-        
-        // Wait for WebSocket to open
-        await act(async () => {
-          await new Promise(resolve => setTimeout(resolve, 10));
-        });
-        
-        // Simulate server response with identity assignment
-        const identityOptions = ['A', 'B', 'C', 'D'] as const;
-        const selectedIdentity = identityOptions[Math.floor(Math.random() * 4)];
         
         act(() => {
-          // Find the WebSocket instance from the store's internal state
-          const storeState = result.current as any;
-          const ws = storeState.ws;
-          if (ws && ws.onmessage) {
-            ws.onmessage(new MessageEvent('message', {
-              data: JSON.stringify({
-                action: 'connected',
-                identity: selectedIdentity,
-                sessionId: `session-${i}`,
-                participantCount: 1
-              })
-            }));
-          }
+          result.current.startTestingMode();
         });
         
         identities.push(result.current.myIdentity || '');
-        
-        act(() => {
-          result.current.reset();
-        });
       }
       
       console.log('Assigned identities:', identities);
       console.log('Unique identities:', new Set(identities));
       
-      // Check that not all identities are 'A'
+      // Check that we got different identities
       const uniqueIdentities = new Set(identities);
       expect(uniqueIdentities.size).toBeGreaterThan(1);
+      expect(identities).toEqual(['D', 'A', 'C', 'A']);
       
-      (Math.random as jest.MockedFunction<typeof Math.random>).mockRestore();
+      mockRandom.mockRestore();
     });
 
     it('should maintain identity mapping consistency across the session', () => {
@@ -179,7 +157,7 @@ describe('sessionStore', () => {
       });
       
       expect(result.current.messages).toHaveLength(1);
-      expect(result.current.messages[0].sender).toBe('A');
+      expect(result.current.messages[0].sender).toBe(result.current.myIdentity);
       expect(result.current.messages[0].content).toBe('Hello everyone!');
       expect(mockAIService.scheduleAIResponses).toHaveBeenCalledWith(
         'Hello everyone!',
@@ -237,6 +215,11 @@ describe('sessionStore', () => {
   describe('Participant Management', () => {
     it('should update participants list when received from server', () => {
       const { result } = renderHook(() => useSessionStore());
+      
+      // Initialize testing mode to create a match
+      act(() => {
+        result.current.startTestingMode();
+      });
       
       const participants = [
         { identity: 'A' as const, isAI: false, isConnected: true },

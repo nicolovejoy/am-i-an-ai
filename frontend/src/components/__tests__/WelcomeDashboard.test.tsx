@@ -89,7 +89,7 @@ describe('WelcomeDashboard', () => {
   it('shows game description and instructions', () => {
     render(<WelcomeDashboard />);
     
-    expect(screen.getByText(/figure out who's human and who's ai/i)).toBeInTheDocument();
-    expect(screen.getByText(/5 rounds/i)).toBeInTheDocument();
+    expect(screen.getByText(/try and figure out who's the other human/i)).toBeInTheDocument();
+    expect(screen.getByText(/am i an ai/i)).toBeInTheDocument();
   });
 });
