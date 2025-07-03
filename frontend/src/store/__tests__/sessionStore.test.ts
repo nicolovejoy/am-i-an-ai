@@ -107,7 +107,7 @@ describe('sessionStore', () => {
       const uniqueIdentities = new Set(identities);
       expect(uniqueIdentities.size).toBeGreaterThan(1);
       
-      Math.random.mockRestore();
+      (Math.random as jest.MockedFunction<typeof Math.random>).mockRestore();
     });
 
     it('should maintain identity mapping consistency across the session', () => {
@@ -142,12 +142,12 @@ describe('sessionStore', () => {
       });
       
       expect(result.current.testingMode).toBe(true);
-      expect(result.current.myIdentity).toBe('A');
-      expect(result.current.participants).toHaveLength(4);
-      expect(result.current.participants[0]).toEqual({ identity: 'A', isAI: false, isConnected: true });
-      expect(result.current.participants[1]).toEqual({ identity: 'B', isAI: true, isConnected: true });
-      expect(result.current.participants[2]).toEqual({ identity: 'C', isAI: true, isConnected: true });
-      expect(result.current.participants[3]).toEqual({ identity: 'D', isAI: true, isConnected: true });
+      expect(result.current.myIdentity).toMatch(/^[ABCD]$/); // Random identity
+      expect(result.current.match?.participants).toHaveLength(4);
+      expect(result.current.match?.participants.some(p => p.identity === 'A')).toBe(true);
+      expect(result.current.match?.participants.some(p => p.identity === 'B')).toBe(true);
+      expect(result.current.match?.participants.some(p => p.identity === 'C')).toBe(true);
+      expect(result.current.match?.participants.some(p => p.identity === 'D')).toBe(true);
     });
 
     it('should not attempt WebSocket connection in testing mode', () => {
@@ -239,15 +239,15 @@ describe('sessionStore', () => {
       const { result } = renderHook(() => useSessionStore());
       
       const participants = [
-        { identity: 'A', isAI: false, isConnected: true },
-        { identity: 'B', isAI: false, isConnected: true }
+        { identity: 'A' as const, isAI: false, isConnected: true },
+        { identity: 'B' as const, isAI: false, isConnected: true }
       ];
       
       act(() => {
         result.current.handleParticipantUpdate(participants);
       });
       
-      expect(result.current.participants).toEqual(participants);
+      expect(result.current.match?.participants).toEqual(participants);
     });
   });
 
