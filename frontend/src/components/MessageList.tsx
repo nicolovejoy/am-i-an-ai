@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useSessionStore } from '@/store/sessionStore';
-import { MessageBubble } from './ui/MessageBubble';
+import MessageBubble from './ui/MessageBubble';
 
 export default function MessageList() {
   const { messages, myIdentity } = useSessionStore();
