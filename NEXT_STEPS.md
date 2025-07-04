@@ -17,22 +17,22 @@
 ✅ **WELCOME DASHBOARD COMPLETE**: TDD implementation with proper user orientation
 ✅ **ROBOT AUTO-RESPONSES**: Robots now respond automatically, game is playable end-to-end
 
-## 🎼 **Instrument Architecture Plan**
+## 🎯 **Participant Architecture Plan**
 
 ### **Conceptual Model**
-- **Human Musicians** → SELECT and PLAY instruments (choosing their voice for each performance)
-- **Robot Musicians** → ARE instruments (each robot embodies a specific AI voice)
+- **Human Players** → ASSIGNED personas automatically (behind the scenes, not visible in UX)
+- **AI Participants** → HAVE distinct personas (each AI embodies a specific persona)
 
 ### **Implementation Strategy**
-1. **Unified Instrument Model**: Create TypeScript interfaces that distinguish between human-playable instruments and AI-embodied instruments
-2. **Robot Orchestrator Service**: A new service that conducts AI instruments as first-class entities
-3. **Instrument Selection**: Add UI for humans to choose their instrument before joining performances
-4. **System Account**: `@system/conductor` manages the ensemble of AI instruments
+1. **Unified Participant Model**: Create TypeScript interfaces that distinguish between human-assigned personas and AI-embodied personas
+2. **AI Orchestrator Service**: A service that manages AI participants as first-class entities
+3. **Persona Assignment**: System automatically assigns personas to humans when joining sessions
+4. **System Account**: `@system/coordinator` manages the group of AI participants
 
 ### **Technical Approach**
-- Extend `Participant` model to support instrument references (for humans)
-- Robot participants ARE their instrument (no separate reference needed)
-- Store instrument choices per-performance (not per-user) for flexibility
+- Extend `Participant` model to support persona references (for humans)
+- AI participants HAVE their persona (no separate reference needed)
+- Store persona assignments per-session (not per-user) for flexibility
 - No database schema changes required initially
 
 ## 🎯 **MVP Priorities** (Based on User Journey)
@@ -58,8 +58,8 @@
 14. ✅ **Random Identity Assignment** - Fixed! User gets randomized identity
 15. ✅ **Timer Display** - Response time + round time tracking implemented
 
-### **~~Phase 3: Basic Robot Orchestrator~~ ✅ COMPLETED**
-16. ✅ **Robot Auto-Response System** - Robots now respond automatically when humans submit
+### **~~Phase 3: Basic AI Orchestrator~~ ✅ COMPLETED**
+16. ✅ **AI Auto-Response System** - AI participants now respond automatically when humans submit
 17. ✅ **Personality-Based Responses** - 3 distinct AI personalities with unique response patterns
 18. ✅ **Domain Migration** - Infrastructure switched to robotorchestra.org
 19. ✅ **CI/CD Pipeline Fixed** - All tests passing, clean TypeScript compilation
@@ -67,15 +67,15 @@
 
 ### **Phase 4: Polish & Enhancement (1-2 sessions)**
 21. **About Page Content** - Complete game explanation and strategy tips
-22. **Performance Result Persistence** - Store completed performances in DynamoDB
-23. **Real Performance History** - Replace mock data with actual stored performances
-24. **Performance Detail View** - Full movement-by-movement transcript and voting patterns
-25. **User Profile Stats** - Total matches, average accuracy, streaks
+22. **Session Result Persistence** - Store completed sessions in DynamoDB
+23. **Real Session History** - Replace mock data with actual stored sessions
+24. **Session Detail View** - Full round-by-round transcript and voting patterns
+25. **User Profile Stats** - Total sessions, average accuracy, streaks
 
 ### **Phase 5: Advanced Features (Future)**
 - **OpenAI Integration** - Replace mock AI with real OpenAI responses and dynamic prompt generation
-- **Live Performances** - Join performances with other humans (2H+2AI)
-- **Admin Console** - Monitor active matches and user analytics
+- **Live Sessions** - Join sessions with other humans (2H+2AI)
+- **Admin Console** - Monitor active sessions and user analytics
 - **Advanced Scoring** - More sophisticated voting mechanics and accuracy tracking
 - **Leaderboards** - Community competition and rankings
 
@@ -110,15 +110,15 @@
 
 **LATEST ACHIEVEMENT**:
 ✅ **CI/CD PIPELINE FIXED**: All tests passing, TypeScript compiles cleanly
-✅ **ROBOT AUTO-RESPONSES**: Basic robot orchestrator implemented - robots respond automatically when humans submit
+✅ **AI AUTO-RESPONSES**: Basic AI orchestrator implemented - AI participants respond automatically when humans submit
 ✅ **DOMAIN MIGRATION**: Infrastructure switched from amianai.com to robotorchestra.org
 ✅ **CODEBASE CLEANUP**: Removed incomplete features and broken tests
 
 **NEXT PRIORITIES**:
 1. **Deploy robotorchestra.org Domain** - User will deploy updated infrastructure
-2. **Robot Orchestrator Enhancement** - Improve AI response personality and timing
+2. **AI Orchestrator Enhancement** - Improve AI response personality and timing
 3. **About Page Content** - Complete the RobotOrchestra explanation and strategy tips
-4. **Performance Persistence** - Store performance results to enable real history
+4. **Session Persistence** - Store session results to enable real history
 
 **TECHNICAL FOUNDATION**:
 - 38+ tests passing with comprehensive coverage

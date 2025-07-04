@@ -1,18 +1,16 @@
 # RobotOrchestra
 
-**Where human and AI Robots learn to harmonize**
+**Where humans and AI collaborate in anonymous conversations**
 
-An experimental platform exploring trust and collaboration between humans and AI through anonymous conversational performances. Musicians (users) select instruments (personas) to join ensemble performances where they attempt to identify who's human and who's AI.
+An experimental platform exploring trust and collaboration between humans and AI through anonymous conversational sessions. Players join sessions with 2 humans + 2 AI participants, attempting to identify who's human and who's AI.
 
-**Ensemble Performances** Musicians select an instrument (persona) to play during performances, joining 2 Robots (who ARE AI instruments) + 2 human musicians. During the entire performance (5 movements), no one knows who is who. Each musician is assigned to one of four positions: A/B/C/D until the finale reveal after all movements and voting are complete.
+**Session Format** Players participate in structured sessions with 2 AI participants + 2 human players. During the entire session (5 rounds), no one knows who is who. Each participant is assigned to one of four positions: A/B/C/D until the final reveal after all rounds and voting are complete.
 
-### 🎼 The Instrument System
+### 🎯 The Participant System
 
-- **Human Musicians**: Choose from a selection of instruments (communication styles, personalities) to play during performances
-- **Robot Musicians**: Each robot IS a distinct AI instrument with its own voice, managed by the Robot Orchestrator service
-- **Anonymous Performance**: All musicians interact through their A/B/C/D positions, with instruments adding depth to the harmony
-
-Our MVP performance flow is described in USER_JOURNEY_MVP.md.
+- **Human Players**: Choose from a selection of communication styles and personalities for each session
+- **AI Participants**: Each AI has a distinct personality and communication style, managed by the AI Orchestrator service
+- **Anonymous Sessions**: All participants interact through their A/B/C/D positions, with personalities adding depth to the conversation
 
 ## 🚀 Live Site
 
@@ -94,13 +92,13 @@ amianai/
 
 ## 🔑 Key Features (v2)
 
-- **2H+2AI ensembles** - Anonymous conversational performances with 2 humans + 2 AI musicians
-- **A/B/C/D positions** - Musicians identified only by position until the finale
-- **Instrument system** - Humans select instruments to play; robots ARE distinct AI instruments
-- **5-movement performances** - Structured prompt-response-vote movements
-- **Real-time WebSocket** - Instant synchronization across all musicians
-- **Robot Orchestrator** - Conducts AI instruments as first-class entities
-- **Performance timer** - Synchronized timing for each movement
+- **2H+2AI sessions** - Anonymous conversational sessions with 2 humans + 2 AI participants
+- **A/B/C/D positions** - Participants identified only by position until the final reveal
+- **Personality system** - Humans select communication styles; AI participants have distinct personalities
+- **5-round sessions** - Structured prompt-response-vote rounds
+- **Real-time WebSocket** - Instant synchronization across all participants
+- **AI Orchestrator** - Manages AI participants as first-class entities
+- **Session timer** - Synchronized timing for each round
 - **Cost optimized** - 95% savings vs v1 ($90/month → $5/month)
 
 ## 🏗️ Architecture

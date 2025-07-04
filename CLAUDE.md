@@ -2,14 +2,14 @@
 
 ## Project Overview
 
-**Where human and AI Robots learn to harmonize.** Musicians join ensemble performances with 2 humans + 2 AI participants, creating conversational harmony with A/B/C/D positions until the finale reveal.
+**Where humans and AI collaborate in anonymous conversations.** Players join sessions with 2 humans + 2 AI participants, creating conversational interactions with A/B/C/D positions until the final reveal.
 
-### 🎼 Instrument Architecture
+### 🎯 Participant Architecture
 
-- **Human Musicians** → SELECT instruments (choosing their voice for performances)
-- **Robot Musicians** → ARE instruments (each robot embodies a specific AI voice)
-- **Robot Orchestrator** → Service conducting AI instruments as first-class entities
-- **System Account** → `@system/conductor` manages the AI instrument ensemble
+- **Human Players** → ASSIGNED personas automatically (behind the scenes, not visible in UX)
+- **AI Participants** → HAVE distinct personas (each AI embodies a specific persona)
+- **AI Orchestrator** → Service managing AI participants as first-class entities
+- **System Account** → `@system/coordinator` manages the AI participant group
 
 ## Development Workflow
 
