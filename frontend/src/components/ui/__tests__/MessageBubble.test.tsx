@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MessageBubble } from '../MessageBubble';
-import { PLAYER_CONFIG } from '@/config/playerConfig';
+import { PLAYER_CONFIG } from '../../../config/playerConfig';
 
 describe('MessageBubble', () => {
   const defaultIdentityMapping = { A: 1, B: 2, C: 3, D: 4 };

@@ -2,8 +2,8 @@
 
 import { useState, useRef } from 'react';
 import { FiSend } from 'react-icons/fi';
-import { PLAYER_CONFIG } from '@/config/playerConfig';
-import { Card } from '@/components/ui';
+import { PLAYER_CONFIG } from '../config/playerConfig';
+import { Card } from './ui';
 
 interface PlayerInputProps {
   playerNumber: 1 | 2 | 3 | 4;

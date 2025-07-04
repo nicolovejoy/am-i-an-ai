@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Identity } from '@/store/sessionStore';
-import { PLAYER_CONFIG, getPlayerNumber, IDENTITY_NAMES } from '@/config/playerConfig';
+import { PLAYER_CONFIG, getPlayerNumber, IDENTITY_NAMES } from '../../config/playerConfig';
 
 interface MessageBubbleProps {
   sender: Identity | 'You';

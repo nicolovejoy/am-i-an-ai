@@ -1,8 +1,8 @@
 'use client';
 
-import { Card } from '@/components/ui';
-import { PLAYER_CONFIG, getPlayerConfigByIdentity } from '@/config/playerConfig';
-import { Identity } from '@/store/sessionStore';
+import { Card } from './ui';
+import { PLAYER_CONFIG, getPlayerConfigByIdentity } from '../config/playerConfig';
+import { Identity } from '../store/sessionStore';
 
 interface Message {
   id: string;

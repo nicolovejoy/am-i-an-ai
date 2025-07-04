@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, Button } from '@/components/ui';
-import { PLAYER_CONFIG } from '@/config/playerConfig';
+import { Card, Button } from './ui';
+import { PLAYER_CONFIG } from '../config/playerConfig';
 
 interface Player {
   playerNumber: 1 | 2 | 3 | 4;
