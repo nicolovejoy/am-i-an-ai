@@ -27,6 +27,10 @@ cd frontend && npm run dev  # http://localhost:3001
 # Pre-commit checks (run from project root)
 cd frontend && npm run lint && npm run build
 cd lambda && npm test
+
+# Deployment (user handles)
+cd infrastructure && terraform plan && terraform apply
+cd infrastructure/scripts && ./build-frontend.sh && DOMAIN_NAME=robotorchestra.org ./deploy-frontend.sh
 ```
 
 ### Pre-Commit Requirements
@@ -46,9 +50,8 @@ cd lambda && npm test          # All tests must pass
 
 ### Key URLs
 
-- **Production**: https://robotorchestra.org (currently https://amianai.com)
-- **WebSocket**: wss://ip1n2fcaw2.execute-api.us-east-1.amazonaws.com/prod
-- **DynamoDB**: amianai-v2-sessions table
+- **Production**: https://robotorchestra.org (soon. need to update DNS)
+- **WebSocket**: wss://ip1n2fcaw2.execute-api.us-east-1.amazonaws.com/pro
 
 ### Important Notes
 

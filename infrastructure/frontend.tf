@@ -1,4 +1,4 @@
-# Frontend Infrastructure for amianai.com
+# Frontend Infrastructure for robotorchestra.org
 # S3, CloudFront, Route53, and ACM Certificate
 
 # S3 bucket for static website hosting

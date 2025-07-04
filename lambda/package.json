@@ -1,7 +1,7 @@
 {
-  "name": "amianai-v2-websocket-lambda",
+  "name": "robot-orchestra-websocket-lambda",
   "version": "1.0.0",
-  "description": "WebSocket Lambda handler for amianai v2",
+  "description": "WebSocket Lambda handler for robot-orchestra",
   "main": "handler.js",
   "scripts": {
     "test": "jest",

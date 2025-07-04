@@ -1,4 +1,4 @@
-# AmIAnAI v2 - Simplified 2H+2AI Infrastructure
+# RobotOrchestra - Simplified 2H+2AI Infrastructure
 # DynamoDB + WebSocket API + Lambda (No VPC, No RDS)
 
 terraform {
@@ -23,7 +23,7 @@ provider "aws" {
 data "aws_region" "current" {}
 
 locals {
-  project_name = "amianai-v2"
+  project_name = "robot-orchestra"
   
   tags = {
     Project     = local.project_name
