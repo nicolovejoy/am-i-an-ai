@@ -9,14 +9,15 @@
 - ✅ **Auth Working**: New Cognito pool `robot-orchestra-users` active  
 - ✅ **Deployment Pipeline**: Terraform-first + simple scripts working
 - ✅ **Cost Optimized**: Old NAT gateways removed (~$90/month saved)
-- ❌ **CI Build**: Module resolution error (non-blocking)
+- ✅ **Local Build Fixed**: MessageBubble component rebuilt, no import issues
+- ❌ **CI/CD Workflow**: Backend config issues preventing terraform init
 
 ## 🎯 **Next Priorities**
 
-### **Phase 2: Content & Features**
-1. **About Page** - Game explanation and rules
-2. **Session Persistence** - Store completed games in DynamoDB
-3. **Real History** - Replace mock session data
+### **Phase 2: Fix CI/CD & Features**
+1. **Fix GitHub Workflow** - Resolve terraform backend initialization issues
+2. **About Page** - Game explanation and rules  
+3. **Session Persistence** - Store completed games in DynamoDB
 4. **OpenAI Integration** - Connect Lambda to real AI responses
 
 ### **Phase 3: Community Features**
