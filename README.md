@@ -1,10 +1,22 @@
-# AmIAnAI v2
+# RobotOrchestra
 
-**2H+2AI real-time anonymous conversations.** Two humans and two AI participants engage in 10-minute anonymous discussions with A/B/C/D identities, revealing who's who only at the end.
+**Where human and AI Robots learn to harmonize**
+
+An experimental platform exploring trust and collaboration between humans and AI through anonymous conversational performances. Musicians (users) select instruments (personas) to join ensemble performances where they attempt to identify who's human and who's AI.
+
+**Ensemble Performances** Musicians select an instrument (persona) to play during performances, joining 2 Robots (who ARE AI instruments) + 2 human musicians. During the entire performance (5 movements), no one knows who is who. Each musician is assigned to one of four positions: A/B/C/D until the finale reveal after all movements and voting are complete.
+
+### 🎼 The Instrument System
+
+- **Human Musicians**: Choose from a selection of instruments (communication styles, personalities) to play during performances
+- **Robot Musicians**: Each robot IS a distinct AI instrument with its own voice, managed by the Robot Orchestrator service
+- **Anonymous Performance**: All musicians interact through their A/B/C/D positions, with instruments adding depth to the harmony
+
+Our MVP performance flow is described in USER_JOURNEY_MVP.md.
 
 ## 🚀 Live Site
 
-Visit [amianai.com](https://amianai.com) to join anonymous 2H+2AI conversations.
+[RobotOrchestra.org](https://robotorchestra.org) (currently at [amianai.com](https://amianai.com))
 
 ## 🛠️ Tech Stack (v2)
 
@@ -43,7 +55,7 @@ Visit [http://localhost:3001](http://localhost:3001)
 # Run v2 WebSocket tests
 cd lambda && npm test
 
-# Run frontend tests  
+# Run frontend tests
 cd frontend && npm test
 ```
 
@@ -73,7 +85,7 @@ aws cloudfront create-invalidation --distribution-id $(terraform output -raw clo
 ```
 amianai/
 ├── frontend/          # React application (was v2/frontend)
-├── lambda/           # WebSocket handlers (was v2/lambda)  
+├── lambda/           # WebSocket handlers (was v2/lambda)
 ├── infrastructure/   # Terraform configs (shared + v2)
 ├── archive/v1/      # Legacy code (preserved)
 ├── v2/              # TEMPORARY - will be reorganized
@@ -82,47 +94,27 @@ amianai/
 
 ## 🔑 Key Features (v2)
 
-- **2H+2AI conversations** - Anonymous real-time chat with 2 humans + 2 AI participants
-- **A/B/C/D anonymity** - Participants identified only by letters until reveal
-- **10-minute sessions** - Timed conversations with identity reveal at end
-- **Real-time WebSocket** - Instant message sync across all participants
-- **AI personalities** - Two distinct AI participants with different conversation styles
-- **Session timer** - Synchronized countdown with server-side time coordination
+- **2H+2AI ensembles** - Anonymous conversational performances with 2 humans + 2 AI musicians
+- **A/B/C/D positions** - Musicians identified only by position until the finale
+- **Instrument system** - Humans select instruments to play; robots ARE distinct AI instruments
+- **5-movement performances** - Structured prompt-response-vote movements
+- **Real-time WebSocket** - Instant synchronization across all musicians
+- **Robot Orchestrator** - Conducts AI instruments as first-class entities
+- **Performance timer** - Synchronized timing for each movement
 - **Cost optimized** - 95% savings vs v1 ($90/month → $5/month)
 
 ## 🏗️ Architecture
 
-### Current State (Mixed v1/v2)
-- **Frontend**: v2 React app deployed at amianai.com
-- **Backend**: v2 WebSocket system (DynamoDB + Lambda)
-- **Infrastructure**: Partially destroyed v1, working v2 components
+### Current State
 
-### Target State (Clean v2)
+- **Frontend**: React app deployed at amianai.com
+- **Backend**: WebSocket system (DynamoDB + Lambda)
+
+### Target State
+
 - **Serverless-only**: No VPC, NAT Gateway, or RDS
 - **Real-time focus**: WebSocket-first architecture
-- **Cost efficient**: ~$5/month vs v1's $90/month
-- **Simple & maintainable**: ~800 lines vs v1's 15,000+ lines
-
-## 📊 Migration Status
-
-- ✅ v2 frontend deployed and working
-- ✅ v2 WebSocket system operational  
-- ✅ 2H+2AI conversations functional
-- 🚧 Infrastructure in mixed state (partial v1 destruction)
-- 🚧 GitHub Actions workflow broken
-- 📋 **Next**: Clean slate rebuild (see NEXT_STEPS.md)
-
-## 📚 Documentation
-
-- [CLAUDE.md](CLAUDE.md) - Development instructions and conventions
-- [NEXT_STEPS.md](NEXT_STEPS.md) - Current priorities and roadmap
-- [Infrastructure Guide](docs/infrastructure.md) - AWS setup details
-- [Lambda Implementation](docs/lambda-implementation-plan.md) - API architecture
-
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
-This project is proprietary and confidential.
+This project is proprietary.

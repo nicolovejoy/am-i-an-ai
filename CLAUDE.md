@@ -1,24 +1,22 @@
-# AmIAnAI Project - Claude Instructions
+# RobotOrchestra - Claude Instructions
 
 ## Project Overview
 
-**2H+2AI real-time anonymous conversations.** Users join sessions with 2 humans + 2 AI participants, engaging in anonymous discussions with A/B/C/D identities until the reveal.
+**Where human and AI Robots learn to harmonize.** Musicians join ensemble performances with 2 humans + 2 AI participants, creating conversational harmony with A/B/C/D positions until the finale reveal.
+
+### 🎼 Instrument Architecture
+
+- **Human Musicians** → SELECT instruments (choosing their voice for performances)
+- **Robot Musicians** → ARE instruments (each robot embodies a specific AI voice)
+- **Robot Orchestrator** → Service conducting AI instruments as first-class entities
+- **System Account** → `@system/conductor` manages the AI instrument ensemble
 
 ## Development Workflow
-
-### Architecture (v2)
-
-- **Frontend**: React + Next.js (deployed to https://amianai.com)
-- **Backend**: WebSocket API Gateway + Lambda (Node.js 20.x)
-- **Database**: DynamoDB (serverless, managed by Terraform)
-- **Auth**: AWS Cognito (inherited from v1)
-- **Cost**: ~$5/month (95% savings vs v1)
 
 ### Deployment
 
 - **User handles ALL deployments** - Claude never runs deployment commands
-- **Scripts**: Use `/infrastructure/scripts/deploy.sh` (see README in that folder)
-- **Infrastructure**: All AWS resources managed by Terraform
+- **Scripts**: reside in `/infrastructure/scripts` -- for details see readme in this directory.
 
 ### Development Commands
 
@@ -48,7 +46,7 @@ cd lambda && npm test          # All tests must pass
 
 ### Key URLs
 
-- **Production**: https://amianai.com
+- **Production**: https://robotorchestra.org (currently https://amianai.com)
 - **WebSocket**: wss://ip1n2fcaw2.execute-api.us-east-1.amazonaws.com/prod
 - **DynamoDB**: amianai-v2-sessions table
 
@@ -58,3 +56,17 @@ cd lambda && npm test          # All tests must pass
 - **User manages infrastructure** - Claude implements features, user deploys
 - **TDD approach** - write tests first when that makes sense, especially for Lambda functions
 - **Follow existing patterns** - match code style and conventions
+
+### Command Permissions
+
+Claude has permission to freely run the following commands WITHOUT asking:
+
+- npm test (and any test variations)
+- grep (for searching code)
+- tsc (TypeScript compilation)
+- cd (directory navigation)
+- ls, pwd (directory listing/location)
+- cat, head, tail (file reading)
+- Any other read-only or development commands
+
+Just run them and continue with your work.

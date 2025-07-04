@@ -1,4 +1,4 @@
-# am I an AI? - Next Steps
+# RobotOrchestra - Next Steps
 
 ## 🎉 **Current Status**
 
@@ -15,7 +15,25 @@
 ✅ **TypeScript Foundation**: `match-handler.ts`, `MatchManager.ts`, `types.ts` with full test coverage
 ✅ **FRONTEND INTEGRATION COMPLETE**: Updated to use new match-based WebSocket API
 ✅ **WELCOME DASHBOARD COMPLETE**: TDD implementation with proper user orientation
-✅ **5-ROUND COMPONENTS COMPLETE**: RoundInterface, PromptDisplay, ResponseInput, RoundVoting
+✅ **ROBOT AUTO-RESPONSES**: Robots now respond automatically, game is playable end-to-end
+
+## 🎼 **Instrument Architecture Plan**
+
+### **Conceptual Model**
+- **Human Musicians** → SELECT and PLAY instruments (choosing their voice for each performance)
+- **Robot Musicians** → ARE instruments (each robot embodies a specific AI voice)
+
+### **Implementation Strategy**
+1. **Unified Instrument Model**: Create TypeScript interfaces that distinguish between human-playable instruments and AI-embodied instruments
+2. **Robot Orchestrator Service**: A new service that conducts AI instruments as first-class entities
+3. **Instrument Selection**: Add UI for humans to choose their instrument before joining performances
+4. **System Account**: `@system/conductor` manages the ensemble of AI instruments
+
+### **Technical Approach**
+- Extend `Participant` model to support instrument references (for humans)
+- Robot participants ARE their instrument (no separate reference needed)
+- Store instrument choices per-performance (not per-user) for flexibility
+- No database schema changes required initially
 
 ## 🎯 **MVP Priorities** (Based on User Journey)
 
@@ -40,16 +58,23 @@
 14. ✅ **Random Identity Assignment** - Fixed! User gets randomized identity
 15. ✅ **Timer Display** - Response time + round time tracking implemented
 
-### **Phase 3: Polish & Enhancement (1-2 sessions)**
-16. **About Page Content** - Complete game explanation and strategy tips
-17. **Match Result Persistence** - Store completed matches in DynamoDB
-18. **Real Match History** - Replace mock data with actual stored matches
-19. **Match Detail View** - Full round-by-round transcript and voting patterns
-20. **User Profile Stats** - Total matches, average accuracy, streaks
+### **Phase 3: Instrument System Implementation (2-3 sessions)**
+16. **Instrument Types & Interfaces** - Define TypeScript models for human-playable and AI-embodied instruments
+17. **Robot Orchestrator Service** - Implement service to conduct AI instruments as entities
+18. **Instrument Selection UI** - Add instrument choice screen before performance start
+19. **Backend Integration** - Update WebSocket handlers to accept instrument selections
+20. **Instrument Display** - Show selected instruments during performances
 
-### **Phase 4: Advanced Features (Future)**
+### **Phase 4: Polish & Enhancement (1-2 sessions)**
+21. **About Page Content** - Complete game explanation and strategy tips
+22. **Performance Result Persistence** - Store completed performances in DynamoDB
+23. **Real Performance History** - Replace mock data with actual stored performances
+24. **Performance Detail View** - Full movement-by-movement transcript and voting patterns
+25. **User Profile Stats** - Total matches, average accuracy, streaks
+
+### **Phase 5: Advanced Features (Future)**
 - **OpenAI Integration** - Replace mock AI with real OpenAI responses and dynamic prompt generation
-- **Live Matches** - Join matches with other humans (2H+2AI)
+- **Live Performances** - Join performances with other humans (2H+2AI)
 - **Admin Console** - Monitor active matches and user analytics
 - **Advanced Scoring** - More sophisticated voting mechanics and accuracy tracking
 - **Leaderboards** - Community competition and rankings
@@ -83,11 +108,17 @@
 - ✅ 5-Round component system built and functional
 - ✅ Full user journey from login → dashboard → match → results implemented
 
+**LATEST ACHIEVEMENT**:
+✅ **FRONTEND REBRAND COMPLETE**: RobotOrchestra musical terminology implemented throughout UI
+✅ **MUSICAL METAPHOR**: All components now use performance/movement/musician language
+✅ **TEST COVERAGE**: All frontend tests updated and passing (42/42)
+✅ **BUILD SUCCESS**: Frontend compiles cleanly with new branding
+
 **NEXT PRIORITIES**:
-1. **About Page Content** - Complete the linked about page with game rules and tips
-2. **Match Persistence** - Store match results to enable real history
-3. **Polish & Refinement** - Enhance UX and visual design
-4. **Performance Testing** - Validate with multiple concurrent users
+1. **Phase 2: Backend Instrument Integration** - Add persona/instrument selection to backend
+2. **Robot Orchestrator Service** - Implement AI instrument management 
+3. **About Page Content** - Complete the RobotOrchestra explanation and strategy tips
+4. **Performance Persistence** - Store performance results to enable real history
 
 **TECHNICAL FOUNDATION**:
 - 38+ tests passing with comprehensive coverage

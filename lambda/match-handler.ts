@@ -164,11 +164,33 @@ async function handleSubmitResponse(connectionId: string, message: SubmitRespons
     message.response
   );
   
-  // Broadcast updated match state
+  // Broadcast that this participant has responded
   await broadcastToMatch(match, {
-    action: 'match_state',
-    match
-  } as MatchStateMessage, event);
+    action: 'participant_responded',
+    identity: participant.identity,
+    roundNumber: message.roundNumber
+  }, event);
+  
+  // If this was the first response, broadcast robot responses with delays
+  const currentRound = matchManager.getCurrentRound(match);
+  if (currentRound && Object.keys(currentRound.responses).length > 1) {
+    // Robot responses were auto-generated, broadcast them with delays
+    const robotParticipants = match.participants.filter(p => p.type === 'ai');
+    
+    robotParticipants.forEach((robot, index) => {
+      if (currentRound.responses[robot.identity]) {
+        // Broadcast each robot response with a 2-4 second delay
+        setTimeout(async () => {
+          await broadcastToMatch(match, {
+            action: 'participant_responded',
+            identity: robot.identity,
+            roundNumber: message.roundNumber,
+            response: currentRound.responses[robot.identity]
+          }, event);
+        }, 2000 + (index * 2000)); // 2s, 4s, 6s delays
+      }
+    });
+  }
   
   // If all responses collected, start voting phase
   if (allResponsesCollected) {
