@@ -8,8 +8,20 @@
 - ✅ **Complete 5-Round Sessions**: End-to-end playable 
 - ✅ **AI Auto-Responses**: 3 distinct AI personalities
 - ✅ **Comprehensive Tests**: 42+ tests passing
-- ✅ **CI/CD Pipeline**: Fixed and working
+- ❌ **CI/CD Pipeline**: Build failing with module resolution error
 - ✅ **Domain Ready**: Infrastructure switched to robotorchestra.org
+
+## 🚨 **Known Issues**
+
+**CI Build Failure**: Module resolution error in CI environment
+```
+./src/components/ui/MessageBubble.tsx
+Module not found: Can't resolve '../../config/playerConfig'
+```
+- Builds successfully locally
+- Fails consistently in GitHub Actions CI
+- Module path appears correct: `MessageBubble.tsx` → `../../config/playerConfig`
+- Likely CI environment or webpack configuration issue
 
 ## 🎯 **Next Priorities**
 
