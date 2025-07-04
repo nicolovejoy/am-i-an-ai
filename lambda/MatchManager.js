@@ -145,6 +145,18 @@ class MatchManager {
         }
         // Store the response
         currentRound.responses[identity] = response;
+        // If this is a human response, generate robot responses automatically
+        const participant = match.participants.find(p => p.identity === identity);
+        if (participant?.type === 'human') {
+            // Generate responses for all AI participants
+            const aiParticipants = match.participants.filter(p => p.type === 'ai');
+            for (const aiParticipant of aiParticipants) {
+                if (!currentRound.responses[aiParticipant.identity]) {
+                    const robotResponse = this.generateRobotResponse(aiParticipant.identity, currentRound.prompt, aiParticipant.personality || 'curious_student');
+                    currentRound.responses[aiParticipant.identity] = robotResponse;
+                }
+            }
+        }
         // Check if all participants have responded
         if (Object.keys(currentRound.responses).length === 4) {
             match.status = 'round_voting';
@@ -283,6 +295,38 @@ class MatchManager {
      */
     getAllMatches() {
         return Array.from(this.matches.values());
+    }
+    /**
+     * Generate robot response for a specific identity and personality
+     */
+    generateRobotResponse(_identity, _prompt, personality) {
+        // Mock AI responses based on personality
+        const responses = {
+            curious_student: [
+                "That's interesting! I wonder if there's more to explore here?",
+                "Hmm, what do you think about the implications of that?",
+                "Could you tell me more about your perspective on this?",
+                "I'm curious - what led you to think about it that way?",
+                "That raises some fascinating questions for me!"
+            ],
+            witty_professional: [
+                "Well, that's one way to look at it.",
+                "Efficient solution. I appreciate the practicality.",
+                "Interesting approach. Very methodical.",
+                "Fair point, though I'd probably approach it differently.",
+                "That's a solid take, professionally speaking."
+            ],
+            friendly_skeptic: [
+                "I'm not entirely convinced, but I see your point.",
+                "That raises some questions for me, actually.",
+                "Sounds reasonable, though I'd want to verify that first.",
+                "Hmm, I'm a bit skeptical, but open to hearing more.",
+                "Interesting perspective, though I have some doubts."
+            ]
+        };
+        const personalityResponses = responses[personality] || responses.curious_student;
+        const randomIndex = Math.floor(Math.random() * personalityResponses.length);
+        return personalityResponses[randomIndex];
     }
     /**
      * Clear all matches (for testing)

@@ -7,6 +7,7 @@ export type Identity = 'A' | 'B' | 'C' | 'D';
 export type MatchStatus = 'waiting' | 'round_active' | 'round_voting' | 'completed';
 export type ParticipantType = 'human' | 'ai';
 
+
 export interface Participant {
   /** Unique identifier for this participant */
   id: string;
@@ -94,6 +95,7 @@ export interface SubmitVoteMessage extends WebSocketMessage {
   roundNumber: number;
   humanIdentity: Identity; // Who they think is human
 }
+
 
 export interface MatchStateMessage extends WebSocketMessage {
   action: 'match_state';

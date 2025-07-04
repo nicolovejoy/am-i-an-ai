@@ -70,6 +70,7 @@ interface SessionState {
   identityMapping: Record<string, number>; // Maps A,B,C,D to player numbers 1,2,3,4
   typingParticipants: Set<Identity>;
   
+  
   // Actions
   connect: () => void;
   disconnect: () => void;

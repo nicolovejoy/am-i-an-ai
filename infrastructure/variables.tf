@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "domain_name" {
   description = "The domain name for the website"
   type        = string
-  default     = "amianai.com"
+  default     = "robotorchestra.org"
 }
 
 variable "environment" {
