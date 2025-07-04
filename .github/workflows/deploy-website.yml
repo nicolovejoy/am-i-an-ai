@@ -41,31 +41,39 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Get Cognito Values
-        id: get-cognito
+      - name: Get Terraform Outputs
+        id: get-terraform
+        working-directory: infrastructure
         run: |
-          USER_POOL_ID=$(aws cognito-idp list-user-pools --max-results 1 --query 'UserPools[0].Id' --output text)
-          CLIENT_ID=$(aws cognito-idp list-user-pool-clients --user-pool-id $USER_POOL_ID --max-results 1 --query 'UserPoolClients[0].ClientId' --output text)
+          # Initialize terraform to read state
+          terraform init -backend=true -input=false
+          
+          # Get outputs from terraform state
+          USER_POOL_ID=$(terraform output -raw cognito_user_pool_id)
+          CLIENT_ID=$(terraform output -raw cognito_client_id) 
+          WEBSOCKET_URL=$(terraform output -raw websocket_url)
+          WEBSITE_URL=$(terraform output -raw website_url)
+          CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id)
+          
           echo "user_pool_id=$USER_POOL_ID" >> $GITHUB_OUTPUT
           echo "client_id=$CLIENT_ID" >> $GITHUB_OUTPUT
+          echo "websocket_url=$WEBSOCKET_URL" >> $GITHUB_OUTPUT
+          echo "website_url=$WEBSITE_URL" >> $GITHUB_OUTPUT
+          echo "cloudfront_id=$CLOUDFRONT_ID" >> $GITHUB_OUTPUT
 
       - name: Build Next.js site
         working-directory: frontend
         env:
-          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ steps.get-cognito.outputs.user_pool_id }}
-          NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ steps.get-cognito.outputs.client_id }}
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ steps.get-terraform.outputs.user_pool_id }}
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ steps.get-terraform.outputs.client_id }}
+          NEXT_PUBLIC_WEBSOCKET_URL: ${{ steps.get-terraform.outputs.websocket_url }}
+          NEXT_PUBLIC_DOMAIN_NAME: ${{ steps.get-terraform.outputs.website_url }}
         run: npm run build
 
-      - name: Sync to S3
+      - name: Deploy to S3
         run: |
-          aws s3 sync frontend/dist/ s3://amianai.com --delete --cache-control "max-age=86400"
+          aws s3 sync frontend/dist/ s3://robotorchestra.org --delete --cache-control "max-age=86400"
 
       - name: Invalidate CloudFront
         run: |
-          DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, 'amianai.com')]].Id" --output text)
-          if [ -n "$DISTRIBUTION_ID" ] && [ "$DISTRIBUTION_ID" != "None" ]; then
-            echo "Invalidating CloudFront distribution: $DISTRIBUTION_ID"
-            aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
-          else
-            echo "No CloudFront distribution found for amianai.com - skipping invalidation"
-          fi
+          aws cloudfront create-invalidation --distribution-id ${{ steps.get-terraform.outputs.cloudfront_id }} --paths "/*"
