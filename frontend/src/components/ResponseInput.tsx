@@ -5,8 +5,8 @@ import { useSessionStore } from '@/store/sessionStore';
 import { Card, Button } from './ui';
 import { FiSend } from 'react-icons/fi';
 
-export default function ResponseInput() {
-  const [response, setResponse] = useState('');
+export default function PhraseComposer() {
+  const [phrase, setPhrase] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { submitResponse, timeRemaining } = useSessionStore();
 
@@ -17,11 +17,11 @@ export default function ResponseInput() {
   }, []);
 
   const handleSubmit = () => {
-    const trimmedResponse = response.trim();
-    if (!trimmedResponse) return;
+    const trimmedPhrase = phrase.trim();
+    if (!trimmedPhrase) return;
     
-    submitResponse(trimmedResponse);
-    setResponse('');
+    submitResponse(trimmedPhrase);
+    setPhrase('');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -31,14 +31,14 @@ export default function ResponseInput() {
     }
   };
 
-  const remainingChars = 280 - response.length;
+  const remainingChars = 280 - phrase.length;
   const isTimeRunningOut = timeRemaining !== null && timeRemaining < 30;
 
   return (
     <Card>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Your Response</h3>
+          <h3 className="text-lg font-semibold">Your Musical Phrase</h3>
           {timeRemaining !== null && (
             <div className={`text-sm font-mono px-3 py-1 rounded ${
               isTimeRunningOut ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
@@ -51,10 +51,10 @@ export default function ResponseInput() {
         <div className="space-y-3">
           <textarea
             ref={textareaRef}
-            value={response}
-            onChange={(e) => setResponse(e.target.value)}
+            value={phrase}
+            onChange={(e) => setPhrase(e.target.value)}
             onKeyDown={handleKeyPress}
-            placeholder="Type your response here... Be creative and human!"
+            placeholder="Compose your phrase... Express your human musicality!"
             className="w-full h-32 px-4 py-3 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder-slate-500"
             maxLength={280}
           />
@@ -71,23 +71,23 @@ export default function ResponseInput() {
             
             <Button
               onClick={handleSubmit}
-              disabled={!response.trim()}
+              disabled={!phrase.trim()}
               className="flex items-center gap-2"
             >
               <FiSend size={16} />
-              Submit Response
+              Play Phrase
             </Button>
           </div>
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm text-blue-800">
-            <strong>💡 Tips for sounding human:</strong>
+            <strong>🎵 Tips for human musicality:</strong>
             <ul className="mt-2 space-y-1 text-blue-700">
-              <li>• Use personal experiences and emotions</li>
-              <li>• Include small imperfections or casual language</li>
+              <li>• Share personal experiences and emotions</li>
+              <li>• Include natural imperfections or casual language</li>
               <li>• Reference specific details or memories</li>
-              <li>• Show your personality and unique perspective</li>
+              <li>• Let your unique voice and perspective shine through</li>
             </ul>
           </div>
         </div>

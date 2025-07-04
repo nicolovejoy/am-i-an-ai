@@ -5,37 +5,37 @@ import { useSessionStore } from "@/store/sessionStore";
 import { Card, Button } from "./ui";
 
 // Mock data for MVP phase
-const MOCK_AVAILABLE_MATCHES = [
+const MOCK_AVAILABLE_PERFORMANCES = [
   {
-    id: "match-1",
-    name: "Match #1",
-    participants: ["Alice", "Bob", "Charlie"],
+    id: "performance-1",
+    name: "Ensemble #1",
+    musicians: ["Alice", "Bob", "Charlie"],
     status: "waiting" as const,
-    waitingFor: "1 more player",
+    waitingFor: "1 more musician",
   },
   {
-    id: "match-2",
-    name: "Match #2",
-    participants: ["Emma", "David"],
+    id: "performance-2",
+    name: "Ensemble #2",
+    musicians: ["Emma", "David"],
     status: "active" as const,
-    currentRound: 3,
+    currentMovement: 3,
   },
 ];
 
-const MOCK_RECENT_MATCHES = [
+const MOCK_RECENT_PERFORMANCES = [
   {
     id: "recent-1",
-    name: "Last Match",
+    name: "Last Performance",
     completedAt: "2 hours ago",
-    accuracy: "3/5",
-    result: "Won",
+    harmony: "3/5",
+    result: "In Tune",
   },
   {
     id: "recent-2",
-    name: "Previous Match",
+    name: "Previous Performance",
     completedAt: "Yesterday",
-    accuracy: "2/5",
-    result: "Lost",
+    harmony: "2/5",
+    result: "Off Key",
   },
 ];
 
@@ -43,7 +43,7 @@ export default function WelcomeDashboard() {
   const { user } = useAuth();
   const { startTestingMode } = useSessionStore();
 
-  const handleStartTestMatch = () => {
+  const handleStartTestPerformance = () => {
     startTestingMode();
   };
 
@@ -53,11 +53,11 @@ export default function WelcomeDashboard() {
         {/* Header */}
         <Card className="text-center">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Welcome back, {user?.email?.split("@")[0] || "Player"}!
+            Welcome back, {user?.email?.split("@")[0] || "Musician"}!
           </h1>
-          <h2 className="text-xl text-slate-700 mb-4">am I an AI?</h2>
+          <h2 className="text-xl text-slate-700 mb-4">RobotOrchestra</h2>
           <p className="text-slate-600 max-w-2xl mx-auto">
-            Try and figure out who&apos;s the other human in this short match.
+            Join the ensemble and discover who&apos;s human and who&apos;s AI in anonymous performances.
           </p>
         </Card>
 
@@ -66,33 +66,33 @@ export default function WelcomeDashboard() {
           <Card>
             <h3 className="text-xl font-semibold mb-4">Quick Start</h3>
             <Button
-              onClick={handleStartTestMatch}
+              onClick={handleStartTestPerformance}
               size="lg"
               className="w-full mb-4"
             >
-              🎮 Start Test Match
+              🎵 Start Test Performance
             </Button>
             <p className="text-sm text-slate-600">
-              Jump into a practice matchfro. Perfect for learning the game!
+              Join a practice ensemble. Perfect for learning to harmonize!
             </p>
           </Card>
 
           <Card>
-            <h3 className="text-xl font-semibold mb-4">Create Live Match</h3>
+            <h3 className="text-xl font-semibold mb-4">Create Live Performance</h3>
             <Button
               disabled
               size="lg"
               className="w-full mb-4"
               variant="secondary"
             >
-              🚀 Create Live Match
+              🎼 Create Live Performance
             </Button>
             <div className="bg-orange-50 border border-orange-200 rounded p-3">
               <span className="text-xs text-orange-700 font-medium">
                 Not Implemented Yet
               </span>
               <p className="text-xs text-orange-600 mt-1">
-                Coming soon: Play with other humans online
+                Coming soon: Perform with other humans online
               </p>
             </div>
           </Card>
@@ -100,20 +100,20 @@ export default function WelcomeDashboard() {
 
         {/* Available Matches */}
         <Card>
-          <h3 className="text-xl font-semibold mb-4">Available Matches</h3>
+          <h3 className="text-xl font-semibold mb-4">Available Performances</h3>
           <div className="space-y-3">
-            {MOCK_AVAILABLE_MATCHES.map((match) => (
+            {MOCK_AVAILABLE_PERFORMANCES.map((performance) => (
               <div
-                key={match.id}
+                key={performance.id}
                 className="flex items-center justify-between p-3 border border-slate-200 rounded-lg"
               >
                 <div>
-                  <h4 className="font-medium">{match.name}</h4>
+                  <h4 className="font-medium">{performance.name}</h4>
                   <p className="text-sm text-slate-600">
-                    {match.participants.join(", ")}
-                    {match.status === "waiting" && ` • ${match.waitingFor}`}
-                    {match.status === "active" &&
-                      ` • Round ${match.currentRound}/5`}
+                    {performance.musicians.join(", ")}
+                    {performance.status === "waiting" && ` • ${performance.waitingFor}`}
+                    {performance.status === "active" &&
+                      ` • Movement ${performance.currentMovement}/5`}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -121,7 +121,7 @@ export default function WelcomeDashboard() {
                     Not Implemented
                   </span>
                   <Button size="sm" disabled variant="secondary">
-                    {match.status === "waiting" ? "Join" : "Watch"}
+                    {performance.status === "waiting" ? "Join" : "Listen"}
                   </Button>
                 </div>
               </div>
@@ -131,18 +131,18 @@ export default function WelcomeDashboard() {
 
         {/* Recent Matches */}
         <Card>
-          <h3 className="text-xl font-semibold mb-4">Recent Matches</h3>
+          <h3 className="text-xl font-semibold mb-4">Recent Performances</h3>
           <div className="space-y-3">
-            {MOCK_RECENT_MATCHES.map((match) => (
+            {MOCK_RECENT_PERFORMANCES.map((performance) => (
               <div
-                key={match.id}
+                key={performance.id}
                 className="flex items-center justify-between p-3 border border-slate-200 rounded-lg"
               >
                 <div>
-                  <h4 className="font-medium">{match.name}</h4>
+                  <h4 className="font-medium">{performance.name}</h4>
                   <p className="text-sm text-slate-600">
-                    {match.completedAt} • {match.accuracy} correct •{" "}
-                    {match.result}
+                    {performance.completedAt} • {performance.harmony} harmony •{" "}
+                    {performance.result}
                   </p>
                 </div>
                 <Button size="sm" variant="ghost">
@@ -159,10 +159,10 @@ export default function WelcomeDashboard() {
             href="/about"
             className="text-blue-600 hover:text-blue-800 font-medium"
           >
-            📖 About the Game
+            🎼 About RobotOrchestra
           </a>
           <p className="text-sm text-slate-600 mt-2">
-            Learn how to play and strategies for identifying humans vs AI
+            Learn how to harmonize and strategies for identifying human musicians vs AI
           </p>
         </Card>
       </div>

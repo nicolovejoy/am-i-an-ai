@@ -37,59 +37,58 @@ describe('WelcomeDashboard', () => {
     render(<WelcomeDashboard />);
     
     expect(screen.getByText('Welcome back, testuser!')).toBeInTheDocument();
-    expect(screen.getByText(/am I an AI\?/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /RobotOrchestra/ })).toBeInTheDocument();
   });
 
-  it('displays Start Test Match button prominently', () => {
+  it('displays Start Test Performance button prominently', () => {
     render(<WelcomeDashboard />);
     
-    const startButton = screen.getByRole('button', { name: /start test match/i });
+    const startButton = screen.getByRole('button', { name: /start test performance/i });
     expect(startButton).toBeInTheDocument();
     expect(startButton).not.toBeDisabled();
   });
 
-  it('starts testing mode when Start Test Match is clicked', () => {
+  it('starts testing mode when Start Test Performance is clicked', () => {
     render(<WelcomeDashboard />);
     
-    const startButton = screen.getByRole('button', { name: /start test match/i });
+    const startButton = screen.getByRole('button', { name: /start test performance/i });
     fireEvent.click(startButton);
     
     expect(mockStartTestingMode).toHaveBeenCalledTimes(1);
   });
 
-  it('shows available matches section with mock data', () => {
+  it('shows available performances section with mock data', () => {
     render(<WelcomeDashboard />);
     
-    expect(screen.getByText(/available matches/i)).toBeInTheDocument();
-    expect(screen.getByText(/match #1/i)).toBeInTheDocument();
-    expect(screen.getByText(/match #2/i)).toBeInTheDocument();
+    expect(screen.getByText(/available performances/i)).toBeInTheDocument();
+    expect(screen.getByText(/ensemble #1/i)).toBeInTheDocument();
+    expect(screen.getByText(/ensemble #2/i)).toBeInTheDocument();
   });
 
-  it('displays not implemented badges on match browser items', () => {
+  it('displays not implemented badges on performance browser items', () => {
     render(<WelcomeDashboard />);
     
     const badges = screen.getAllByText(/not implemented/i);
     expect(badges.length).toBeGreaterThan(0);
   });
 
-  it('shows recent match history section with placeholder data', () => {
+  it('shows recent performance history section with placeholder data', () => {
     render(<WelcomeDashboard />);
     
-    expect(screen.getByText(/recent matches/i)).toBeInTheDocument();
-    expect(screen.getByText(/last match/i)).toBeInTheDocument();
+    expect(screen.getByText(/recent performances/i)).toBeInTheDocument();
+    expect(screen.getByText(/last performance/i)).toBeInTheDocument();
   });
 
   it('displays About link', () => {
     render(<WelcomeDashboard />);
     
-    const aboutLink = screen.getByText(/about the game/i);
+    const aboutLink = screen.getByText(/about robotorchestra/i);
     expect(aboutLink).toBeInTheDocument();
   });
 
-  it('shows game description and instructions', () => {
+  it('shows performance description and instructions', () => {
     render(<WelcomeDashboard />);
     
-    expect(screen.getByText(/try and figure out who's the other human/i)).toBeInTheDocument();
-    expect(screen.getByText(/am i an ai/i)).toBeInTheDocument();
+    expect(screen.getByText(/join the ensemble and discover who's human/i)).toBeInTheDocument();
   });
 });

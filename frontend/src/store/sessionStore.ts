@@ -84,6 +84,7 @@ interface SessionState {
   handleMatchState: (data: any) => void;
   handleRoundStart: (data: any) => void;
   handleResponseSubmitted: (data: any) => void;
+  handleParticipantResponded: (data: any) => void;
   handleRoundVoting: (data: any) => void;
   handleRoundComplete: (data: any) => void;
   handleMatchComplete: (data: any) => void;
@@ -163,6 +164,9 @@ export const useSessionStore = create<SessionState>()(
                   break;
                 case 'response_submitted':
                   get().handleResponseSubmitted(data);
+                  break;
+                case 'participant_responded':
+                  get().handleParticipantResponded(data);
                   break;
                 case 'round_voting':
                   get().handleRoundVoting(data);
@@ -438,6 +442,22 @@ export const useSessionStore = create<SessionState>()(
             [data.identity]: data.response
           }
         }));
+      },
+
+      handleParticipantResponded: (data: any) => {
+        // Handle when a participant (human or robot) has responded
+        if (data.response) {
+          // If response is included, update it
+          set(state => ({
+            roundResponses: {
+              ...state.roundResponses,
+              [data.identity]: data.response
+            }
+          }));
+        }
+        
+        // Could also update UI to show who has responded
+        console.log(`${data.identity} has responded to round ${data.roundNumber}`);
       },
 
       handleRoundVoting: (data) => {

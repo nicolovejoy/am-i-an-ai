@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+.next/
+
+# Environment files
+.env*.local
+
+# Test coverage
+coverage/
+
+# TypeScript
+*.tsbuildinfo

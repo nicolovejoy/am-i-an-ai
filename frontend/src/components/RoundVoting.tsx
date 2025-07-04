@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { useSessionStore, Identity } from '@/store/sessionStore';
 import { Card, Button } from './ui';
 
-interface RoundVotingProps {
+interface MusicianRecognitionProps {
   responses: Partial<Record<Identity, string>>;
 }
 
-export default function RoundVoting({ responses }: RoundVotingProps) {
+export default function MusicianRecognition({ responses }: MusicianRecognitionProps) {
   const [selectedIdentity, setSelectedIdentity] = useState<Identity | null>(null);
   const { submitVote, myIdentity, timeRemaining } = useSessionStore();
 
@@ -28,15 +28,15 @@ export default function RoundVoting({ responses }: RoundVotingProps) {
     <Card>
       <div className="space-y-6">
         <div className="text-center">
-          <h3 className="text-xl font-semibold mb-2">🗳️ Time to Vote!</h3>
+          <h3 className="text-xl font-semibold mb-2">👂 Time to Recognize!</h3>
           <p className="text-slate-600">
-            Which response sounds most human to you? Click to select, then confirm your vote.
+            Which phrase sounds most human to you? Listen carefully and identify the human musicians.
           </p>
           {timeRemaining !== null && (
             <div className={`mt-3 text-sm font-mono px-3 py-1 rounded inline-block ${
               isTimeRunningOut ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
             }`}>
-              {timeRemaining} seconds to vote
+              {timeRemaining} seconds to identify
             </div>
           )}
         </div>
@@ -68,11 +68,11 @@ export default function RoundVoting({ responses }: RoundVotingProps) {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="text-sm font-medium text-slate-500">
-                        Response {String.fromCharCode(65 + index)}
+                        Phrase {String.fromCharCode(65 + index)}
                       </div>
                       {isMyResponse && (
                         <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                          Your response
+                          Your phrase
                         </span>
                       )}
                       {isSelected && !isMyResponse && (
@@ -112,26 +112,26 @@ export default function RoundVoting({ responses }: RoundVotingProps) {
             size="lg"
             className="w-full sm:w-auto"
           >
-            {selectedIdentity ? `Vote for Response ${
+            {selectedIdentity ? `Identify Phrase ${
               String.fromCharCode(65 + shuffledResponses.findIndex(([id]) => id === selectedIdentity))
-            }` : 'Select a response to vote'}
+            }` : 'Select a phrase to identify'}
           </Button>
           
           {!selectedIdentity && (
             <p className="text-sm text-slate-500 text-center">
-              Remember: You&apos;re trying to identify which response was written by another human
+              Remember: You&apos;re trying to identify which phrase was composed by another human musician
             </p>
           )}
         </div>
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="text-sm text-yellow-800">
-            <strong>🧠 Voting Tips:</strong>
+            <strong>🎵 Recognition Tips:</strong>
             <ul className="mt-2 space-y-1 text-yellow-700">
-              <li>• Look for personal details and specific experiences</li>
+              <li>• Listen for personal details and specific experiences</li>
               <li>• Notice natural language patterns and casual tone</li>
               <li>• Consider emotional authenticity and unique perspectives</li>
-              <li>• Be aware that AI responses might be too perfect or generic</li>
+              <li>• Be aware that AI phrases might be too perfect or generic</li>
             </ul>
           </div>
         </div>

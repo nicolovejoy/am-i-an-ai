@@ -2,11 +2,11 @@
 
 import { useSessionStore } from '@/store/sessionStore';
 import PromptDisplay from './PromptDisplay';
-import ResponseInput from './ResponseInput';
-import RoundVoting from './RoundVoting';
+import PhraseComposer from './ResponseInput';
+import MusicianRecognition from './RoundVoting';
 import { Card } from './ui';
 
-export default function RoundInterface() {
+export default function MovementInterface() {
   const { 
     match, 
     currentPrompt, 
@@ -21,29 +21,29 @@ export default function RoundInterface() {
     return null;
   }
 
-  const currentRound = match.currentRound;
-  const totalRounds = match.totalRounds;
-  const allResponsesIn = Object.keys(roundResponses).length === 4;
+  const currentMovement = match.currentRound;
+  const totalMovements = match.totalRounds;
+  const allPhrasesIn = Object.keys(roundResponses).length === 4;
 
-  // Determine current phase of the round
+  // Determine current phase of the movement
   const isPromptPhase = currentPrompt && !hasSubmittedResponse;
-  const isVotingPhase = allResponsesIn && !hasSubmittedVote;
-  const isWaitingForOthers = hasSubmittedResponse && !allResponsesIn;
+  const isRecognitionPhase = allPhrasesIn && !hasSubmittedVote;
+  const isWaitingForOthers = hasSubmittedResponse && !allPhrasesIn;
 
   return (
     <div className="space-y-4">
-      {/* Round Progress Header */}
+      {/* Movement Progress Header */}
       <Card padding="sm">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">
-              Round {currentRound} of {totalRounds}
+              Movement {currentMovement} of {totalMovements}
             </h2>
             <div className="flex items-center gap-4 mt-1">
               <span className="text-sm text-slate-600">
-                {isPromptPhase && "💭 Respond to prompt"}
-                {isWaitingForOthers && "⏳ Waiting for others..."}
-                {isVotingPhase && "🗳️ Vote on responses"}
+                {isPromptPhase && "🎵 Compose your phrase"}
+                {isWaitingForOthers && "⏳ Waiting for other musicians..."}
+                {isRecognitionPhase && "👂 Identify the humans"}
               </span>
               {timeRemaining !== null && (
                 <span className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
@@ -53,15 +53,15 @@ export default function RoundInterface() {
             </div>
           </div>
           
-          {/* Round Progress Bar */}
+          {/* Movement Progress Bar */}
           <div className="flex items-center gap-2">
-            {Array.from({ length: totalRounds }, (_, i) => (
+            {Array.from({ length: totalMovements }, (_, i) => (
               <div
                 key={i}
                 className={`w-3 h-3 rounded-full ${
-                  i < currentRound - 1 
+                  i < currentMovement - 1 
                     ? 'bg-green-500' 
-                    : i === currentRound - 1 
+                    : i === currentMovement - 1 
                     ? 'bg-blue-500' 
                     : 'bg-slate-200'
                 }`}
@@ -75,7 +75,7 @@ export default function RoundInterface() {
       {isPromptPhase && (
         <>
           <PromptDisplay prompt={currentPrompt} />
-          <ResponseInput />
+          <PhraseComposer />
         </>
       )}
 
@@ -83,19 +83,19 @@ export default function RoundInterface() {
         <Card className="text-center">
           <div className="py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <h3 className="text-lg font-medium mb-2">Response submitted!</h3>
+            <h3 className="text-lg font-medium mb-2">Phrase submitted!</h3>
             <p className="text-slate-600">
-              Waiting for other participants to respond...
+              Waiting for other musicians to contribute...
             </p>
             <div className="mt-4 text-sm text-slate-500">
-              {Object.keys(roundResponses).length}/4 responses received
+              {Object.keys(roundResponses).length}/4 phrases received
             </div>
           </div>
         </Card>
       )}
 
-      {isVotingPhase && (
-        <RoundVoting responses={roundResponses} />
+      {isRecognitionPhase && (
+        <MusicianRecognition responses={roundResponses} />
       )}
     </div>
   );
