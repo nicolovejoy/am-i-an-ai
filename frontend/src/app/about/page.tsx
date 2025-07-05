@@ -1,6 +1,6 @@
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50" data-page="about">
       <div className="max-w-4xl mx-auto px-4 py-16">
         <h1 className="text-4xl font-bold text-slate-900 mb-8">About Robot Orchestra</h1>
         

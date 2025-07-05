@@ -254,7 +254,14 @@ export const useSessionStore = create<SessionState>()(
           connectionStatus: 'disconnected',
           retryCount: 0,
           lastError: null,
-          ws: null 
+          ws: null,
+          // Clear all session data when disconnecting
+          match: null,
+          myIdentity: null,
+          messages: [],
+          currentPrompt: null,
+          isSessionActive: false,
+          isRevealed: false
         });
       },
 

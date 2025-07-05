@@ -188,7 +188,7 @@ export default function ChatInterface() {
       <Card className="text-center" padding="sm">
         <div className="flex items-center justify-between">
           <div className="text-left">
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900">am I an AI?</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900">Robot Orchestra</h1>
             <p className="text-xs sm:text-sm text-slate-600 hidden sm:block">
               Figure out who&apos;s human and who&apos;s AI
             </p>
@@ -210,23 +210,6 @@ export default function ChatInterface() {
               className="sm:hidden"
             >
               Leave
-            </Button>
-            <Button
-              onClick={signOut}
-              variant="ghost"
-              size="sm"
-              className="hidden sm:flex"
-            >
-              <FiLogOut size={16} />
-              Sign Out
-            </Button>
-            <Button
-              onClick={signOut}
-              variant="ghost"
-              size="sm"
-              className="sm:hidden"
-            >
-              <FiLogOut size={16} />
             </Button>
           </div>
         </div>

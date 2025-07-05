@@ -13,7 +13,7 @@ export default function Home() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-slate-50" data-page="home">
         {showChatInterface ? (
           <ChatInterface />
         ) : (
