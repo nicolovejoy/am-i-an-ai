@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { handler, sessions, connectionToSession } from './handler';
+import { handler, matches, connectionToMatch } from './handler';
 import { APIGatewayProxyWebsocketEventV2 } from 'aws-lambda';
 
 // Test helpers
 let broadcasts: any[] = [];
 
-// Mock AWS SDK
+// Mock AWS SDK v2
 jest.mock('aws-sdk', () => ({
   ApiGatewayManagementApi: jest.fn(() => ({
     postToConnection: jest.fn((params: any) => {
@@ -15,10 +15,26 @@ jest.mock('aws-sdk', () => ({
   }))
 }));
 
+// Mock AWS SDK v3
+jest.mock('@aws-sdk/client-apigatewaymanagementapi', () => ({
+  ApiGatewayManagementApiClient: jest.fn(() => ({
+    send: jest.fn((command: any) => {
+      const data = command.Data ? command.Data.toString() : command.input.Data.toString();
+      broadcasts.push(JSON.parse(data));
+      return Promise.resolve();
+    })
+  })),
+  PostToConnectionCommand: jest.fn((params: any) => ({
+    input: params,
+    Data: params.Data
+  }))
+}));
+
 beforeEach(() => {
-  sessions.clear();
-  connectionToSession.clear();
+  matches.clear();
+  connectionToMatch.clear();
   broadcasts = [];
+  process.env.NODE_ENV = 'test';
 });
 
 // Helper functions
@@ -54,17 +70,17 @@ async function sendMessage(connectionId: string, content: string) {
   return handler(event as APIGatewayProxyWebsocketEventV2, {} as any, {} as any);
 }
 
-// async function startSession() {
+// async function startMatch() {
 //   // Trigger session start logic
 //   return { success: true };
 // }
 
-function getSessionParticipants() {
-  // Return current session participants from the global session
-  const session = sessions.get('global');
-  if (!session) return [];
+function getMatchParticipants() {
+  // Return current match participants from the global match
+  const match = matches.get('global');
+  if (!match) return [];
   
-  return Array.from(session.connections.values()).map(conn => ({
+  return Array.from(match.connections.values()).map(conn => ({
     identity: conn.identity,
     isAI: conn.isAI,
     personality: conn.personality
@@ -75,14 +91,80 @@ async function advanceTime(ms: number) {
   jest.advanceTimersByTime(ms);
 }
 
-async function createFullSession() {
-  // Connect 2 humans, which automatically adds 2 AIs
+async function createFullMatch() {
+  // Connect 1 human, which automatically adds 3 robots
   await connect('human-1');
-  await connect('human-2');
-  // AIs are added automatically, so session is now full
+  // Robots are added automatically, so match is now full
 }
 
 describe('WebSocket Lambda Handler', () => {
+  describe('Join Protocol Compatibility', () => {
+    it('should handle join_match action from frontend', async () => {
+      // Given a connected user
+      await connect('test-connection');
+      
+      // When frontend sends join_match action
+      const event: Partial<APIGatewayProxyWebsocketEventV2> = {
+        requestContext: {
+          eventType: 'MESSAGE',
+          connectionId: 'test-connection',
+          routeKey: 'message',
+          domainName: 'test.execute-api.us-east-1.amazonaws.com',
+          stage: 'test'
+        } as any,
+        body: JSON.stringify({ action: 'join_match' })
+      };
+      
+      const result = await handler(event as APIGatewayProxyWebsocketEventV2, {} as any, {} as any);
+      
+      // Then should respond with success (proving the action was recognized)
+      expect(result).toEqual({ statusCode: 200 });
+      
+      // And should send participants update (from broadcastToMatch call)
+      expect(broadcasts).toContainEqual(
+        expect.objectContaining({
+          action: 'participants',
+          participants: expect.arrayContaining([
+            expect.objectContaining({
+              identity: expect.stringMatching(/^[A-D]$/),
+              isAI: false,
+              connectionId: 'test-connection'
+            })
+          ])
+        })
+      );
+    });
+
+    it('should handle legacy join action for backward compatibility', async () => {
+      // Given a connected user
+      await connect('test-connection-2');
+      
+      // When backend receives legacy join action
+      const event: Partial<APIGatewayProxyWebsocketEventV2> = {
+        requestContext: {
+          eventType: 'MESSAGE',
+          connectionId: 'test-connection-2',
+          routeKey: 'message',
+          domainName: 'test.execute-api.us-east-1.amazonaws.com',
+          stage: 'test'
+        } as any,
+        body: JSON.stringify({ action: 'join' })
+      };
+      
+      const result = await handler(event as APIGatewayProxyWebsocketEventV2, {} as any, {} as any);
+      
+      // Then should respond with success
+      expect(result).toEqual({ statusCode: 200 });
+      expect(broadcasts).toContainEqual(
+        expect.objectContaining({
+          action: 'connected',
+          identity: expect.stringMatching(/^[A-D]$/),
+          matchId: 'global'
+        })
+      );
+    });
+  });
+
   describe('Connection Management', () => {
     it('should handle $connect and assign A/B/C/D identity', async () => {
       // When connection is processed
@@ -91,11 +173,11 @@ describe('WebSocket Lambda Handler', () => {
       // Then should assign identity and store connection
       expect(result).toMatchObject({
         identity: expect.stringMatching(/^[A-D]$/),
-        sessionId: expect.any(String)
+        matchId: expect.any(String)
       });
     });
 
-    it('should limit sessions to exactly 4 participants', async () => {
+    it('should limit matches to exactly 4 participants', async () => {
       // Given 4 connections already exist
       for (let i = 1; i <= 4; i++) {
         await connect(`connection-${i}`);
@@ -104,27 +186,26 @@ describe('WebSocket Lambda Handler', () => {
       // When 5th connection attempts to join
       const result = await connect('connection-5');
 
-      // Then should reject with session full
+      // Then should reject with match full
       expect(result.statusCode).toBe(403);
-      expect(result.body).toContain('Session full');
+      expect(result.body).toContain('Match full');
     });
 
     it('should assign unique A/B/C/D identities', async () => {
-      // When 2 humans connect (which triggers AI addition)
+      // When 1 human connects (which triggers 3 robot additions)
       await connect('human-1');
-      await connect('human-2');
       
-      // Get all participants (including AIs)
-      const participants = getSessionParticipants();
+      // Get all participants (including robots)
+      const participants = getMatchParticipants();
       const identities = new Set(participants.map(p => p.identity));
 
       // Then each has unique identity
       expect(identities.size).toBe(4);
       expect([...identities].sort()).toEqual(['A', 'B', 'C', 'D']);
       
-      // And we should have 2 humans and 2 AIs
-      expect(participants.filter(p => !p.isAI)).toHaveLength(2);
-      expect(participants.filter(p => p.isAI)).toHaveLength(2);
+      // And we should have 1 human and 3 robots
+      expect(participants.filter(p => !p.isAI)).toHaveLength(1);
+      expect(participants.filter(p => p.isAI)).toHaveLength(3);
     });
   });
 
@@ -160,42 +241,30 @@ describe('WebSocket Lambda Handler', () => {
     });
   });
 
-  describe('AI Participant Integration', () => {
-    it('should inject 2 AI participants when only 2 humans join', async () => {
-      // Given 2 human connections
+  describe('Robot Participant Integration', () => {
+    it('should inject 3 robots when 1 human joins', async () => {
+      // Given 1 human connection
       await connect('human-1');
-      await connect('human-2');
 
-      // When session starts (automatic after 2 humans)
-      // Then 2 AI participants should be added
-      const participants = getSessionParticipants();
+      // Then 3 robot participants should be added automatically
+      const participants = getMatchParticipants();
       expect(participants).toHaveLength(4);
-      expect(participants.filter(p => p.isAI)).toHaveLength(2);
-    });
-
-    it('should assign different personalities to AI participants', async () => {
-      // Given a session with 2 humans (triggers AI addition)
-      await connect('human-1');
-      await connect('human-2');
-
-      // Then AI personalities should differ
-      const participants = getSessionParticipants();
-      const ais = participants.filter(p => p.isAI);
-      expect(ais[0].personality).not.toBe(ais[1].personality);
+      expect(participants.filter(p => p.isAI)).toHaveLength(3);
+      expect(participants.filter(p => !p.isAI)).toHaveLength(1);
     });
   });
 
-  describe('Session Management', () => {
-    it('should enforce 10-minute session timer', async () => {
+  describe('Match Management', () => {
+    it('should enforce 10-minute match timer', async () => {
       jest.useFakeTimers();
       
-      // Given an active session
-      await createFullSession();
+      // Given an active match
+      await createFullMatch();
       
       // When 10 minutes pass
       await advanceTime(10 * 60 * 1000);
 
-      // Then session should end and reveal identities
+      // Then match should end and reveal identities
       const reveals = broadcasts.filter(b => b.action === 'reveal');
       expect(reveals).toHaveLength(2); // One reveal per real WebSocket connection (2 humans)
       expect(reveals[0]).toMatchObject({
