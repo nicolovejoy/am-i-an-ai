@@ -6,7 +6,7 @@ import PhraseComposer from './ResponseInput';
 import MusicianRecognition from './RoundVoting';
 import { Card } from './ui';
 
-export default function MovementInterface() {
+export default function RoundInterface() {
   const { 
     match, 
     currentPrompt, 

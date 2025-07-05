@@ -268,12 +268,14 @@ async function broadcastToMatch(match: Match, data: any, event?: any) {
       const AWS = require('aws-sdk');
       const api = new AWS.ApiGatewayManagementApi();
       
-      // Broadcast to all connections in match (including AI participants for testing)
-      for (const [connectionId] of match.connections) {
-        await api.postToConnection({
-          ConnectionId: connectionId,
-          Data: JSON.stringify(data)
-        }).promise();
+      // Broadcast to all real connections in match (skip AI participants)
+      for (const [connectionId, connection] of match.connections) {
+        if (!connection.isAI) {
+          await api.postToConnection({
+            ConnectionId: connectionId,
+            Data: JSON.stringify(data)
+          }).promise();
+        }
       }
     } catch (error) {
       console.error('Broadcast error:', error);
