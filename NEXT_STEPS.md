@@ -5,10 +5,21 @@
 ## 🎯 **Current Priorities**
 
 ### **1. Navigation Improvements (Option B)**
-- Create `/match` page (move current match-finding logic from home)
-- Update home page (`/`) to show dashboard/overview  
-- Update "Leave Match" button to return to `/match`
-- Tests already written in `NavigationStructure.test.tsx`
+
+**Immediate TDD Steps:**
+1. **Create `/match` page** - Move `WelcomeDashboard` + auto-connect logic from home
+   - Test: Visiting `/match` should auto-connect to WebSocket
+   - Test: `/match` shows match-finding interface when disconnected
+2. **Build home dashboard** - Replace auto-connect with welcome/overview content  
+   - Test: Home page shows "Welcome to Robot Orchestra" without connecting
+   - Test: "Start Playing" button navigates to `/match`
+3. **Update Leave Match navigation** - Change destination from `/` to `/match`
+   - Test: Leave Match button calls `router.push('/match')`
+
+**Full Goal:**
+- Home (`/`) → Dashboard with overview, stats, quick actions
+- Find Match (`/match`) → Join/create matches + game interface  
+- Tests in `NavigationStructure.test.tsx` define complete behavior
 
 ### **2. Core Features**
 - **Session Persistence** - Store completed games in DynamoDB
