@@ -98,6 +98,76 @@ async function createFullMatch() {
 }
 
 describe('WebSocket Lambda Handler', () => {
+  describe('Response Submission Protocol', () => {
+    it('should handle submit_response action from frontend', async () => {
+      // Given a connected user in an active match
+      await connect('test-connection');
+      
+      // When frontend sends submit_response action
+      const event: Partial<APIGatewayProxyWebsocketEventV2> = {
+        requestContext: {
+          eventType: 'MESSAGE',
+          connectionId: 'test-connection',
+          routeKey: 'message',
+          domainName: 'test.execute-api.us-east-1.amazonaws.com',
+          stage: 'test'
+        } as any,
+        body: JSON.stringify({ 
+          action: 'submit_response', 
+          roundNumber: 1, 
+          response: 'My favorite hobby is reading sci-fi novels.' 
+        })
+      };
+      
+      const result = await handler(event as APIGatewayProxyWebsocketEventV2, {} as any, {} as any);
+      
+      // Then should respond with success
+      expect(result).toEqual({ statusCode: 200 });
+      
+      // And should broadcast the response as a message
+      expect(broadcasts).toContainEqual(
+        expect.objectContaining({
+          action: 'message',
+          sender: expect.stringMatching(/^[A-D]$/),
+          content: 'My favorite hobby is reading sci-fi novels.',
+          timestamp: expect.any(Number)
+        })
+      );
+    });
+
+    it('should handle legacy content-only messages for backward compatibility', async () => {
+      // Given a connected user
+      await connect('test-connection-legacy');
+      
+      // When backend receives legacy content message
+      const event: Partial<APIGatewayProxyWebsocketEventV2> = {
+        requestContext: {
+          eventType: 'MESSAGE',
+          connectionId: 'test-connection-legacy',
+          routeKey: 'message',
+          domainName: 'test.execute-api.us-east-1.amazonaws.com',
+          stage: 'test'
+        } as any,
+        body: JSON.stringify({ content: 'Legacy message format' })
+      };
+      
+      const result = await handler(event as APIGatewayProxyWebsocketEventV2, {} as any, {} as any);
+      
+      // Then should respond with success
+      expect(result).toEqual({ statusCode: 200 });
+      
+      // And should broadcast the message
+      expect(broadcasts).toContainEqual(
+        expect.objectContaining({
+          action: 'message',
+          sender: expect.stringMatching(/^[A-D]$/),
+          content: 'Legacy message format',
+          timestamp: expect.any(Number)
+        })
+      );
+    });
+  });
+
   describe('Join Protocol Compatibility', () => {
     it('should handle join_match action from frontend', async () => {
       // Given a connected user

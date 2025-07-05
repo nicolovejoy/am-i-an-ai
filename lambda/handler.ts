@@ -188,10 +188,17 @@ async function handleMessage(connectionId: string, body: any, event: any) {
     return { statusCode: 200 };
   }
   
-  // Handle regular messages
+  // Handle regular messages (support both legacy content format and new submit_response format)
+  let content: string;
+  if (body.action === 'submit_response') {
+    content = body.response;
+  } else {
+    content = body.content;
+  }
+  
   const message: Message = {
     sender: sender.identity,
-    content: body.content,
+    content: content,
     timestamp: Date.now()
   };
   
