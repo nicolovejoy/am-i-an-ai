@@ -42,6 +42,16 @@ export function Navigation() {
               🎮 Play
             </Link>
             <Link
+              href="/about"
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                pathname === "/about"
+                  ? "bg-blue-100 text-blue-700"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              📖 About
+            </Link>
+            <Link
               href="/history"
               className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 pathname === "/history"

@@ -1,5 +1,6 @@
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { Navigation } from '@/components/Navigation';
 
 export const metadata = {
   title: 'AmIAnAI v2 - 2H+2AI Conversations',
@@ -15,6 +16,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <AuthProvider>
+          <Navigation />
           {children}
         </AuthProvider>
       </body>
