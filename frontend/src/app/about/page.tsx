@@ -9,8 +9,9 @@ export default function AboutPage() {
         <div className="bg-blue-50 border-l-4 border-blue-400 p-6 mb-8">
           <p className="text-lg text-blue-800 font-medium">
             An experimental platform exploring trust and collaboration between
-            humans and AI through anonymized matches where participants try and
-            determine who is human and who is a robot (AI).
+            humans and AI. As of July 2025 we are just getting rolling and our
+            first approach is to set up anonymized matches where participants
+            try and determine who is human and who is a robot (AI).
           </p>
         </div>
 
@@ -24,9 +25,12 @@ export default function AboutPage() {
                 2 players are human, 2 are AI - but you won&apos;t know which is
                 which
               </li>
-              <li>Chat naturally about any topic for multiple rounds</li>
-              <li>At the end, vote on who you think is human or AI</li>
-              <li>See the reveal and find out if you guessed correctly!</li>
+              <li>
+                5 quick rounds, 5 quick votes, then you find out who was a
+                human.
+              </li>
+
+              <li>this is not completely built out yet.</li>
             </ol>
           </section>
 

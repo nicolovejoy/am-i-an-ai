@@ -10,13 +10,19 @@
 - ✅ **Deployment Pipeline**: Terraform-first + simple scripts working
 - ✅ **Cost Optimized**: Old NAT gateways removed (~$90/month saved)
 - ✅ **Local Build Fixed**: MessageBubble component rebuilt, no import issues
-- ❌ **CI/CD Workflow**: Backend config issues preventing terraform init
+- ✅ **CI/CD Workflow**: Fixed terraform backend and build path issues
+- ✅ **Navigation Fixed**: Leave Match button works, duplicate sign-out removed
+- ✅ **Project Identity**: Updated branding to "Robot Orchestra" throughout
 
 ## 🎯 **Next Priorities**
 
-### **Phase 2: Fix CI/CD & Features**
-1. **Fix GitHub Workflow** - Resolve terraform backend initialization issues
-2. **About Page** - Game explanation and rules  
+### **Phase 2: UX & Core Features**
+1. **Improve Navigation** - Separate Home/Dashboard from Match-finding (Option B)
+   - Home (`/`) → Dashboard with overview, stats, quick actions
+   - Find Match (`/match`) → Join/create matches + game interface  
+   - Update "Leave Match" to return to `/match` not home
+   - Tests written, ready for implementation
+2. ✅ **About Page** - Game explanation and rules (completed)
 3. **Session Persistence** - Store completed games in DynamoDB
 4. **OpenAI Integration** - Connect Lambda to real AI responses
 
