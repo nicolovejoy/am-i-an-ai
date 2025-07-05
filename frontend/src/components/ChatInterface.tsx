@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { FiSend, FiLogOut } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
 import { useSessionStore } from '@/store/sessionStore';
 import { useAuth } from '@/contexts/AuthContext';
 import MessageList from './MessageList';
@@ -35,6 +36,7 @@ export default function ChatInterface() {
   } = useSessionStore();
 
   const { user, signOut } = useAuth();
+  const router = useRouter();
 
   // Auto-connect on mount (unless in testing mode)
   useEffect(() => {
@@ -70,6 +72,11 @@ export default function ChatInterface() {
     if (!testingMode) {
       setTimeout(() => connect(), 100);
     }
+  };
+
+  const handleLeaveMatch = () => {
+    disconnect();
+    router.push('/');
   };
 
   // Show testing mode toggle if not connected and not in error state and not in testing mode
@@ -196,7 +203,7 @@ export default function ChatInterface() {
           <div className="flex items-center gap-2 sm:gap-4">
             <SessionTimer />
             <Button
-              onClick={disconnect}
+              onClick={handleLeaveMatch}
               variant="ghost"
               size="sm"
               className="hidden sm:flex"
@@ -204,7 +211,7 @@ export default function ChatInterface() {
               Leave Match
             </Button>
             <Button
-              onClick={disconnect}
+              onClick={handleLeaveMatch}
               variant="ghost"
               size="sm"
               className="sm:hidden"

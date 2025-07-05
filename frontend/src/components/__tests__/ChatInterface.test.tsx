@@ -2,13 +2,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ChatInterface from '../ChatInterface';
 import { useSessionStore } from '@/store/sessionStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 // Mock dependencies
 jest.mock('@/store/sessionStore');
 jest.mock('@/contexts/AuthContext');
+jest.mock('next/navigation');
 
 const mockUseSessionStore = useSessionStore as jest.MockedFunction<typeof useSessionStore>;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 
 // Mock WebSocket
 global.WebSocket = jest.fn(() => ({
@@ -26,6 +29,7 @@ describe('ChatInterface', () => {
   const mockSendMessage = jest.fn();
   const mockStartTestingMode = jest.fn();
   const mockSignOut = jest.fn();
+  const mockPush = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,6 +37,15 @@ describe('ChatInterface', () => {
     mockUseAuth.mockReturnValue({
       user: { email: 'test@example.com' },
       signOut: mockSignOut,
+    } as any);
+
+    mockUseRouter.mockReturnValue({
+      push: mockPush,
+      back: jest.fn(),
+      forward: jest.fn(),
+      refresh: jest.fn(),
+      replace: jest.fn(),
+      prefetch: jest.fn(),
     } as any);
   });
 
@@ -206,6 +219,43 @@ describe('ChatInterface', () => {
       // The disconnect function should clear match data
       // This expectation will help us write the fix
       expect(mockStore.disconnect).toHaveBeenCalledTimes(1);
+    });
+
+    it('should navigate to home page after leaving match', async () => {
+      // Arrange: Set up a connected match state
+      mockUseSessionStore.mockReturnValue({
+        connectionStatus: 'connected',
+        retryCount: 0,
+        lastError: null,
+        myIdentity: 'A',
+        match: {
+          id: 'test-match',
+          currentRound: 1,
+          totalRounds: 5,
+          participants: ['A', 'B', 'C', 'D'],
+        },
+        messages: [],
+        currentPrompt: null,
+        isSessionActive: true,
+        isRevealed: false,
+        testingMode: false,
+        connect: mockConnect,
+        disconnect: mockDisconnect,
+        sendMessage: mockSendMessage,
+        reset: mockReset,
+        startTestingMode: mockStartTestingMode,
+      } as any);
+
+      // Act: Render the component
+      render(<ChatInterface />);
+
+      // Act: Click Leave Match button
+      const leaveButton = screen.getByText('Leave Match');
+      fireEvent.click(leaveButton);
+
+      // Assert: Should navigate to home page
+      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(mockDisconnect).toHaveBeenCalledTimes(1);
     });
   });
 

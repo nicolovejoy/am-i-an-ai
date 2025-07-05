@@ -55,9 +55,9 @@ export default function WelcomeDashboard() {
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
             Welcome back, {user?.email?.split("@")[0] || "Musician"}!
           </h1>
-          <h2 className="text-xl text-slate-700 mb-4">RobotOrchestra</h2>
+
           <p className="text-slate-600 max-w-2xl mx-auto">
-            Join the ensemble and discover who&apos;s human and who&apos;s AI in anonymous performances.
+            Join this experimental ensemble and guess who&apos;s human
           </p>
         </Card>
 
@@ -78,7 +78,9 @@ export default function WelcomeDashboard() {
           </Card>
 
           <Card>
-            <h3 className="text-xl font-semibold mb-4">Create Live Performance</h3>
+            <h3 className="text-xl font-semibold mb-4">
+              Create Live Performance
+            </h3>
             <Button
               disabled
               size="lg"
@@ -111,7 +113,8 @@ export default function WelcomeDashboard() {
                   <h4 className="font-medium">{performance.name}</h4>
                   <p className="text-sm text-slate-600">
                     {performance.musicians.join(", ")}
-                    {performance.status === "waiting" && ` • ${performance.waitingFor}`}
+                    {performance.status === "waiting" &&
+                      ` • ${performance.waitingFor}`}
                     {performance.status === "active" &&
                       ` • Movement ${performance.currentMovement}/5`}
                   </p>
@@ -162,7 +165,8 @@ export default function WelcomeDashboard() {
             🎼 About RobotOrchestra
           </a>
           <p className="text-sm text-slate-600 mt-2">
-            Learn how to harmonize and strategies for identifying human musicians vs AI
+            Learn how to harmonize and strategies for identifying human
+            musicians vs AI
           </p>
         </Card>
       </div>
