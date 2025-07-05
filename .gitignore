@@ -52,7 +52,7 @@ tfplan
 # AWS
 .aws/
 credentials
-config 
+.aws/config 
 
 # Lambda deployment packages
 *.zip
