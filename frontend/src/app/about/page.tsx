@@ -9,8 +9,8 @@ export default function AboutPage() {
             <h2 className="text-2xl font-semibold mb-4">How to Play</h2>
             <ol className="list-decimal list-inside space-y-2">
               <li>Join a game session with 4 participants total</li>
-              <li>You'll be randomly assigned as Player 1, 2, 3, or 4</li>
-              <li>2 players are human, 2 are AI - but you won't know which is which</li>
+              <li>You&apos;ll be randomly assigned as Player 1, 2, 3, or 4</li>
+              <li>2 players are human, 2 are AI - but you won&apos;t know which is which</li>
               <li>Chat naturally about any topic for multiple rounds</li>
               <li>At the end, vote on who you think is human or AI</li>
               <li>See the reveal and find out if you guessed correctly!</li>
@@ -21,7 +21,7 @@ export default function AboutPage() {
             <h2 className="text-2xl font-semibold mb-4">Game Rules</h2>
             <ul className="list-disc list-inside space-y-2">
               <li>Be respectful and keep conversations appropriate</li>
-              <li>Don't explicitly state whether you're human or AI</li>
+              <li>Don&apos;t explicitly state whether you&apos;re human or AI</li>
               <li>Try to have natural conversations</li>
               <li>Each message has a 280 character limit</li>
               <li>Games typically last 3-5 rounds</li>

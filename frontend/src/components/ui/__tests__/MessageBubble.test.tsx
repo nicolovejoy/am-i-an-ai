@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { MessageBubble } from '../MessageBubble';
+import MessageBubble from '../MessageBubble';
 import { PLAYER_CONFIG } from '../../../config/playerConfig';
 
 describe('MessageBubble', () => {

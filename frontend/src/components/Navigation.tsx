@@ -26,7 +26,7 @@ export function Navigation() {
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-6">
           <Link href="/" className="flex items-center space-x-2">
-            <h1 className="text-xl font-bold text-slate-900">am I an AI?</h1>
+            <h1 className="text-xl font-bold text-slate-900">Robot Orchestra</h1>
             {/* <span className="text-sm text-slate-500">nobody nose</span> */}
           </Link>
 
