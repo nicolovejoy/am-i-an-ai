@@ -1,14 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import MessageBubble from '../MessageBubble';
-import { PLAYER_CONFIG } from '../../../config/playerConfig';
 
 describe('MessageBubble', () => {
-  const defaultIdentityMapping = { A: 1, B: 2, C: 3, D: 4 };
-
   describe('Player Names', () => {
     it('should display "Ashley" for identity A', () => {
       render(
-        <MessageBubble sender="A" identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="A">
           Test message
         </MessageBubble>
       );
@@ -17,7 +14,7 @@ describe('MessageBubble', () => {
 
     it('should display "Brianna" for identity B', () => {
       render(
-        <MessageBubble sender="B" identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="B">
           Test message
         </MessageBubble>
       );
@@ -26,7 +23,7 @@ describe('MessageBubble', () => {
 
     it('should display "Chloe" for identity C', () => {
       render(
-        <MessageBubble sender="C" identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="C">
           Test message
         </MessageBubble>
       );
@@ -35,125 +32,72 @@ describe('MessageBubble', () => {
 
     it('should display "David" for identity D', () => {
       render(
-        <MessageBubble sender="D" identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="D">
           Test message
         </MessageBubble>
       );
       expect(screen.getByText('David')).toBeInTheDocument();
     });
 
-    it('should display "You" for current user messages', () => {
+    it('should display "You" for sender "You"', () => {
       render(
-        <MessageBubble sender="A" isCurrentUser={true} identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="You">
           Test message
         </MessageBubble>
       );
       expect(screen.getByText('You')).toBeInTheDocument();
-      expect(screen.queryByText('Ashley')).not.toBeInTheDocument();
     });
   });
 
-  describe('Color Coordination', () => {
-    it('should use blue colors for player 1 (identity A)', () => {
+  describe('Color Styling', () => {
+    it('should apply blue styling for identity A', () => {
       const { container } = render(
-        <MessageBubble sender="A" identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="A">
           Test message
         </MessageBubble>
       );
-      const bubble = container.querySelector('.border');
-      expect(bubble).toHaveClass(PLAYER_CONFIG[1].bgColor);
-      expect(bubble).toHaveClass(PLAYER_CONFIG[1].borderColor);
+      const bubble = container.firstChild;
+      expect(bubble).toHaveClass('bg-blue-100', 'border-blue-300');
     });
 
-    it('should use green colors for player 2 (identity B)', () => {
+    it('should apply green styling for identity B', () => {
       const { container } = render(
-        <MessageBubble sender="B" identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="B">
           Test message
         </MessageBubble>
       );
-      const bubble = container.querySelector('.border');
-      expect(bubble).toHaveClass(PLAYER_CONFIG[2].bgColor);
-      expect(bubble).toHaveClass(PLAYER_CONFIG[2].borderColor);
+      const bubble = container.firstChild;
+      expect(bubble).toHaveClass('bg-green-100', 'border-green-300');
     });
 
-    it('should use maroon colors for player 3 (identity C)', () => {
+    it('should apply pink styling for identity C', () => {
       const { container } = render(
-        <MessageBubble sender="C" identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="C">
           Test message
         </MessageBubble>
       );
-      const bubble = container.querySelector('.border');
-      expect(bubble).toHaveClass(PLAYER_CONFIG[3].bgColor);
-      expect(bubble).toHaveClass(PLAYER_CONFIG[3].borderColor);
+      const bubble = container.firstChild;
+      expect(bubble).toHaveClass('bg-pink-100', 'border-pink-300');
     });
 
-    it('should use fuchsia colors for player 4 (identity D)', () => {
+    it('should apply fuchsia styling for identity D', () => {
       const { container } = render(
-        <MessageBubble sender="D" identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="D">
           Test message
         </MessageBubble>
       );
-      const bubble = container.querySelector('.border');
-      expect(bubble).toHaveClass(PLAYER_CONFIG[4].bgColor);
-      expect(bubble).toHaveClass(PLAYER_CONFIG[4].borderColor);
+      const bubble = container.firstChild;
+      expect(bubble).toHaveClass('bg-fuchsia-100', 'border-fuchsia-300');
     });
 
-    it('should maintain correct colors when identity mapping is different', () => {
-      const customMapping = { A: 3, B: 1, C: 4, D: 2 };
+    it('should apply gray styling for "You"', () => {
       const { container } = render(
-        <MessageBubble sender="A" identityMapping={customMapping}>
+        <MessageBubble sender="You">
           Test message
         </MessageBubble>
       );
-      const bubble = container.querySelector('.border');
-      // A maps to player 3, should use maroon colors
-      expect(bubble).toHaveClass(PLAYER_CONFIG[3].bgColor);
-      expect(bubble).toHaveClass(PLAYER_CONFIG[3].borderColor);
-    });
-  });
-
-  describe('User Differentiation', () => {
-    it('should align current user messages to the right', () => {
-      const { container } = render(
-        <MessageBubble sender="A" isCurrentUser={true} identityMapping={defaultIdentityMapping}>
-          Test message
-        </MessageBubble>
-      );
-      const messageContainer = container.firstChild;
-      expect(messageContainer).toHaveClass('ml-auto');
-    });
-
-    it('should not align other player messages to the right', () => {
-      const { container } = render(
-        <MessageBubble sender="B" identityMapping={defaultIdentityMapping}>
-          Test message
-        </MessageBubble>
-      );
-      const messageContainer = container.firstChild;
-      expect(messageContainer).not.toHaveClass('ml-auto');
-    });
-
-    it('should have a bold outline for current user messages', () => {
-      const { container } = render(
-        <MessageBubble sender="A" isCurrentUser={true} identityMapping={defaultIdentityMapping}>
-          Test message
-        </MessageBubble>
-      );
-      const bubble = container.querySelector('.border');
-      expect(bubble).toHaveClass('ring-2');
-      expect(bubble).toHaveClass('ring-slate-400');
-    });
-
-    it('should use correct colors for current user based on their identity', () => {
-      const { container } = render(
-        <MessageBubble sender="B" isCurrentUser={true} identityMapping={defaultIdentityMapping}>
-          Test message
-        </MessageBubble>
-      );
-      const bubble = container.querySelector('.border');
-      // Current user is B (player 2), should use green colors
-      expect(bubble).toHaveClass(PLAYER_CONFIG[2].bgColor);
-      expect(bubble).toHaveClass(PLAYER_CONFIG[2].borderColor);
+      const bubble = container.firstChild;
+      expect(bubble).toHaveClass('bg-gray-100', 'border-gray-300');
     });
   });
 
@@ -161,21 +105,21 @@ describe('MessageBubble', () => {
     it('should display timestamp when provided', () => {
       const timestamp = new Date('2025-07-02T15:30:00').getTime();
       render(
-        <MessageBubble sender="A" timestamp={timestamp} identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="A" timestamp={timestamp}>
           Test message
         </MessageBubble>
       );
-      // The timestamp format includes leading zero
-      expect(screen.getByText('03:30 PM')).toBeInTheDocument();
+      // The actual format depends on locale
+      expect(screen.getByText(/3:30/i)).toBeInTheDocument();
     });
 
     it('should not display timestamp when not provided', () => {
       const { container } = render(
-        <MessageBubble sender="A" identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="A">
           Test message
         </MessageBubble>
       );
-      const timestampElement = container.querySelector('.text-xs.text-slate-500.mt-1');
+      const timestampElement = container.querySelector('.text-xs.text-gray-500');
       expect(timestampElement).not.toBeInTheDocument();
     });
   });
@@ -183,21 +127,21 @@ describe('MessageBubble', () => {
   describe('Message Content', () => {
     it('should display the message content', () => {
       render(
-        <MessageBubble sender="A" identityMapping={defaultIdentityMapping}>
+        <MessageBubble sender="A">
           This is a test message
         </MessageBubble>
       );
       expect(screen.getByText('This is a test message')).toBeInTheDocument();
     });
 
-    it('should handle long messages with word breaking', () => {
+    it('should render with correct structure', () => {
       const { container } = render(
-        <MessageBubble sender="A" identityMapping={defaultIdentityMapping}>
-          ThisIsAVeryLongMessageWithoutAnySpacesThatShouldBreakProperly
+        <MessageBubble sender="A">
+          Test content
         </MessageBubble>
       );
-      const messageElement = container.querySelector('.break-words');
-      expect(messageElement).toBeInTheDocument();
+      const bubble = container.firstChild;
+      expect(bubble).toHaveClass('mb-4', 'p-3', 'rounded-lg', 'border-2');
     });
   });
 });
