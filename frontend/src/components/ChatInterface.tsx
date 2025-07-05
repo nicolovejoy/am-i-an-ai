@@ -201,7 +201,7 @@ export default function ChatInterface() {
               size="sm"
               className="hidden sm:flex"
             >
-              Leave Session
+              Leave Match
             </Button>
             <Button
               onClick={disconnect}

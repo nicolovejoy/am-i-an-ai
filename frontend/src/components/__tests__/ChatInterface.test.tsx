@@ -36,8 +36,8 @@ describe('ChatInterface', () => {
     } as any);
   });
 
-  describe('Leave Session Button', () => {
-    it('should call disconnect when Leave Session button is clicked', async () => {
+  describe('Leave Match Button', () => {
+    it('should call disconnect when Leave Match button is clicked', async () => {
       // Arrange: Set up a connected session state
       mockUseSessionStore.mockReturnValue({
         connectionStatus: 'connected',
@@ -65,11 +65,11 @@ describe('ChatInterface', () => {
       // Act: Render the component
       render(<ChatInterface />);
 
-      // Assert: Leave Session button should be visible
-      const leaveButton = screen.getByText('Leave Session');
+      // Assert: Leave Match button should be visible
+      const leaveButton = screen.getByText('Leave Match');
       expect(leaveButton).toBeInTheDocument();
 
-      // Act: Click the Leave Session button
+      // Act: Click the Leave Match button
       fireEvent.click(leaveButton);
 
       // Assert: disconnect should be called
@@ -145,8 +145,8 @@ describe('ChatInterface', () => {
       // Act: Render the component
       const { rerender } = render(<ChatInterface />);
 
-      // Act: Click Leave Session
-      const leaveButton = screen.getByText('Leave Session');
+      // Act: Click Leave Match
+      const leaveButton = screen.getByText('Leave Match');
       fireEvent.click(leaveButton);
 
       // Assert: disconnect was called
@@ -164,7 +164,7 @@ describe('ChatInterface', () => {
       rerender(<ChatInterface />);
 
       // Assert: Should show connecting state, not the game interface
-      expect(screen.queryByText('Leave Session')).not.toBeInTheDocument();
+      expect(screen.queryByText('Leave Match')).not.toBeInTheDocument();
       expect(screen.getByText('Connecting...')).toBeInTheDocument();
     });
 
@@ -200,7 +200,7 @@ describe('ChatInterface', () => {
       mockUseSessionStore.mockReturnValue(mockStore as any);
       render(<ChatInterface />);
 
-      const leaveButton = screen.getByText('Leave Session');
+      const leaveButton = screen.getByText('Leave Match');
       fireEvent.click(leaveButton);
 
       // The disconnect function should clear match data

@@ -4,6 +4,12 @@ export default function AboutPage() {
       <div className="max-w-4xl mx-auto px-4 py-16">
         <h1 className="text-4xl font-bold text-slate-900 mb-8">About Robot Orchestra</h1>
         
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-6 mb-8">
+          <p className="text-lg text-blue-800 font-medium">
+            An experimental platform exploring trust and collaboration between humans and AI through anonymized matches where participants try and determine who is human and who is a robot (AI).
+          </p>
+        </div>
+        
         <div className="space-y-6 text-slate-700">
           <section className="bg-white rounded-lg p-6 shadow-sm">
             <h2 className="text-2xl font-semibold mb-4">How to Play</h2>

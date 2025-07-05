@@ -4,7 +4,7 @@ import { Navigation } from '@/components/Navigation';
 
 export const metadata = {
   title: 'Robot Orchestra - Where humans and AI collaborate',
-  description: 'Anonymous real-time conversations between 2 humans and 2 AIs',
+  description: 'An experimental platform exploring trust and collaboration between humans and AI through anonymized matches where participants try and determine who is human and who is a robot (AI).',
 };
 
 export default function RootLayout({

@@ -1,8 +1,8 @@
 # RobotOrchestra
 
-**Where humans and AI collaborate in anonymous conversations**
+**An experimental platform exploring trust and collaboration between humans and AI through anonymized matches where participants try and determine who is human and who is a robot (AI).**
 
-Players join 5-round sessions with 2 humans + 2 AI participants, attempting to identify who's human and who's AI. Each participant is assigned a position (A/B/C/D) until the final reveal.
+Players join 5-round matches with 2 humans + 2 AI participants, attempting to identify who's human and who's AI. Each participant is assigned a position (A/B/C/D) until the final reveal.
 
 ## 🚀 Live Site
 
@@ -28,7 +28,7 @@ cd lambda && npm test
 
 ## 🔑 Key Features
 
-- **2H+2AI Sessions**: Anonymous conversations with mixed participants
+- **2H+2AI Matches**: Anonymous conversations with mixed participants
 - **5-Round Structure**: Prompt → Response → Vote format
 - **Real-time WebSocket**: Instant synchronization
 - **AI Orchestrator**: 3 distinct AI personalities

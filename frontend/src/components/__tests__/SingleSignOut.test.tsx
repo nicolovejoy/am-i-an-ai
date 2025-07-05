@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Home from '@/app/page';
 import HistoryPage from '@/app/history/page';
@@ -33,32 +33,28 @@ global.WebSocket = jest.fn(() => ({
   removeEventListener: jest.fn(),
 })) as any;
 
-// Helper to render with auth context
-const renderWithAuth = (component: React.ReactElement) => {
-  return render(
-    <AuthProvider>
-      {component}
-    </AuthProvider>
-  );
+// Mock AuthContext instead of using real AuthProvider
+jest.mock('@/contexts/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useAuth: () => ({
+    user: { email: 'test@example.com' },
+    signOut: jest.fn(),
+    isLoading: false,
+  }),
+}));
+
+// Helper to render components
+const renderComponent = (component: React.ReactElement) => {
+  return render(component);
 };
 
 describe('Single Sign Out Button Rule', () => {
   beforeEach(() => {
-    // Mock authenticated user
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => {
-      if (key === 'auth-user') {
-        return JSON.stringify({ email: 'test@example.com' });
-      }
-      return null;
-    });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   it('should have at most one sign out button on the home page', () => {
-    renderWithAuth(<Home />);
+    renderComponent(<Home />);
     
     // Look for any element containing "sign out" text (case insensitive)
     const signOutElements = screen.queryAllByText(/sign out/i);
@@ -66,21 +62,21 @@ describe('Single Sign Out Button Rule', () => {
   });
 
   it('should have at most one sign out button on the history page', () => {
-    renderWithAuth(<HistoryPage />);
+    renderComponent(<HistoryPage />);
     
     const signOutElements = screen.queryAllByText(/sign out/i);
     expect(signOutElements.length).toBeLessThanOrEqual(1);
   });
 
   it('should have at most one sign out button on the about page', () => {
-    renderWithAuth(<AboutPage />);
+    renderComponent(<AboutPage />);
     
     const signOutElements = screen.queryAllByText(/sign out/i);
     expect(signOutElements.length).toBeLessThanOrEqual(1);
   });
 
   it('should not show old project name "am I an AI?" in navigation', () => {
-    renderWithAuth(<Home />);
+    renderComponent(<Home />);
     
     // Should not find the old name
     expect(screen.queryByText('am I an AI?')).not.toBeInTheDocument();
