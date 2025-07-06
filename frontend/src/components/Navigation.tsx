@@ -32,24 +32,24 @@ export function Navigation() {
 
           <div className="flex space-x-1">
             <Link
-              href="/"
+              href="/dashboard"
               className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                pathname === "/"
+                pathname === "/dashboard"
                   ? "bg-blue-100 text-blue-700"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              🏠 Home
+              🏠 Dashboard
             </Link>
             <Link
-              href="/match"
+              href="/history"
               className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                pathname === "/match"
+                pathname === "/history"
                   ? "bg-blue-100 text-blue-700"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              🎮 Find Match
+              📊 Match History
             </Link>
             <Link
               href="/about"
@@ -61,16 +61,18 @@ export function Navigation() {
             >
               📖 About
             </Link>
-            <Link
-              href="/history"
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                pathname === "/history"
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              📊 History
-            </Link>
+            {user.email === "nlovejoy@me.com" && (
+              <Link
+                href="/admin"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  pathname === "/admin"
+                    ? "bg-blue-100 text-blue-700"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                🔧 Admin
+              </Link>
+            )}
           </div>
         </div>
 

@@ -1,24 +1,21 @@
 'use client';
 
-import { useSessionStore } from '@/store/sessionStore';
-import ChatInterface from '@/components/ChatInterface';
-import WelcomeDashboard from '@/components/WelcomeDashboard';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function Home() {
-  const { match, connectionStatus, testingMode } = useSessionStore();
+  const router = useRouter();
   
-  // Show chat interface if user is in a match or connected/connecting
-  const showChatInterface = match || connectionStatus === 'connected' || connectionStatus === 'connecting' || testingMode;
+  useEffect(() => {
+    // Redirect to dashboard as the default landing page
+    router.push('/dashboard');
+  }, [router]);
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-50" data-page="home">
-        {showChatInterface ? (
-          <ChatInterface />
-        ) : (
-          <WelcomeDashboard />
-        )}
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-600">Redirecting to dashboard...</p>
       </div>
     </ProtectedRoute>
   );

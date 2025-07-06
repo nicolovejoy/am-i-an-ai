@@ -93,7 +93,7 @@ export default function ChatInterface() {
             </h2>
             <div className="text-slate-600 space-y-1">
               <p>
-                Connecting to table for four conversation
+                Connecting to match with four participants
               </p>
               {retryCount > 0 && (
                 <p className="text-sm">

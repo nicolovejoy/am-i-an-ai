@@ -99,9 +99,7 @@ interface SessionState {
   reset: () => void;
 }
 
-const WEBSOCKET_URL = process.env.NODE_ENV === 'development' 
-  ? 'wss://ip1n2fcaw2.execute-api.us-east-1.amazonaws.com/prod'
-  : 'wss://ip1n2fcaw2.execute-api.us-east-1.amazonaws.com/prod';
+const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://ckhxuef2t7.execute-api.us-east-1.amazonaws.com/prod';
 
 export const useSessionStore = create<SessionState>()(
   devtools(
@@ -261,7 +259,8 @@ export const useSessionStore = create<SessionState>()(
           messages: [],
           currentPrompt: null,
           isSessionActive: false,
-          isRevealed: false
+          isRevealed: false,
+          testingMode: false // Exit testing mode when disconnecting
         });
       },
 

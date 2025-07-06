@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { useSessionStore } from '@/store/sessionStore';
-import MessageBubble from './ui/MessageBubble';
+import { useEffect, useRef } from "react";
+import { useSessionStore } from "@/store/sessionStore";
+import MessageBubble from "./ui/MessageBubble";
 
 export default function MessageList() {
   const { messages, myIdentity } = useSessionStore();
@@ -10,7 +10,7 @@ export default function MessageList() {
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   if (messages.length === 0) {
@@ -25,7 +25,7 @@ export default function MessageList() {
             Topic: &quot;What&apos;s your favorite childhood memory?&quot;
           </p>
           <p className="text-sm text-slate-500 mt-2">
-            Start chatting to begin the 10-minute session
+            Submit one answer each round
           </p>
         </div>
       </div>
@@ -38,7 +38,7 @@ export default function MessageList() {
         {messages.map((message, index) => (
           <MessageBubble
             key={`${message.timestamp}-${index}`}
-            sender={message.sender === myIdentity ? 'You' : message.sender}
+            sender={message.sender === myIdentity ? "You" : message.sender}
             timestamp={message.timestamp}
             isCurrentUser={message.sender === myIdentity}
           >
