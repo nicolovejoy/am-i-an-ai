@@ -1,18 +1,102 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.handler = exports.connectionToSession = exports.sessions = void 0;
-// DynamoDB storage for production
-// import { DynamoDBClient, GetItemCommand, PutItemCommand, DeleteItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
-const client_apigatewaymanagementapi_1 = require("@aws-sdk/client-apigatewaymanagementapi");
-// const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
-// const tableName = process.env.DYNAMODB_TABLE || 'amianai-v2-sessions';
-// In-memory cache for tests (export for testing)
-exports.sessions = new Map();
-exports.connectionToSession = new Map();
+const { ApiGatewayManagementApiClient, PostToConnectionCommand } = require("@aws-sdk/client-apigatewaymanagementapi");
+const { AIResponseGenerator, ROBOT_PERSONALITIES } = require('./aiResponseGenerator');
+const { RobotParticipantManager } = require('./robotParticipantManager');
+
+const OpenAI = require('openai');
+const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
+
+// Initialize AI components
+let aiGenerator;
+let robotManager;
+let secretsClient;
+
+// Initialize Secrets Manager client
+function getSecretsClient() {
+    if (!secretsClient) {
+        secretsClient = new SecretsManagerClient({
+            region: process.env.AWS_REGION || 'us-east-1'
+        });
+    }
+    return secretsClient;
+}
+
+// Get OpenAI API key from Secrets Manager
+async function getOpenAIApiKey() {
+    if (process.env.OPENAI_API_KEY) {
+        // For local testing with environment variable
+        return process.env.OPENAI_API_KEY;
+    }
+    
+    if (!process.env.OPENAI_SECRET_ARN) {
+        console.log('No OPENAI_SECRET_ARN found, using mock client');
+        return null;
+    }
+    
+    try {
+        const client = getSecretsClient();
+        const command = new GetSecretValueCommand({
+            SecretId: process.env.OPENAI_SECRET_ARN
+        });
+        
+        const response = await client.send(command);
+        return response.SecretString;
+    } catch (error) {
+        console.error('Failed to retrieve OpenAI API key from Secrets Manager:', error);
+        return null;
+    }
+}
+
+// Lazy initialization for AI components
+async function initializeAI() {
+    if (!aiGenerator) {
+        // Get OpenAI API key from Secrets Manager
+        const apiKey = await getOpenAIApiKey();
+        let openAIClient;
+        
+        if (apiKey) {
+            openAIClient = new OpenAI({
+                apiKey: apiKey
+            });
+            console.log('Initialized with real OpenAI client from Secrets Manager');
+        } else {
+            // Fallback to mock for testing without API key
+            openAIClient = {
+                chat: {
+                    completions: {
+                        create: async () => ({
+                            choices: [{ message: { content: "This is a fallback response - OpenAI API key not configured." } }]
+                        })
+                    }
+                }
+            };
+            console.log('Using mock OpenAI client - configure OPENAI_SECRET_ARN for real AI');
+        }
+
+        aiGenerator = new AIResponseGenerator({
+            openAIClient,
+            provider: 'openai'
+        });
+
+        robotManager = new RobotParticipantManager({
+            aiGenerator,
+            broadcastFn: broadcastToMatch
+        });
+    }
+}
+
+// In-memory storage (same as original)
+const matches = new Map();
+const connectionToMatch = new Map();
+
 const handler = async (event) => {
     try {
         console.log('WebSocket event:', JSON.stringify(event, null, 2));
         const { eventType, connectionId, routeKey } = event.requestContext;
+        
+        // Initialize AI on first use
+        await initializeAI();
+        
         switch (routeKey || eventType) {
             case '$connect':
             case 'CONNECT':
@@ -28,245 +112,396 @@ const handler = async (event) => {
                 console.log('Unknown route/event:', routeKey, eventType);
                 return { statusCode: 400, body: 'Unknown route' };
         }
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Handler error:', error);
         return { statusCode: 500, body: 'Internal server error' };
     }
 };
-exports.handler = handler;
-async function handleConnect(connectionId, _event) {
-    // Find or create session (MVP: single global session)
-    let session = exports.sessions.get('global') || createSession('global');
-    // Check if session is full
-    if (session.connections.size >= 4) {
-        return { statusCode: 403, body: 'Session full' };
+
+async function handleConnect(connectionId, event) {
+    // Find or create match (MVP: single global match)
+    let match = matches.get('global') || createMatch('global');
+    
+    // Check if match is full
+    if (Object.keys(match.participants).length >= 4) {
+        return { statusCode: 403, body: 'Match full' };
     }
+    
     // Assign random available identity
-    const usedIdentities = new Set([...session.connections.values()].map(c => c.identity));
-    const availableIdentities = ['A', 'B', 'C', 'D'].filter(id => !usedIdentities.has(id));
+    const usedIdentities = Object.keys(match.participants);
+    const availableIdentities = ['A', 'B', 'C', 'D'].filter(id => !usedIdentities.includes(id));
     const randomIndex = Math.floor(Math.random() * availableIdentities.length);
-    const identity = availableIdentities[randomIndex];
-    // Store connection
-    const connection = {
+    const humanIdentity = availableIdentities[randomIndex];
+    
+    // Add human participant
+    match.participants[humanIdentity] = {
+        identity: humanIdentity,
+        isHuman: true,
         connectionId,
-        identity,
-        sessionId: session.id
+        score: 0
     };
-    session.connections.set(connectionId, connection);
-    exports.connectionToSession.set(connectionId, session.id);
-    exports.sessions.set(session.id, session);
-    // If we now have 2 humans, add 2 AI participants and start timer
-    if (session.connections.size === 2) {
-        await addAIParticipants(session, _event);
-        startSessionTimer(session);
+    
+    connectionToMatch.set(connectionId, match.id);
+    
+    // MVP: When first human joins, immediately add 3 robot participants
+    if (Object.keys(match.participants).length === 1) {
+        const remainingIdentities = availableIdentities.filter(id => id !== humanIdentity);
+        const robots = robotManager.createRobotParticipants(remainingIdentities);
+        
+        // Add robots to match
+        robots.forEach(robot => {
+            match.participants[robot.identity] = robot;
+        });
+        
+        startMatchTimer(match);
+        
+        // Start first round after robots are added
+        setTimeout(async () => {
+            match.currentRound = 1;
+            match.rounds[1] = {
+                prompt: ROUND_PROMPTS[0],
+                responses: {},
+                votes: {},
+                startTime: Date.now()
+            };
+            
+            await broadcastToMatch(match, {
+                action: 'round_start',
+                round: 1,
+                prompt: ROUND_PROMPTS[0]
+            }, event);
+        }, 2000);
     }
-    console.log(`Connection ${connectionId} assigned identity ${identity} in session ${session.id}`);
-    // Return connection details for tests
+    
+    matches.set(match.id, match);
+    console.log(`Connection ${connectionId} assigned identity ${humanIdentity} in match ${match.id}`);
+    
     return {
         statusCode: 200,
         body: JSON.stringify({
-            identity,
-            sessionId: session.id
+            identity: humanIdentity,
+            matchId: match.id
         })
     };
 }
+
 async function handleDisconnect(connectionId) {
-    const sessionId = exports.connectionToSession.get(connectionId);
-    if (!sessionId)
-        return { statusCode: 200 };
-    const session = exports.sessions.get(sessionId);
-    if (!session)
-        return { statusCode: 200 };
-    session.connections.delete(connectionId);
-    exports.connectionToSession.delete(connectionId);
-    // Clean up empty sessions
-    if (session.connections.size === 0) {
-        if (session.timer) {
-            clearTimeout(session.timer);
-        }
-        exports.sessions.delete(sessionId);
+    const matchId = connectionToMatch.get(connectionId);
+    if (!matchId) return { statusCode: 200 };
+    
+    const match = matches.get(matchId);
+    if (!match) return { statusCode: 200 };
+    
+    // Find and remove participant
+    const participant = Object.values(match.participants).find(p => p.connectionId === connectionId);
+    if (participant) {
+        delete match.participants[participant.identity];
     }
+    
+    connectionToMatch.delete(connectionId);
+    
+    // Clean up empty matches
+    if (Object.keys(match.participants).filter(p => match.participants[p].isHuman).length === 0) {
+        if (match.timer) {
+            clearTimeout(match.timer);
+        }
+        matches.delete(matchId);
+    }
+    
     return { statusCode: 200 };
 }
+
 async function handleMessage(connectionId, body, event) {
-    const sessionId = exports.connectionToSession.get(connectionId);
-    if (!sessionId)
-        return { statusCode: 400, body: 'Not in session' };
-    const session = exports.sessions.get(sessionId);
-    if (!session)
-        return { statusCode: 400, body: 'Session not found' };
-    const sender = session.connections.get(connectionId);
-    if (!sender)
-        return { statusCode: 400, body: 'Connection not found' };
+    const matchId = connectionToMatch.get(connectionId);
+    if (!matchId) return { statusCode: 400, body: 'Not in match' };
+    
+    const match = matches.get(matchId);
+    if (!match) return { statusCode: 400, body: 'Match not found' };
+    
+    const sender = Object.values(match.participants).find(p => p.connectionId === connectionId);
+    if (!sender) return { statusCode: 400, body: 'Participant not found' };
+    
     // Handle join action
-    if (body.action === 'join') {
+    if (body.action === 'join' || body.action === 'join_match') {
         const endpoint = `https://${event.requestContext.domainName}/${event.requestContext.stage}`;
-        const apiClient = new client_apigatewaymanagementapi_1.ApiGatewayManagementApiClient({ endpoint });
-        const command = new client_apigatewaymanagementapi_1.PostToConnectionCommand({
+        const apiClient = new ApiGatewayManagementApiClient({ endpoint });
+        
+        const command = new PostToConnectionCommand({
             ConnectionId: connectionId,
             Data: Buffer.from(JSON.stringify({
-                action: 'connected',
+                action: 'match_joined',
                 identity: sender.identity,
-                sessionId: session.id,
-                participantCount: session.connections.size,
-                sessionStartTime: session.startTime,
-                serverTime: Date.now()
+                matchId: match.id,
+                status: match.status,
+                currentRound: match.currentRound,
+                totalRounds: 5,
+                participants: Object.values(match.participants).map(p => ({
+                    identity: p.identity,
+                    isHuman: p.isHuman,
+                    isConnected: true,
+                    score: p.score
+                }))
             }))
         });
+        
         try {
             await apiClient.send(command);
+        } catch (error) {
+            console.error('Failed to send match_joined:', error);
         }
-        catch (error) {
-            console.error('Failed to send identity:', error);
-        }
-        // Broadcast updated participant list to all participants
-        const participants = Array.from(session.connections.values()).map(conn => ({
-            identity: conn.identity,
-            isAI: conn.isAI || false,
-            connectionId: conn.connectionId
-        }));
-        await broadcastToSession(session, {
-            action: 'participants',
-            participants
+        
+        // Also send match state
+        await broadcastToMatch(match, {
+            action: 'match_state',
+            matchId: match.id,
+            status: match.status,
+            currentRound: match.currentRound,
+            participants: Object.values(match.participants).map(p => ({
+                identity: p.identity,
+                isHuman: p.isHuman,
+                isConnected: true,
+                score: p.score
+            }))
         }, event);
+        
         return { statusCode: 200 };
     }
-    // Handle regular messages
-    const message = {
-        sender: sender.identity,
-        content: body.content,
-        timestamp: Date.now()
-    };
-    session.messages.push(message);
-    // Broadcast to all participants
-    await broadcastToSession(session, {
-        action: 'message',
-        ...message
-    }, event);
-    // Trigger AI responses if needed
-    if (!sender.isAI) {
-        await triggerAIResponses(session, message, event);
+    
+    // Handle response submission
+    if (body.action === 'submit_response') {
+        const { roundNumber, response } = body;
+        
+        if (roundNumber !== match.currentRound) {
+            return { statusCode: 400, body: 'Invalid round number' };
+        }
+        
+        // Store human response
+        match.rounds[roundNumber].responses[sender.identity] = response;
+        
+        // Broadcast that participant responded
+        await broadcastToMatch(match, {
+            action: 'participant_responded',
+            identity: sender.identity,
+            responseTime: (Date.now() - match.rounds[roundNumber].startTime) / 1000
+        }, event);
+        
+        // Trigger AI responses
+        const currentPrompt = match.rounds[roundNumber].prompt;
+        const robotPromises = robotManager.scheduleRobotResponses(match, currentPrompt);
+        
+        // Handle robot responses as they complete
+        robotPromises.forEach(promise => {
+            promise.then(result => {
+                // Store robot response
+                match.rounds[roundNumber].responses[result.identity] = result.response;
+                
+                // Check if all responses collected
+                if (Object.keys(match.rounds[roundNumber].responses).length === 4) {
+                    // Move to voting phase
+                    startVotingPhase(match, event);
+                }
+            }).catch(error => {
+                console.error('Robot response error:', error);
+            });
+        });
+        
+        return { statusCode: 200 };
     }
-    return { statusCode: 200 };
+    
+    // Handle vote submission
+    if (body.action === 'submit_vote') {
+        const { roundNumber, votedIdentity } = body;
+        
+        if (roundNumber !== match.currentRound) {
+            return { statusCode: 400, body: 'Invalid round number' };
+        }
+        
+        // Store human vote
+        match.rounds[roundNumber].votes[sender.identity] = votedIdentity;
+        
+        // Generate robot votes
+        const robotParticipants = {};
+        Object.entries(match.participants).forEach(([identity, participant]) => {
+            if (!participant.isHuman) {
+                robotParticipants[identity] = participant.personality;
+            }
+        });
+        
+        const humanIdentity = Object.values(match.participants).find(p => p.isHuman)?.identity;
+        const robotVotes = await robotManager.generateRobotVotes(
+            robotParticipants,
+            match.rounds[roundNumber].responses,
+            humanIdentity
+        );
+        
+        // Store robot votes
+        Object.assign(match.rounds[roundNumber].votes, robotVotes);
+        
+        // Calculate scores
+        const scores = calculateRoundScores(match.rounds[roundNumber].votes, humanIdentity);
+        Object.entries(scores).forEach(([identity, points]) => {
+            match.participants[identity].score += points;
+        });
+        
+        // Send round complete
+        await broadcastToMatch(match, {
+            action: 'round_complete',
+            roundNumber,
+            votes: match.rounds[roundNumber].votes,
+            scores,
+            correctAnswer: humanIdentity
+        }, event);
+        
+        // Advance to next round or end match
+        if (match.currentRound >= 5) {
+            await endMatch(match, event);
+        } else {
+            match.currentRound++;
+            match.rounds[match.currentRound] = {
+                prompt: ROUND_PROMPTS[match.currentRound - 1],
+                responses: {},
+                votes: {},
+                startTime: Date.now()
+            };
+            
+            setTimeout(async () => {
+                await broadcastToMatch(match, {
+                    action: 'round_start',
+                    round: match.currentRound,
+                    prompt: ROUND_PROMPTS[match.currentRound - 1]
+                }, event);
+            }, 3000);
+        }
+        
+        return { statusCode: 200 };
+    }
+    
+    return { statusCode: 400, body: 'Unknown action' };
 }
-function createSession(id) {
+
+function createMatch(id) {
     return {
         id,
-        connections: new Map(),
+        participants: {},
+        status: 'waiting',
         startTime: Date.now(),
-        messages: []
+        currentRound: 0,
+        rounds: {},
+        timer: null
     };
 }
-async function addAIParticipants(session, event) {
-    const aiPersonalities = ['analytical', 'creative'];
-    const availableIdentities = ['A', 'B', 'C', 'D']
-        .filter(id => ![...session.connections.values()].some(c => c.identity === id));
-    for (let i = 0; i < 2; i++) {
-        const aiConnection = {
-            connectionId: `ai-${i}-${Date.now()}`,
-            identity: availableIdentities[i],
-            sessionId: session.id,
-            isAI: true,
-            personality: aiPersonalities[i]
-        };
-        session.connections.set(aiConnection.connectionId, aiConnection);
-    }
-    // Broadcast updated participant list after adding AI participants
-    if (event) {
-        const participants = Array.from(session.connections.values()).map(conn => ({
-            identity: conn.identity,
-            isAI: conn.isAI || false,
-            connectionId: conn.connectionId
-        }));
-        await broadcastToSession(session, {
-            action: 'participants',
-            participants
-        }, event);
-    }
-}
-async function broadcastToSession(session, data, event) {
-    // In test environment, use mocked AWS SDK
+
+async function broadcastToMatch(match, data, event) {
     if (process.env.NODE_ENV === 'test') {
-        try {
-            const AWS = require('aws-sdk');
-            const api = new AWS.ApiGatewayManagementApi();
-            // Broadcast to all connections in session (including AI participants for testing)
-            for (const [connectionId] of session.connections) {
-                await api.postToConnection({
-                    ConnectionId: connectionId,
-                    Data: JSON.stringify(data)
-                }).promise();
-            }
-        }
-        catch (error) {
-            console.error('Broadcast error:', error);
-        }
+        console.log('Test broadcast:', data);
+        return;
     }
-    else {
-        // In production, use the API Gateway Management API
-        const endpoint = process.env.WEBSOCKET_ENDPOINT ||
-            `https://${event?.requestContext?.domainName}/${event?.requestContext?.stage}`;
-        const apiClient = new client_apigatewaymanagementapi_1.ApiGatewayManagementApiClient({
-            endpoint
-        });
-        // Broadcast to all real connections (skip AI connections as they don't have real WebSocket connections)
-        const promises = [];
-        for (const [connectionId, connection] of session.connections) {
-            if (!connection.isAI) {
-                const command = new client_apigatewaymanagementapi_1.PostToConnectionCommand({
-                    ConnectionId: connectionId,
-                    Data: Buffer.from(JSON.stringify(data))
-                });
-                promises.push(apiClient.send(command).catch(err => {
-                    console.error(`Failed to send to ${connectionId}:`, err);
-                }));
-            }
+    
+    const endpoint = process.env.WEBSOCKET_ENDPOINT ||
+        `https://${event?.requestContext?.domainName}/${event?.requestContext?.stage}`;
+    const apiClient = new ApiGatewayManagementApiClient({ endpoint });
+    
+    // Only broadcast to human participants (robots don't have connections)
+    const promises = [];
+    Object.values(match.participants).forEach(participant => {
+        if (participant.isHuman && participant.connectionId) {
+            const command = new PostToConnectionCommand({
+                ConnectionId: participant.connectionId,
+                Data: Buffer.from(JSON.stringify(data))
+            });
+            promises.push(apiClient.send(command).catch(err => {
+                console.error(`Failed to send to ${participant.connectionId}:`, err);
+            }));
         }
-        await Promise.all(promises);
-    }
+    });
+    
+    await Promise.all(promises);
 }
-async function triggerAIResponses(session, humanMessage, event) {
-    // Simple AI response for MVP
-    const aiConnections = [...session.connections.values()].filter(c => c.isAI);
-    for (const ai of aiConnections) {
-        // 30% chance to respond
-        if (Math.random() < 0.3) {
-            setTimeout(async () => {
-                await handleMessage(ai.connectionId, {
-                    content: `Interesting point about "${humanMessage.content.slice(0, 20)}..."`
-                }, event);
-            }, 1000 + Math.random() * 2000); // 1-3 second delay
-        }
-    }
+
+// Round prompts for MVP
+const ROUND_PROMPTS = [
+    "What's your favorite childhood memory?",
+    "Describe your perfect weekend",
+    "What skill would you love to master?",
+    "Tell us about a time you overcame a challenge",
+    "What's something that always makes you smile?"
+];
+
+async function startVotingPhase(match, event) {
+    match.status = 'round_voting';
+    
+    await broadcastToMatch(match, {
+        action: 'round_voting',
+        roundNumber: match.currentRound,
+        responses: match.rounds[match.currentRound].responses
+    }, event);
 }
-function startSessionTimer(session) {
-    // 10-minute session timer
-    session.timer = setTimeout(async () => {
-        await endSessionAndReveal(session);
+
+function calculateRoundScores(votes, correctAnswer) {
+    const scores = {};
+    
+    Object.entries(votes).forEach(([voter, votedFor]) => {
+        scores[voter] = scores[voter] || 0;
+        if (votedFor === correctAnswer) {
+            scores[voter] += 10; // Points for correct guess
+        }
+    });
+    
+    return scores;
+}
+
+function startMatchTimer(match) {
+    match.timer = setTimeout(async () => {
+        await endMatch(match);
     }, 10 * 60 * 1000); // 10 minutes
 }
-async function endSessionAndReveal(session) {
-    // Create identity reveal data
-    const identities = {};
-    for (const [, connection] of session.connections) {
-        identities[connection.identity] = {
-            type: connection.isAI ? 'ai' : 'human',
-            name: connection.isAI ? `AI Assistant` : `Human User`,
-            personality: connection.personality || undefined
-        };
-    }
-    // Broadcast reveal to all participants
-    await broadcastToSession(session, {
-        action: 'reveal',
-        identities
+
+async function endMatch(match, event) {
+    match.status = 'completed';
+    
+    // Calculate final scores
+    const finalScores = {};
+    Object.entries(match.participants).forEach(([identity, participant]) => {
+        finalScores[identity] = participant.score;
     });
-    // Clean up session
-    if (session.timer) {
-        clearTimeout(session.timer);
+    
+    // Determine winner
+    const winner = Object.entries(finalScores).reduce((a, b) => 
+        finalScores[a[0]] > finalScores[b[0]] ? a : b
+    )[0];
+    
+    // Send match complete
+    await broadcastToMatch(match, {
+        action: 'match_complete',
+        finalScores,
+        winner,
+        participants: Object.entries(match.participants).map(([identity, p]) => ({
+            identity,
+            isHuman: p.isHuman,
+            personality: p.personality,
+            score: p.score
+        }))
+    }, event);
+    
+    // Clean up
+    if (match.timer) {
+        clearTimeout(match.timer);
     }
-    for (const connectionId of session.connections.keys()) {
-        exports.connectionToSession.delete(connectionId);
-    }
-    exports.sessions.delete(session.id);
+    
+    Object.values(match.participants).forEach(p => {
+        if (p.connectionId) {
+            connectionToMatch.delete(p.connectionId);
+        }
+    });
+    
+    matches.delete(match.id);
 }
+
+module.exports = {
+    handler,
+    matches,
+    connectionToMatch,
+    // Export for testing
+    initializeAI,
+    robotManager
+};

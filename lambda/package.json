@@ -5,17 +5,19 @@
   "main": "handler.js",
   "scripts": {
     "test": "jest",
-    "build": "tsc && cp package*.json dist/ && cd dist && npm ci --production",
+    "build": "mkdir -p dist && cp *.js *.json dist/ && cd dist && npm ci --production",
     "package": "rm -f lambda.zip && npm ci --production && zip -r lambda.zip match-handler.js node_modules && npm install"
   },
   "dependencies": {
-    "@aws-sdk/client-apigatewaymanagementapi": "^3.0.0"
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.0.0",
+    "@aws-sdk/client-secrets-manager": "3.840.0",
+    "openai": "5.8.2"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
-    "@types/jest": "^29.5.0",
     "@types/aws-lambda": "^8.10.0",
+    "@types/jest": "^29.5.0",
     "aws-sdk": "^2.1691.0",
+    "jest": "^29.7.0",
     "ts-jest": "^29.1.0",
     "typescript": "^5.0.0"
   },

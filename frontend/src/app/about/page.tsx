@@ -11,7 +11,9 @@ export default function AboutPage() {
             An experimental platform exploring trust and collaboration between
             humans and AI. As of July 2025 we are just getting rolling and our
             first approach is to set up anonymized matches where participants
-            try and determine who is human and who is a robot (AI).
+            try and determine who is human and who is a robot (AI). Today (7/6)
+            we are moving to a Kafka implementation (from DDB after RDS. faster
+            better stronger)
           </p>
         </div>
       </div>

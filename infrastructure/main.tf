@@ -100,23 +100,23 @@ resource "aws_cognito_user_pool_client" "main" {
 # DynamoDB Table
 ############################
 
-resource "aws_dynamodb_table" "sessions" {
-  name           = "${local.project_name}-sessions"
+resource "aws_dynamodb_table" "matches" {
+  name           = "${local.project_name}-matches"
   billing_mode   = "PAY_PER_REQUEST"  # Serverless pricing
-  hash_key       = "sessionId"
-  range_key      = "connectionId"
+  hash_key       = "matchId"
+  range_key      = "timestamp"
 
   attribute {
-    name = "sessionId"
+    name = "matchId"
     type = "S"
   }
 
   attribute {
-    name = "connectionId"
-    type = "S"
+    name = "timestamp"
+    type = "N"
   }
 
-  # TTL for automatic session cleanup
+  # TTL for automatic match cleanup (30 days)
   ttl {
     attribute_name = "expiresAt"
     enabled        = true
@@ -172,7 +172,7 @@ resource "aws_iam_policy" "dynamodb_access" {
           "dynamodb:Query",
           "dynamodb:Scan"
         ]
-        Resource = aws_dynamodb_table.sessions.arn
+        Resource = aws_dynamodb_table.matches.arn
       }
     ]
   })
@@ -214,7 +214,7 @@ resource "aws_iam_role_policy_attachment" "lambda_apigateway" {
 resource "aws_lambda_function" "websocket" {
   function_name = "${local.project_name}-websocket"
   role          = aws_iam_role.websocket_lambda.arn
-  handler       = "match-handler.handler"
+  handler       = "handler.handler"
   runtime       = "nodejs20.x"
   timeout       = 30
   memory_size   = 256
@@ -225,8 +225,10 @@ resource "aws_lambda_function" "websocket" {
 
   environment {
     variables = {
-      DYNAMODB_TABLE = aws_dynamodb_table.sessions.name
+      DYNAMODB_TABLE = aws_dynamodb_table.matches.name
       WEBSOCKET_ENDPOINT = "https://${aws_apigatewayv2_api.websocket.id}.execute-api.${data.aws_region.current.name}.amazonaws.com/prod"
+      OPENAI_SECRET_ARN = aws_secretsmanager_secret.openai_api_key.arn
+      AI_PROVIDER = "openai"
     }
   }
 
@@ -246,6 +248,49 @@ data "archive_file" "websocket_placeholder" {
     })
     filename = "index.js"
   }
+}
+
+############################
+# SECRETS MANAGER FOR API KEYS
+############################
+
+# OpenAI API Key Secret
+resource "aws_secretsmanager_secret" "openai_api_key" {
+  name        = "${local.project_name}-openai-api-key"
+  description = "OpenAI API key for AI robot participants"
+  
+  tags = local.tags
+}
+
+# Store the OpenAI API key value
+resource "aws_secretsmanager_secret_version" "openai_api_key" {
+  secret_id     = aws_secretsmanager_secret.openai_api_key.id
+  secret_string = var.openai_api_key
+}
+
+# IAM policy for Lambda to read secrets
+resource "aws_iam_policy" "secrets_access" {
+  name = "${local.project_name}-secrets-access"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = aws_secretsmanager_secret.openai_api_key.arn
+      }
+    ]
+  })
+
+  tags = local.tags
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_secrets" {
+  role       = aws_iam_role.websocket_lambda.name
+  policy_arn = aws_iam_policy.secrets_access.arn
 }
 
 # CloudWatch Log Group
@@ -344,7 +389,7 @@ output "websocket_url" {
 
 output "dynamodb_table_name" {
   description = "DynamoDB table name"
-  value       = aws_dynamodb_table.sessions.name
+  value       = aws_dynamodb_table.matches.name
 }
 
 output "lambda_function_name" {
