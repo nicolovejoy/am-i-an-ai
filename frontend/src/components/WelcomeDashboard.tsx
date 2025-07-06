@@ -3,17 +3,35 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useSessionStore } from "@/store/sessionStore";
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import Link from 'next/link';
-import { Card, Button } from "./ui";
+import { Card, Button, Input } from "./ui";
 
 export default function WelcomeDashboard() {
   const { user } = useAuth();
-  const { connect } = useSessionStore();
+  const { connect, createRealMatch, connectionStatus } = useSessionStore();
   const router = useRouter();
+  const [playerName, setPlayerName] = useState(user?.email?.split('@')[0] || '');
+  const [showRealMatchForm, setShowRealMatchForm] = useState(false);
 
-  const handleJoinRealMatch = () => {
+  const handleJoinTestMatch = () => {
     connect();
     router.push('/match');
+  };
+
+  const handleJoinRealMatch = async () => {
+    if (!playerName.trim()) {
+      alert('Please enter a player name');
+      return;
+    }
+    
+    try {
+      await createRealMatch(playerName.trim());
+      router.push('/match');
+    } catch (error) {
+      console.error('Failed to create real match:', error);
+      alert('Failed to create match. Please try again.');
+    }
   };
 
   return (
@@ -35,18 +53,67 @@ export default function WelcomeDashboard() {
 
         {/* Main Action */}
         <Card className="text-center">
-          <h2 className="text-xl font-semibold mb-4">Join a Match</h2>
-          <Button
-            onClick={handleJoinRealMatch}
-            size="lg"
-            className="w-full md:w-auto px-8"
-            variant="primary"
-          >
-            🎮 Join Real Match
-          </Button>
-          <p className="text-sm text-slate-600 mt-3">
-            Play with 3 AI participants powered by OpenAI
-          </p>
+          <h2 className="text-xl font-semibold mb-4">Start Playing</h2>
+          
+          {!showRealMatchForm ? (
+            <div className="space-y-4">
+              <Button
+                onClick={() => setShowRealMatchForm(true)}
+                size="lg"
+                className="w-full md:w-auto px-8 mr-3"
+                variant="primary"
+              >
+                🎮 Create Real Match
+              </Button>
+              <Button
+                onClick={handleJoinTestMatch}
+                size="lg"
+                className="w-full md:w-auto px-8"
+                variant="secondary"
+              >
+                🧪 Test Mode
+              </Button>
+              <p className="text-sm text-slate-600 mt-3">
+                Real matches generate authentic data and contribute to match history
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-w-md mx-auto">
+              <div>
+                <label htmlFor="playerName" className="block text-sm font-medium text-slate-700 mb-2">
+                  Player Name
+                </label>
+                <Input
+                  id="playerName"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleJoinRealMatch}
+                  disabled={connectionStatus === "connecting" || !playerName.trim()}
+                  className="flex-1"
+                  variant="primary"
+                >
+                  {connectionStatus === "connecting" ? "Creating..." : "Create Match"}
+                </Button>
+                <Button
+                  onClick={() => setShowRealMatchForm(false)}
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+              </div>
+              
+              <p className="text-sm text-slate-600">
+                You&apos;ll play with 3 AI participants. Try to guess who&apos;s human!
+              </p>
+            </div>
+          )}
         </Card>
 
         {/* Quick Links */}

@@ -230,7 +230,7 @@ export function SessionHistory() {
                           )}
                         </div>
                         <p className="text-sm text-slate-600 mb-3 italic">
-                          "{round.prompt}"
+                          &quot;{round.prompt}&quot;
                         </p>
                         {round.responses.length > 0 && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">

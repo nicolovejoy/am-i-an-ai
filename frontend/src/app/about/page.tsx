@@ -12,11 +12,11 @@ export default function AboutPage() {
           </p>
           
           <p className="text-base text-blue-700 mb-4">
-            Through anonymous 5-round matches with 4 participants, you'll engage in thoughtful conversations while trying to discern who among you is human and who might be AI. It's part psychology experiment, part social game, and entirely revealing about how we perceive and interact with artificial intelligence.
+            Through anonymous 5-round matches with 4 participants, you&apos;ll engage in thoughtful conversations while trying to discern who among you is human and who might be AI. It&apos;s part psychology experiment, part social game, and entirely revealing about how we perceive and interact with artificial intelligence.
           </p>
           
           <p className="text-sm text-blue-600 italic">
-            <strong>Fresh off the development bench:</strong> We're just getting rolling as of July 2025, transitioning to a cutting-edge Kafka event-driven architecture. Expect rapid evolution as we build toward a future of seamless human-AI collaboration.
+            <strong>Fresh off the development bench:</strong> We&apos;re just getting rolling as of July 2025, transitioning to a cutting-edge Kafka event-driven architecture. Expect rapid evolution as we build toward a future of seamless human-AI collaboration.
           </p>
         </div>
       </div>

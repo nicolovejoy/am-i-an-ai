@@ -1,43 +1,44 @@
-'use client';
+"use client";
 
-import { useSessionStore } from '@/store/sessionStore';
-import PromptDisplay from './PromptDisplay';
-import PhraseComposer from './ResponseInput';
-import MusicianRecognition from './RoundVoting';
-import { Card } from './ui';
+import { useSessionStore } from "@/store/sessionStore";
+import PromptDisplay from "./PromptDisplay";
+import PhraseComposer from "./ResponseInput";
+import MusicianRecognition from "./RoundVoting";
+import { Card } from "./ui";
 
 export default function RoundInterface() {
-  const { 
-    match, 
-    currentPrompt, 
-    hasSubmittedResponse, 
+  const {
+    match,
+    currentPrompt,
+    hasSubmittedResponse,
     hasSubmittedVote,
     roundResponses,
     isSessionActive,
-    timeRemaining 
+    timeRemaining,
   } = useSessionStore();
 
   if (!match || !isSessionActive) {
     return null;
   }
 
-  const currentMovement = match.currentRound;
-  const totalMovements = match.totalRounds;
+  const currentRound = match.currentRound;
+  const totalRounds = match.totalRounds;
   const allPhrasesIn = Object.keys(roundResponses).length === 4;
 
-  // Determine current phase of the movement
+  // Determine current phase of the Round
+
   const isPromptPhase = currentPrompt && !hasSubmittedResponse;
   const isRecognitionPhase = allPhrasesIn && !hasSubmittedVote;
   const isWaitingForOthers = hasSubmittedResponse && !allPhrasesIn;
 
   return (
     <div className="space-y-4">
-      {/* Movement Progress Header */}
+      {/* Match Progress Header */}
       <Card padding="sm">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">
-              Movement {currentMovement} of {totalMovements}
+              Round {currentRound} of {totalRounds}
             </h2>
             <div className="flex items-center gap-4 mt-1">
               <span className="text-sm text-slate-600">
@@ -47,23 +48,24 @@ export default function RoundInterface() {
               </span>
               {timeRemaining !== null && (
                 <span className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-                  {Math.floor(timeRemaining / 60)}:{String(timeRemaining % 60).padStart(2, '0')}
+                  {Math.floor(timeRemaining / 60)}:
+                  {String(timeRemaining % 60).padStart(2, "0")}
                 </span>
               )}
             </div>
           </div>
-          
-          {/* Movement Progress Bar */}
+
+          {/* Round Progress Bar */}
           <div className="flex items-center gap-2">
-            {Array.from({ length: totalMovements }, (_, i) => (
+            {Array.from({ length: totalRounds }, (_, i) => (
               <div
                 key={i}
                 className={`w-3 h-3 rounded-full ${
-                  i < currentMovement - 1 
-                    ? 'bg-green-500' 
-                    : i === currentMovement - 1 
-                    ? 'bg-blue-500' 
-                    : 'bg-slate-200'
+                  i < currentRound - 1
+                    ? "bg-green-500"
+                    : i === currentRound - 1
+                    ? "bg-blue-500"
+                    : "bg-slate-200"
                 }`}
               />
             ))}
@@ -94,9 +96,7 @@ export default function RoundInterface() {
         </Card>
       )}
 
-      {isRecognitionPhase && (
-        <MusicianRecognition responses={roundResponses} />
-      )}
+      {isRecognitionPhase && <MusicianRecognition responses={roundResponses} />}
     </div>
   );
 }

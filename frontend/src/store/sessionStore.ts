@@ -79,6 +79,7 @@ interface SessionState {
 interface SessionActions {
   // Actions
   startTestingMode: () => void;
+  createRealMatch: (playerName: string) => Promise<void>;
   submitResponse: (response: string) => void;
   submitVote: (humanIdentity: Identity) => void;
 
@@ -99,6 +100,10 @@ type SessionStore = SessionState & SessionActions;
 const MATCH_HISTORY_API =
   process.env.NEXT_PUBLIC_MATCH_HISTORY_API ||
   "https://api.robotorchestra.org/matches/history";
+
+const MATCH_SERVICE_API =
+  process.env.NEXT_PUBLIC_MATCH_SERVICE_API ||
+  "https://api.robotorchestra.org";
 
 export const useSessionStore = create<SessionStore>()(
   devtools(
@@ -127,6 +132,60 @@ export const useSessionStore = create<SessionStore>()(
       connect: () => {
         console.log("Connect called - starting testing mode");
         get().startTestingMode();
+      },
+
+      createRealMatch: async (playerName: string) => {
+        try {
+          set({ connectionStatus: "connecting" });
+
+          const response = await fetch(`${MATCH_SERVICE_API}/matches`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              playerName,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to create match: ${response.statusText}`);
+          }
+
+          const matchData = await response.json();
+          
+          // Convert API response to our internal match format
+          const match: Match = {
+            matchId: matchData.matchId,
+            status: matchData.status === 'waiting' ? 'waiting' : 'round_active',
+            currentRound: matchData.currentRound || 0,
+            totalRounds: matchData.totalRounds || 5,
+            participants: matchData.participants || [],
+            rounds: matchData.rounds || [],
+          };
+
+          // Set the human identity based on the participant data
+          const humanParticipant = matchData.participants?.find((p: any) => p.isHuman);
+          const myIdentity = humanParticipant?.identity || 'A';
+
+          set({
+            connectionStatus: "connected",
+            match,
+            myIdentity,
+            isSessionActive: true,
+            sessionStartTime: Date.now(),
+            timeRemaining: 180, // 3 minutes default
+            testingMode: false,
+            currentPrompt: "Waiting for match to start...",
+          });
+
+        } catch (error) {
+          console.error("Failed to create real match:", error);
+          set({
+            connectionStatus: "error",
+            lastError: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
       },
 
       // Legacy disconnect method
@@ -200,8 +259,45 @@ export const useSessionStore = create<SessionStore>()(
             }
           );
         } else {
-          console.log("Not in testing mode - response submission not implemented");
-          // TODO: Implement REST API call for response submission
+          // Real mode - submit via API
+          const currentState = get();
+          if (!currentState.match?.matchId || !currentState.myIdentity) {
+            console.error("Cannot submit response: no active match or identity");
+            return;
+          }
+
+          const submitResponseAsync = async () => {
+            try {
+              const apiResponse = await fetch(
+                `${MATCH_SERVICE_API}/matches/${currentState.match!.matchId}/responses`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    identity: currentState.myIdentity,
+                    response: response.trim(),
+                    round: currentState.match!.currentRound || 1,
+                  }),
+                }
+              );
+
+              if (!apiResponse.ok) {
+                throw new Error(`Failed to submit response: ${apiResponse.statusText}`);
+              }
+
+              console.log("Response submitted successfully");
+            } catch (error) {
+              console.error("Failed to submit response:", error);
+              set({
+                lastError: error instanceof Error ? error.message : "Failed to submit response",
+              });
+            }
+          };
+
+          submitResponseAsync();
+
           set({
             myResponse: response.trim(),
             hasSubmittedResponse: true,
@@ -211,7 +307,49 @@ export const useSessionStore = create<SessionStore>()(
 
       submitVote: (humanIdentity: Identity) => {
         console.log("Vote submitted for:", humanIdentity);
-        // TODO: Implement REST API call for vote submission
+        
+        const currentState = get();
+        
+        if (!currentState.testingMode) {
+          // Real mode - submit via API
+          if (!currentState.match?.matchId || !currentState.myIdentity) {
+            console.error("Cannot submit vote: no active match or identity");
+            return;
+          }
+
+          const submitVoteAsync = async () => {
+            try {
+              const apiResponse = await fetch(
+                `${MATCH_SERVICE_API}/matches/${currentState.match!.matchId}/votes`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    voter: currentState.myIdentity,
+                    votedFor: humanIdentity,
+                    round: currentState.match!.currentRound || 1,
+                  }),
+                }
+              );
+
+              if (!apiResponse.ok) {
+                throw new Error(`Failed to submit vote: ${apiResponse.statusText}`);
+              }
+
+              console.log("Vote submitted successfully");
+            } catch (error) {
+              console.error("Failed to submit vote:", error);
+              set({
+                lastError: error instanceof Error ? error.message : "Failed to submit vote",
+              });
+            }
+          };
+
+          submitVoteAsync();
+        }
+
         set({
           hasSubmittedVote: true,
         });
