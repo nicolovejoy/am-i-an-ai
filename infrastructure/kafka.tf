@@ -244,17 +244,9 @@ resource "aws_iam_policy" "kafka_access" {
   tags = local.tags
 }
 
-# Attach Kafka access policy to existing WebSocket Lambda role
-resource "aws_iam_role_policy_attachment" "lambda_kafka" {
-  role       = aws_iam_role.websocket_lambda.name
-  policy_arn = aws_iam_policy.kafka_access.arn
-}
-
-# VPC access policy for Lambda (needed to access MSK in VPC)
-resource "aws_iam_role_policy_attachment" "lambda_vpc" {
-  role       = aws_iam_role.websocket_lambda.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-}
+# Note: Kafka access policies are now attached to individual Lambda functions
+# that need Kafka access (e.g., match-history Lambda, population scripts)
+# See match-history-api.tf for examples
 
 ############################
 # Outputs

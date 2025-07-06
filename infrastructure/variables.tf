@@ -20,7 +20,7 @@ variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
   default = {
-    Project     = "amianai"
+    Project     = "robot-orchestra"
     Environment = "prod"
     Terraform   = "true"
   }
@@ -36,7 +36,7 @@ variable "github_username" {
 variable "project_name" {
   description = "The name of the project, used for resource naming"
   type        = string
-  default     = "eeyore"
+  default     = "robot-orchestra"
 }
 
 variable "openai_api_key" {

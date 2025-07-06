@@ -11,8 +11,6 @@ export type ParticipantType = 'human' | 'ai';
 export interface Participant {
   /** Unique identifier for this participant */
   id: string;
-  /** WebSocket connection ID (null for AI participants) */
-  connectionId: string | null;
   /** Anonymous identity (A/B/C/D) */
   identity: Identity;
   /** Human or AI participant */
@@ -73,59 +71,42 @@ export interface Match {
 }
 
 /**
- * WebSocket message types for round-based gameplay
+ * REST API message types for round-based gameplay
  */
-export interface WebSocketMessage {
-  action: string;
-  [key: string]: any;
-}
-
-export interface JoinMatchMessage extends WebSocketMessage {
-  action: 'join_match';
-}
-
-export interface SubmitResponseMessage extends WebSocketMessage {
-  action: 'submit_response';
+export interface SubmitResponseRequest {
   roundNumber: number;
   response: string;
 }
 
-export interface SubmitVoteMessage extends WebSocketMessage {
-  action: 'submit_vote';
+export interface SubmitVoteRequest {
   roundNumber: number;
   humanIdentity: Identity; // Who they think is human
 }
 
-
-export interface MatchStateMessage extends WebSocketMessage {
-  action: 'match_state';
+export interface MatchStateResponse {
   match: Match;
 }
 
-export interface RoundStartMessage extends WebSocketMessage {
-  action: 'round_start';
+export interface RoundStartResponse {
   roundNumber: number;
   prompt: string;
   timeLimit: number;
 }
 
-export interface RoundVotingMessage extends WebSocketMessage {
-  action: 'round_voting';
+export interface RoundVotingResponse {
   roundNumber: number;
   responses: Record<Identity, string>;
   timeLimit: number;
 }
 
-export interface RoundCompleteMessage extends WebSocketMessage {
-  action: 'round_complete';
+export interface RoundCompleteResponse {
   roundNumber: number;
   scores: Record<Identity, number>;
   summary: string;
   isMatchComplete: boolean;
 }
 
-export interface MatchCompleteMessage extends WebSocketMessage {
-  action: 'match_complete';
+export interface MatchCompleteResponse {
   finalScores: Record<Identity, number>;
   rounds: Round[];
 }

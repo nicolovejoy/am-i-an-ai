@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const MatchManager_1 = require("../MatchManager");
-// Mock WebSocket broadcasting - we'll test the logic without actual WebSocket calls
+// Mock event broadcasting - we'll test the logic without actual API calls
 const mockBroadcastToMatch = jest.fn();
 describe('Robot Auto-Responses - TDD', () => {
     let matchManager;
@@ -88,7 +88,7 @@ describe('Robot Auto-Responses - TDD', () => {
             const currentRound = match?.rounds.find(r => r.roundNumber === 1);
             expect(currentRound?.phase).toBe('voting');
             expect(Object.keys(currentRound?.responses || {})).toHaveLength(4);
-            // Should broadcast voting start message
+            // Should trigger voting start event
             expect(mockBroadcastToMatch).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({
                 action: 'voting_start',
                 roundNumber: 1,

@@ -69,7 +69,7 @@ npm test        # All tests must pass
 ### Key URLs
 
 - **Production**: https://robotorchestra.org (soon. need to update DNS)
-- **WebSocket**: wss://ip1n2fcaw2.execute-api.us-east-1.amazonaws.com/pro
+- **Match History API**: Will be available after terraform deployment
 
 ### Important Notes
 

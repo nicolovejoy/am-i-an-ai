@@ -5,66 +5,68 @@
 Migrating from in-memory state to MSK Serverless for event-driven architecture.
 
 ## ✅ **Phase 1 Complete**
+
 - MSK Serverless cluster deployed (26 AWS resources)
 - Event schemas with 18 passing tests
-- Sample data generator (3 robot personalities)
-- Population script with CLI interface
-- Successfully connected to production MSK cluster
+- Match history UI implemented and connected to API endpoint
+- Consumer Lambda for match history API deployed
 
-## 🎯 **Current Focus: Consumer Lambda**
+## 🎯 **Current Focus: Match Creation Interface**
 
-Building match history API that reads from Kafka events.
+Building end-to-end match flow that naturally generates Kafka events through real gameplay.
+
+**Strategic Decision**: Generate event data through actual match creation rather than synthetic population scripts. This ensures realistic data flow and tests the full system integration.
 
 ### **Next Steps**
-1. Build consumer Lambda for match history
-2. Create API Gateway endpoint  
-3. Wire frontend to display Kafka-sourced data
-4. Create Mermaid diagram of architecture
+
+1. **Remove DynamoDB** - Clean up all DynamoDB code from codebase and destroy AWS resources
+2. **Build match creation interface** - Frontend flow to start new matches
+3. **Implement match service Lambda** - Handles match lifecycle and publishes to Kafka
+4. **Connect match history to real data** - Display matches created through gameplay
+5. **Test full event flow** - Create → Play → Complete → View History
 
 ## 📐 **Kafka Architecture Benefits**
 
 ### **Solves Robot Orchestration**
+
 - Robots become independent Kafka consumers
 - Natural async processing via consumer groups
 - Decoupled from WebSocket handler
 - Each robot processes at its own pace
 
 ### **Permanent Event Storage**
+
 - Complete match history preserved forever
 - Replay any match for debugging
 - Natural audit trail
 - No separate database needed for events
 
 ### **Clean Service Architecture**
+
 ```
-Human → WebSocket → Match Service → Kafka Events
-                                         ↓
-                    ┌────────────────────┴────────────────┐
-                    │                                     │
-          Robot Orchestration Service           Robot Workers
-                    │                                     │
-          (Manages robot pool)              (Generate responses)
+Frontend → API Gateway → Match Service → Kafka Events
+    ↓                                           ↓
+    └─────── Match History API ←── History Consumer
 ```
 
-**Key Insight**: Separate services for match management and robot orchestration communicate via events, providing clean boundaries and independent scaling.
+**Future State**: Add robot orchestration that consumes match events and generates AI responses.
 
-## 🏗️ **Migration Phases**
+## 🏗️ **Implementation Approach**
 
-1. **Phase 1** (Current): Read-only validation with sample data
-2. **Phase 2**: Dual-write live events to Kafka
-3. **Phase 3**: Robots consume from Kafka
-4. **Phase 4**: Remove DynamoDB, full event-sourced
+1. **Phase 1** (Current): Build match creation → Kafka → history flow
+2. **Phase 2**: Add robot consumers for AI responses
+3. **Phase 3**: Enhanced features (analytics, personalities, etc.)
 
 ## 💡 **Key Decisions Made**
 
 - **MSK Serverless** over Kinesis (true Kafka, consumer groups)
 - **Event sourcing** with infinite retention
-- **KSQL** for real-time analytics
-- **Gradual migration** starting with read path
+- **Direct to Kafka** - No intermediate storage needed
+- **Natural data generation** through actual gameplay
 
-## 🚫 **What Not to Do Yet**
+## ✅ **Architecture Benefits**
 
-- Don't delete DynamoDB until Phase 4
-- Don't migrate live transactions until read path works
-- Don't over-engineer the initial schemas
-- Don't worry about performance optimization yet
+- **No DynamoDB needed** - Kafka is the source of truth
+- **Simple deployment** - Match service writes directly to Kafka
+- **Clean data flow** - Events flow one direction
+- **Future-ready** - Easy to add robot consumers later

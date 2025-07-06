@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -37,7 +37,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.0
+          terraform_version: 1.9.0
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -56,13 +56,13 @@ jobs:
           # Get outputs from terraform state
           USER_POOL_ID=$(terraform output -raw cognito_user_pool_id)
           CLIENT_ID=$(terraform output -raw cognito_client_id) 
-          WEBSOCKET_URL=$(terraform output -raw websocket_url)
+          MATCH_HISTORY_API=$(terraform output -raw match_history_endpoint)
           WEBSITE_URL=$(terraform output -raw website_url)
           CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id)
           
           echo "user_pool_id=$USER_POOL_ID" >> $GITHUB_OUTPUT
           echo "client_id=$CLIENT_ID" >> $GITHUB_OUTPUT
-          echo "websocket_url=$WEBSOCKET_URL" >> $GITHUB_OUTPUT
+          echo "match_history_api=$MATCH_HISTORY_API" >> $GITHUB_OUTPUT
           echo "website_url=$WEBSITE_URL" >> $GITHUB_OUTPUT
           echo "cloudfront_id=$CLOUDFRONT_ID" >> $GITHUB_OUTPUT
 
@@ -71,7 +71,7 @@ jobs:
         env:
           NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ steps.get-terraform.outputs.user_pool_id }}
           NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ steps.get-terraform.outputs.client_id }}
-          NEXT_PUBLIC_WEBSOCKET_URL: ${{ steps.get-terraform.outputs.websocket_url }}
+          NEXT_PUBLIC_MATCH_HISTORY_API: ${{ steps.get-terraform.outputs.match_history_api }}
           NEXT_PUBLIC_DOMAIN_NAME: ${{ steps.get-terraform.outputs.website_url }}
         run: npm run build
 

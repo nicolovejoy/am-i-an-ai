@@ -1,7 +1,7 @@
 {
-  "name": "robot-orchestra-websocket-lambda",
+  "name": "robot-orchestra-lambda",
   "version": "1.0.0",
-  "description": "WebSocket Lambda handler for robot-orchestra",
+  "description": "Lambda handlers for robot-orchestra",
   "main": "handler.js",
   "scripts": {
     "test": "jest",
@@ -10,7 +10,6 @@
     "populate-kafka": "ts-node scripts/populate-kafka-samples.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-apigatewaymanagementapi": "^3.0.0",
     "@aws-sdk/client-secrets-manager": "3.840.0",
     "@aws-sdk/client-kafka": "^3.0.0",
     "kafkajs": "^2.2.4",
