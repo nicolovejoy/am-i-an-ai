@@ -1,5 +1,7 @@
 # RobotOrchestra - Claude Instructions
 
+**⚠️ READ CAREFULLY: Each new Claude conversation MUST read and follow ALL rules in this document.**
+
 ## Project Overview
 
 **Where humans and AI collaborate in anonymous matches.** Players join matches with 4 participants (MVP: 1 human + 3 robots), playing 5 rounds where each participant contributes once per round, ending with voting and identity reveal.
@@ -26,30 +28,40 @@
 
 ### Development Commands
 
+**IMPORTANT**: Never prefix commands with "cd". Instead, specify the directory first, then the command on a new line.
+
+Frontend development (run from `frontend/`):
 ```bash
-# Frontend development (user runs manually in separate window)
-cd frontend && npm run dev  # http://localhost:3001
+npm run dev  # http://localhost:3001
+```
 
-# Pre-commit checks (run from project root)
-cd frontend && npm run lint && npm run build
-cd lambda && npm test
+Pre-commit checks (run from respective directories):
+```bash
+# From frontend/
+npm run lint && npm run build
 
-# Deployment (user handles)
-cd infrastructure && terraform plan && terraform apply
-cd infrastructure/scripts && ./build-frontend.sh && DOMAIN_NAME=robotorchestra.org ./deploy-frontend.sh
+# From lambda/
+npm test
+```
+
+Deployment (user handles, from `infrastructure/`):
+```bash
+terraform plan && terraform apply
 ```
 
 ### Pre-Commit Requirements
 
 **MANDATORY: Before any git commit, run these checks:**
 
+Frontend checks (from `frontend/`):
 ```bash
-# Frontend checks
-cd frontend && npm run lint    # Fix all errors (warnings OK)
-cd frontend && npm run build   # Must complete successfully
+npm run lint    # Fix all errors (warnings OK)
+npm run build   # Must complete successfully
+```
 
-# Backend checks
-cd lambda && npm test          # All tests must pass
+Backend checks (from `lambda/`):
+```bash
+npm test        # All tests must pass
 ```
 
 **❌ NEVER commit if any check fails**
@@ -92,12 +104,14 @@ Just run them and continue with your work.
 
 ## 🚨 CURRENT PRIORITY: KAFKA MIGRATION - PHASE 1
 
-**FOCUS**: Implementing Kafka-based event architecture, starting with read-only match history.
+**FOCUS**: Building Kafka consumer Lambda for match history API.
 
-**IMMEDIATE GOAL**: 
-1. Set up MSK Serverless infrastructure
-2. Populate with sample match events
-3. Display match history from Kafka in UI
+**PHASE 1 STATUS**: 
+- ✅ MSK Serverless infrastructure deployed
+- ✅ Event schemas with comprehensive tests  
+- ✅ Sample data generator and population script
+- 🔄 Consumer Lambda for match history API (in progress)
+- ⏳ Frontend integration
 
 **KEY DOCUMENTS**:
 - `/KAFKA_MIGRATION_STRATEGY.md` - Full migration plan

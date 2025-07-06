@@ -6,13 +6,11 @@ Players join matches with 4 participants (MVP: 1 human + 3 robots), playing 5 ro
 
 ## 🎯 Current Status
 
-- ✅ **Infrastructure deployed** - AWS serverless stack running
-- ✅ **CI/CD pipeline working** - GitHub Actions deploy successfully  
-- ✅ **Frontend simplified** - Clean UX with dashboard, match history, admin pages
-- ✅ **Backend functional** - WebSocket Lambda with robot AI integration
-- 🔄 **Migrating to Kafka** - Event-driven architecture for robot orchestration
-
-**Minor issue**: DNS nameservers need updating at domain registrar
+- ✅ **MSK Serverless deployed** - Kafka cluster with full VPC setup
+- ✅ **Event schemas** - Comprehensive validation with 18 tests  
+- ✅ **Sample data generation** - Population script with CLI interface
+- 🔄 **Consumer Lambda** - Building match history API
+- ⏳ **Frontend integration** - Display Kafka-sourced match history
 
 ## 🚀 Live Site
 [RobotOrchestra.org](https://robotorchestra.org)
@@ -41,16 +39,23 @@ Key documents:
 
 ## 🏃 Development
 
+Frontend (from `frontend/`):
 ```bash
-# Frontend (localhost:3001)
-cd frontend && npm run dev
+npm run dev  # localhost:3001
+```
 
-# Pre-commit checks (required)  
-cd frontend && npm run lint && npm run build
-cd lambda && npm test
+Pre-commit checks:
+```bash
+# From frontend/
+npm run lint && npm run build
 
-# Deployment (user handles)
-# GitHub Actions auto-deploy on push to main
+# From lambda/ 
+npm test
+```
+
+Kafka sample data (from `lambda/`):
+```bash
+npm run populate-kafka -- --cluster-arn <arn> --count 10
 ```
 
 ## 📁 Project Structure
