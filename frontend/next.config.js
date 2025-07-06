@@ -8,7 +8,7 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  reactStrictMode: false, // Disable for WebSocket connections in development
+  reactStrictMode: false, // Keep disabled for compatibility
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,

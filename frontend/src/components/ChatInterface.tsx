@@ -19,7 +19,6 @@ export default function ChatInterface() {
   
   const {
     connectionStatus,
-    retryCount,
     lastError,
     myIdentity,
     match,
@@ -95,11 +94,6 @@ export default function ChatInterface() {
               <p>
                 Connecting to match with four participants
               </p>
-              {retryCount > 0 && (
-                <p className="text-sm">
-                  Reconnecting... (attempt {retryCount + 1})
-                </p>
-              )}
             </div>
           </Card>
           
@@ -117,13 +111,8 @@ export default function ChatInterface() {
           <h2 className="text-xl font-semibold text-red-600 mb-2">Connection Error</h2>
           <div className="text-slate-600 mb-4 space-y-2">
             <p>
-              {lastError || 'Failed to connect to the WebSocket server.'}
+              {lastError || 'Failed to connect to the API server.'}
             </p>
-            {retryCount > 0 && (
-              <p className="text-sm">
-                Retry attempts: {retryCount}/5
-              </p>
-            )}
             <p className="text-sm">
               Please check your internet connection and try again.
             </p>

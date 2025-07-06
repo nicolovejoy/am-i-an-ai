@@ -2,36 +2,6 @@ import { act, renderHook } from '@testing-library/react';
 import { useSessionStore } from '../sessionStore';
 import { mockAIService } from '@/services/mockAI';
 
-// Mock WebSocket
-class MockWebSocket {
-  readyState: number = WebSocket.CONNECTING;
-  onopen: ((event: Event) => void) | null = null;
-  onclose: ((event: CloseEvent) => void) | null = null;
-  onerror: ((event: Event) => void) | null = null;
-  onmessage: ((event: MessageEvent) => void) | null = null;
-  
-  constructor(public url: string) {
-    setTimeout(() => {
-      this.readyState = WebSocket.OPEN;
-      if (this.onopen) this.onopen(new Event('open'));
-    }, 0);
-  }
-  
-  send(data: string) {
-    // Mock implementation
-  }
-  
-  close(code?: number) {
-    this.readyState = WebSocket.CLOSED;
-    if (this.onclose) {
-      this.onclose(new CloseEvent('close', { code: code || 1000 }));
-    }
-  }
-}
-
-// Mock the WebSocket globally
-global.WebSocket = MockWebSocket as any;
-
 // Mock the mockAIService
 jest.mock('@/services/mockAI', () => ({
   mockAIService: {
@@ -112,7 +82,7 @@ describe('sessionStore', () => {
   });
 
   describe('Testing Mode', () => {
-    it('should initialize with human as A and AIs as B, C, D in testing mode', () => {
+    it('should initialize with human as random identity and AIs as others in testing mode', () => {
       const { result } = renderHook(() => useSessionStore());
       
       act(() => {
@@ -126,23 +96,6 @@ describe('sessionStore', () => {
       expect(result.current.match?.participants.some(p => p.identity === 'B')).toBe(true);
       expect(result.current.match?.participants.some(p => p.identity === 'C')).toBe(true);
       expect(result.current.match?.participants.some(p => p.identity === 'D')).toBe(true);
-    });
-
-    it('should not attempt WebSocket connection in testing mode', () => {
-      const { result } = renderHook(() => useSessionStore());
-      
-      act(() => {
-        result.current.startTestingMode();
-      });
-      
-      const connectSpy = jest.spyOn(result.current, 'connect');
-      
-      act(() => {
-        result.current.connect();
-      });
-      
-      expect(result.current.ws).toBeNull();
-      expect(result.current.connectionStatus).toBe('connected');
     });
 
     it('should handle messages locally in testing mode', () => {
@@ -166,25 +119,96 @@ describe('sessionStore', () => {
         expect.any(Function)
       );
     });
-  });
 
-  describe('Message Handling', () => {
-    it('should add messages to the store', () => {
+    it('should set connected status in testing mode', () => {
       const { result } = renderHook(() => useSessionStore());
       
       act(() => {
-        result.current.handleMessage({
-          sender: 'B',
-          content: 'Test message',
-          timestamp: Date.now()
-        });
+        result.current.startTestingMode();
       });
       
-      expect(result.current.messages).toHaveLength(1);
-      expect(result.current.messages[0].sender).toBe('B');
-      expect(result.current.messages[0].content).toBe('Test message');
+      expect(result.current.connectionStatus).toBe('connected');
+      expect(result.current.isSessionActive).toBe(true);
+    });
+  });
+
+  describe('Legacy Methods', () => {
+    it('should delegate connect() to startTestingMode()', () => {
+      const { result } = renderHook(() => useSessionStore());
+      
+      act(() => {
+        result.current.connect();
+      });
+      
+      expect(result.current.testingMode).toBe(true);
+      expect(result.current.connectionStatus).toBe('connected');
     });
 
+    it('should reset state on disconnect()', () => {
+      const { result } = renderHook(() => useSessionStore());
+      
+      // Set up some state
+      act(() => {
+        result.current.startTestingMode();
+      });
+      
+      act(() => {
+        result.current.disconnect();
+      });
+      
+      expect(result.current.testingMode).toBe(false);
+      expect(result.current.connectionStatus).toBe('disconnected');
+      expect(result.current.myIdentity).toBeNull();
+    });
+  });
+
+  describe('Response and Vote Submission', () => {
+    it('should handle response submission in testing mode', () => {
+      const { result } = renderHook(() => useSessionStore());
+      
+      act(() => {
+        result.current.startTestingMode();
+      });
+      
+      act(() => {
+        result.current.submitResponse('My test response');
+      });
+      
+      expect(result.current.myResponse).toBe('My test response');
+      expect(result.current.hasSubmittedResponse).toBe(true);
+    });
+
+    it('should handle vote submission', () => {
+      const { result } = renderHook(() => useSessionStore());
+      
+      act(() => {
+        result.current.startTestingMode();
+      });
+      
+      act(() => {
+        result.current.submitVote('B');
+      });
+      
+      expect(result.current.hasSubmittedVote).toBe(true);
+    });
+
+    it('should log when not in testing mode for response submission', () => {
+      const { result } = renderHook(() => useSessionStore());
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      
+      act(() => {
+        result.current.submitResponse('Test response');
+      });
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Not in testing mode - response submission not implemented');
+      expect(result.current.myResponse).toBe('Test response');
+      expect(result.current.hasSubmittedResponse).toBe(true);
+      
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Typing Indicators', () => {
     it('should update typing participants', () => {
       const { result } = renderHook(() => useSessionStore());
       
@@ -192,10 +216,14 @@ describe('sessionStore', () => {
         result.current.startTestingMode();
       });
       
-      // Simulate AI typing
-      const scheduleCallback = (mockAIService.scheduleAIResponses as jest.Mock).mock.calls[0];
-      if (scheduleCallback) {
-        const [, onTypingStart, onTypingEnd] = scheduleCallback;
+      act(() => {
+        result.current.sendMessage('Test message');
+      });
+      
+      // Simulate AI typing through the scheduled callback
+      const scheduleCall = (mockAIService.scheduleAIResponses as jest.Mock).mock.calls[0];
+      if (scheduleCall) {
+        const [, onTypingStart, onTypingEnd] = scheduleCall;
         
         act(() => {
           onTypingStart('B');
@@ -212,29 +240,26 @@ describe('sessionStore', () => {
     });
   });
 
-  describe('Participant Management', () => {
-    it('should update participants list when received from server', () => {
+  describe('Timer Management', () => {
+    it('should update timer and mark session inactive when time runs out', () => {
       const { result } = renderHook(() => useSessionStore());
       
-      // Initialize testing mode to create a match
       act(() => {
         result.current.startTestingMode();
       });
       
-      const participants = [
-        { identity: 'A' as const, isAI: false, isConnected: true },
-        { identity: 'B' as const, isAI: false, isConnected: true }
-      ];
+      expect(result.current.isSessionActive).toBe(true);
       
       act(() => {
-        result.current.handleParticipantUpdate(participants);
+        result.current.updateTimer(0);
       });
       
-      expect(result.current.match?.participants).toEqual(participants);
+      expect(result.current.timeRemaining).toBe(0);
+      expect(result.current.isSessionActive).toBe(false);
     });
   });
 
-  describe('Connection Management', () => {
+  describe('Store Reset', () => {
     it('should reset state properly', () => {
       const { result } = renderHook(() => useSessionStore());
       
