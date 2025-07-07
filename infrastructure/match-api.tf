@@ -1,0 +1,847 @@
+# Comprehensive Match API Gateway and Lambda Functions
+# Handles match creation, management, and history via unified REST API
+
+############################
+# REST API Gateway for All Match Operations
+############################
+
+# REST API Gateway
+resource "aws_api_gateway_rest_api" "match_api" {
+  name        = "${local.project_name}-match-api"
+  description = "Unified REST API for match operations - create, manage, and view history"
+  
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+
+  tags = local.tags
+}
+
+# API Gateway resource for /matches
+resource "aws_api_gateway_resource" "matches" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_rest_api.match_api.root_resource_id
+  path_part   = "matches"
+}
+
+# API Gateway resource for /matches/history
+resource "aws_api_gateway_resource" "matches_history" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_resource.matches.id
+  path_part   = "history"
+}
+
+# API Gateway resource for /matches/{matchId}
+resource "aws_api_gateway_resource" "match_by_id" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_resource.matches.id
+  path_part   = "{matchId}"
+}
+
+# API Gateway resource for /matches/{matchId}/responses
+resource "aws_api_gateway_resource" "match_responses" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_resource.match_by_id.id
+  path_part   = "responses"
+}
+
+# API Gateway resource for /matches/{matchId}/votes
+resource "aws_api_gateway_resource" "match_votes" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_resource.match_by_id.id
+  path_part   = "votes"
+}
+
+############################
+# API Gateway Methods
+############################
+
+# GET /matches/history - Match History
+resource "aws_api_gateway_method" "get_matches_history" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.matches_history.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+# POST /matches - Create Match
+resource "aws_api_gateway_method" "post_matches" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.matches.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+# GET /matches/{matchId} - Get Match
+resource "aws_api_gateway_method" "get_match" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.match_by_id.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+# POST /matches/{matchId}/responses - Submit Response
+resource "aws_api_gateway_method" "post_responses" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.match_responses.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+# POST /matches/{matchId}/votes - Submit Vote
+resource "aws_api_gateway_method" "post_votes" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.match_votes.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+# CORS OPTIONS methods
+resource "aws_api_gateway_method" "options_matches" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.matches.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method" "options_matches_history" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.matches_history.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method" "options_match" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.match_by_id.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method" "options_responses" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.match_responses.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method" "options_votes" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.match_votes.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+############################
+# Lambda Integrations
+############################
+
+# Lambda integration for GET /matches/history -> Match History Lambda
+resource "aws_api_gateway_integration" "get_matches_history_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.match_api.id
+  resource_id             = aws_api_gateway_resource.matches_history.id
+  http_method             = aws_api_gateway_method.get_matches_history.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.match_history.invoke_arn
+}
+
+# Lambda integration for POST /matches -> Match Service Lambda
+resource "aws_api_gateway_integration" "post_matches_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.match_api.id
+  resource_id             = aws_api_gateway_resource.matches.id
+  http_method             = aws_api_gateway_method.post_matches.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.match_service.invoke_arn
+}
+
+# Lambda integration for GET /matches/{matchId} -> Match Service Lambda
+resource "aws_api_gateway_integration" "get_match_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.match_api.id
+  resource_id             = aws_api_gateway_resource.match_by_id.id
+  http_method             = aws_api_gateway_method.get_match.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.match_service.invoke_arn
+}
+
+# Lambda integration for POST /matches/{matchId}/responses -> Match Service Lambda
+resource "aws_api_gateway_integration" "post_responses_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.match_api.id
+  resource_id             = aws_api_gateway_resource.match_responses.id
+  http_method             = aws_api_gateway_method.post_responses.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.match_service.invoke_arn
+}
+
+# Lambda integration for POST /matches/{matchId}/votes -> Match Service Lambda
+resource "aws_api_gateway_integration" "post_votes_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.match_api.id
+  resource_id             = aws_api_gateway_resource.match_votes.id
+  http_method             = aws_api_gateway_method.post_votes.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.match_service.invoke_arn
+}
+
+# CORS integrations
+resource "aws_api_gateway_integration" "options_matches_cors" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches.id
+  http_method = aws_api_gateway_method.options_matches.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
+  }
+}
+
+resource "aws_api_gateway_integration" "options_matches_history_cors" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_history.id
+  http_method = aws_api_gateway_method.options_matches_history.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
+  }
+}
+
+resource "aws_api_gateway_integration" "options_match_cors" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_by_id.id
+  http_method = aws_api_gateway_method.options_match.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
+  }
+}
+
+resource "aws_api_gateway_integration" "options_responses_cors" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_responses.id
+  http_method = aws_api_gateway_method.options_responses.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
+  }
+}
+
+resource "aws_api_gateway_integration" "options_votes_cors" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_votes.id
+  http_method = aws_api_gateway_method.options_votes.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
+  }
+}
+
+############################
+# Method Responses
+############################
+
+# GET /matches/history responses
+resource "aws_api_gateway_method_response" "get_matches_history_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_history.id
+  http_method = aws_api_gateway_method.get_matches_history.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
+# POST /matches responses
+resource "aws_api_gateway_method_response" "post_matches_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches.id
+  http_method = aws_api_gateway_method.post_matches.http_method
+  status_code = "201"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
+# GET /matches/{matchId} responses
+resource "aws_api_gateway_method_response" "get_match_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_by_id.id
+  http_method = aws_api_gateway_method.get_match.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
+# POST responses and votes
+resource "aws_api_gateway_method_response" "post_responses_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_responses.id
+  http_method = aws_api_gateway_method.post_responses.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "post_votes_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_votes.id
+  http_method = aws_api_gateway_method.post_votes.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
+# CORS responses
+resource "aws_api_gateway_method_response" "options_matches_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches.id
+  http_method = aws_api_gateway_method.options_matches.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_matches_history_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_history.id
+  http_method = aws_api_gateway_method.options_matches_history.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_match_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_by_id.id
+  http_method = aws_api_gateway_method.options_match.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_responses_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_responses.id
+  http_method = aws_api_gateway_method.options_responses.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_votes_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_votes.id
+  http_method = aws_api_gateway_method.options_votes.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+############################
+# Integration Responses
+############################
+
+# Lambda integration responses
+resource "aws_api_gateway_integration_response" "get_matches_history_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_history.id
+  http_method = aws_api_gateway_method.get_matches_history.http_method
+  status_code = aws_api_gateway_method_response.get_matches_history_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.get_matches_history_lambda]
+}
+
+resource "aws_api_gateway_integration_response" "post_matches_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches.id
+  http_method = aws_api_gateway_method.post_matches.http_method
+  status_code = aws_api_gateway_method_response.post_matches_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.post_matches_lambda]
+}
+
+resource "aws_api_gateway_integration_response" "get_match_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_by_id.id
+  http_method = aws_api_gateway_method.get_match.http_method
+  status_code = aws_api_gateway_method_response.get_match_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.get_match_lambda]
+}
+
+resource "aws_api_gateway_integration_response" "post_responses_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_responses.id
+  http_method = aws_api_gateway_method.post_responses.http_method
+  status_code = aws_api_gateway_method_response.post_responses_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.post_responses_lambda]
+}
+
+resource "aws_api_gateway_integration_response" "post_votes_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_votes.id
+  http_method = aws_api_gateway_method.post_votes.http_method
+  status_code = aws_api_gateway_method_response.post_votes_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.post_votes_lambda]
+}
+
+# CORS integration responses
+resource "aws_api_gateway_integration_response" "options_matches_cors_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches.id
+  http_method = aws_api_gateway_method.options_matches.http_method
+  status_code = aws_api_gateway_method_response.options_matches_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.options_matches_cors]
+}
+
+resource "aws_api_gateway_integration_response" "options_matches_history_cors_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_history.id
+  http_method = aws_api_gateway_method.options_matches_history.http_method
+  status_code = aws_api_gateway_method_response.options_matches_history_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.options_matches_history_cors]
+}
+
+resource "aws_api_gateway_integration_response" "options_match_cors_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_by_id.id
+  http_method = aws_api_gateway_method.options_match.http_method
+  status_code = aws_api_gateway_method_response.options_match_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.options_match_cors]
+}
+
+resource "aws_api_gateway_integration_response" "options_responses_cors_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_responses.id
+  http_method = aws_api_gateway_method.options_responses.http_method
+  status_code = aws_api_gateway_method_response.options_responses_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.options_responses_cors]
+}
+
+resource "aws_api_gateway_integration_response" "options_votes_cors_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.match_votes.id
+  http_method = aws_api_gateway_method.options_votes.http_method
+  status_code = aws_api_gateway_method_response.options_votes_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.options_votes_cors]
+}
+
+############################
+# API Gateway Deployment
+############################
+
+resource "aws_api_gateway_deployment" "match_api" {
+  depends_on = [
+    aws_api_gateway_integration.get_matches_history_lambda,
+    aws_api_gateway_integration.post_matches_lambda,
+    aws_api_gateway_integration.get_match_lambda,
+    aws_api_gateway_integration.post_responses_lambda,
+    aws_api_gateway_integration.post_votes_lambda,
+    aws_api_gateway_integration.options_matches_cors,
+    aws_api_gateway_integration.options_matches_history_cors,
+    aws_api_gateway_integration.options_match_cors,
+    aws_api_gateway_integration.options_responses_cors,
+    aws_api_gateway_integration.options_votes_cors,
+    aws_api_gateway_integration_response.get_matches_history_response,
+    aws_api_gateway_integration_response.post_matches_response,
+    aws_api_gateway_integration_response.get_match_response,
+    aws_api_gateway_integration_response.post_responses_response,
+    aws_api_gateway_integration_response.post_votes_response,
+    aws_api_gateway_integration_response.options_matches_cors_response,
+    aws_api_gateway_integration_response.options_matches_history_cors_response,
+    aws_api_gateway_integration_response.options_match_cors_response,
+    aws_api_gateway_integration_response.options_responses_cors_response,
+    aws_api_gateway_integration_response.options_votes_cors_response
+  ]
+
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+
+  triggers = {
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_resource.matches.id,
+      aws_api_gateway_resource.matches_history.id,
+      aws_api_gateway_resource.match_by_id.id,
+      aws_api_gateway_resource.match_responses.id,
+      aws_api_gateway_resource.match_votes.id,
+      aws_api_gateway_method.get_matches_history.id,
+      aws_api_gateway_method.post_matches.id,
+      aws_api_gateway_method.get_match.id,
+      aws_api_gateway_method.post_responses.id,
+      aws_api_gateway_method.post_votes.id,
+      aws_api_gateway_integration.get_matches_history_lambda.id,
+      aws_api_gateway_integration.post_matches_lambda.id,
+      aws_api_gateway_integration.get_match_lambda.id,
+      aws_api_gateway_integration.post_responses_lambda.id,
+      aws_api_gateway_integration.post_votes_lambda.id,
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# API Gateway stage
+resource "aws_api_gateway_stage" "match_api_prod" {
+  deployment_id = aws_api_gateway_deployment.match_api.id
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  stage_name    = "prod"
+
+  tags = local.tags
+}
+
+############################
+# Match History Lambda Function
+############################
+
+# IAM role for Match History Lambda
+resource "aws_iam_role" "match_history_lambda" {
+  name = "${local.project_name}-match-history-lambda"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.tags
+}
+
+# Lambda basic execution policy
+resource "aws_iam_role_policy_attachment" "match_history_lambda_basic" {
+  role       = aws_iam_role.match_history_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# VPC access for Kafka connectivity
+resource "aws_iam_role_policy_attachment" "match_history_lambda_vpc" {
+  role       = aws_iam_role.match_history_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+# Kafka access policy
+resource "aws_iam_role_policy_attachment" "match_history_lambda_kafka" {
+  role       = aws_iam_role.match_history_lambda.name
+  policy_arn = aws_iam_policy.kafka_access.arn
+}
+
+# CloudWatch Log Group for Match History Lambda
+resource "aws_cloudwatch_log_group" "match_history_logs" {
+  name              = "/aws/lambda/${local.project_name}-match-history"
+  retention_in_days = 7
+  tags              = local.tags
+}
+
+# Lambda function for match history
+resource "aws_lambda_function" "match_history" {
+  function_name = "${local.project_name}-match-history"
+  role          = aws_iam_role.match_history_lambda.arn
+  handler       = "match-history-consumer.handler"
+  runtime       = "nodejs20.x"
+  timeout       = 30
+  memory_size   = 512
+
+  # VPC configuration for Kafka access
+  vpc_config {
+    subnet_ids         = aws_subnet.kafka_private[*].id
+    security_group_ids = [aws_security_group.kafka_lambda.id]
+  }
+
+  # Placeholder code - will be replaced by deployment script
+  filename         = "match-history-placeholder.zip"
+  source_code_hash = data.archive_file.match_history_placeholder.output_base64sha256
+
+  environment {
+    variables = {
+      KAFKA_BOOTSTRAP_SERVERS = aws_msk_serverless_cluster.main.bootstrap_brokers_sasl_iam
+      KAFKA_TOPIC = "match-events"
+      NODE_ENV = "production"
+    }
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.match_history_logs,
+    aws_iam_role_policy_attachment.match_history_lambda_basic,
+    aws_iam_role_policy_attachment.match_history_lambda_vpc,
+    aws_iam_role_policy_attachment.match_history_lambda_kafka
+  ]
+
+  tags = local.tags
+}
+
+# Create placeholder Lambda deployment package for match history
+data "archive_file" "match_history_placeholder" {
+  type        = "zip"
+  output_path = "match-history-placeholder.zip"
+  
+  source {
+    content = jsonencode({
+      exports = {
+        handler = "async (event) => ({ statusCode: 200, body: JSON.stringify({ message: 'Match History API - Phase 1 Kafka Consumer', timestamp: Date.now() }) })"
+      }
+    })
+    filename = "index.js"
+  }
+}
+
+############################
+# Match Service Lambda Function
+############################
+
+# IAM role for Match Service Lambda
+resource "aws_iam_role" "match_service_lambda" {
+  name = "${local.project_name}-match-service-lambda"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.tags
+}
+
+# Lambda basic execution policy
+resource "aws_iam_role_policy_attachment" "match_service_lambda_basic" {
+  role       = aws_iam_role.match_service_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# VPC access for Kafka connectivity
+resource "aws_iam_role_policy_attachment" "match_service_lambda_vpc" {
+  role       = aws_iam_role.match_service_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+# Kafka access policy
+resource "aws_iam_role_policy_attachment" "match_service_lambda_kafka" {
+  role       = aws_iam_role.match_service_lambda.name
+  policy_arn = aws_iam_policy.kafka_access.arn
+}
+
+# CloudWatch Log Group for Match Service Lambda
+resource "aws_cloudwatch_log_group" "match_service_logs" {
+  name              = "/aws/lambda/${local.project_name}-match-service"
+  retention_in_days = 7
+  tags              = local.tags
+}
+
+# Lambda function for match service
+resource "aws_lambda_function" "match_service" {
+  function_name = "${local.project_name}-match-service"
+  role          = aws_iam_role.match_service_lambda.arn
+  handler       = "match-service.handler"
+  runtime       = "nodejs20.x"
+  timeout       = 30
+  memory_size   = 512
+
+  # VPC configuration for Kafka access
+  vpc_config {
+    subnet_ids         = aws_subnet.kafka_private[*].id
+    security_group_ids = [aws_security_group.kafka_lambda.id]
+  }
+
+  # Placeholder code - will be replaced by deployment script
+  filename         = "match-service-placeholder.zip"
+  source_code_hash = data.archive_file.match_service_placeholder.output_base64sha256
+
+  environment {
+    variables = {
+      KAFKA_BOOTSTRAP_SERVERS = aws_msk_serverless_cluster.main.bootstrap_brokers_sasl_iam
+      KAFKA_TOPIC = "match-events"
+      NODE_ENV = "production"
+    }
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.match_service_logs,
+    aws_iam_role_policy_attachment.match_service_lambda_basic,
+    aws_iam_role_policy_attachment.match_service_lambda_vpc,
+    aws_iam_role_policy_attachment.match_service_lambda_kafka
+  ]
+
+  tags = local.tags
+}
+
+# Create placeholder Lambda deployment package for match service
+data "archive_file" "match_service_placeholder" {
+  type        = "zip"
+  output_path = "match-service-placeholder.zip"
+  
+  source {
+    content = jsonencode({
+      exports = {
+        handler = "async (event) => ({ statusCode: 200, body: JSON.stringify({ message: 'Match Service API - Create and manage matches', timestamp: Date.now() }) })"
+      }
+    })
+    filename = "index.js"
+  }
+}
+
+# Lambda permissions for API Gateway
+resource "aws_lambda_permission" "match_history_apigateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.match_history.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.match_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "match_service_apigateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.match_service.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.match_api.execution_arn}/*/*"
+}
+
+############################
+# Outputs
+############################
+
+output "match_api_url" {
+  description = "Match API Gateway URL"
+  value       = "${aws_api_gateway_rest_api.match_api.execution_arn}/prod"
+}
+
+output "match_history_lambda_name" {
+  description = "Match History Lambda function name"
+  value       = aws_lambda_function.match_history.function_name
+}
+
+output "match_service_lambda_name" {
+  description = "Match Service Lambda function name"
+  value       = aws_lambda_function.match_service.function_name
+}
+
+output "match_api_endpoint" {
+  description = "Match API base endpoint"
+  value       = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod"
+}
+
+output "match_api_endpoints" {
+  description = "All Match API endpoints"
+  value = {
+    base_url = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod"
+    history = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/history"
+    create_match = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches"
+    get_match = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/{matchId}"
+    submit_response = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/{matchId}/responses"
+    submit_vote = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/{matchId}/votes"
+  }
+}

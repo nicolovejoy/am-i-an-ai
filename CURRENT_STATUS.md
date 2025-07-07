@@ -1,29 +1,32 @@
 # Current Status - July 2025
 
-## 🚀 **Kafka Phase 1 Progress**
+## 🎯 **Core Match API Working**
 
-Migrating from in-memory state to MSK Serverless for event-driven architecture.
+Successfully implemented unified Match API with Lambda backend.
 
-## ✅ **Phase 1 Complete**
+## ✅ **Completed - July 2025**
 
-- MSK Serverless cluster deployed (26 AWS resources)
-- Event schemas with 18 passing tests
-- Match history UI implemented and connected to API endpoint
-- Consumer Lambda for match history API deployed
+- ✅ **Unified Match API Gateway** - Single API for all match operations
+- ✅ **Match Service Lambda** - TypeScript compilation and deployment working  
+- ✅ **CORS Configuration** - Frontend can call API without issues
+- ✅ **Match Creation** - POST /matches returns 201 with match data
+- ✅ **Response Submission** - POST /matches/{id}/responses working
+- ✅ **Vote Submission** - POST /matches/{id}/votes endpoint ready
+- ✅ **Match Retrieval** - GET /matches/{id} for loading match state
 
-## 🎯 **Current Focus: Match Creation Interface**
+## 🎯 **Current Status: UX Development Phase**
 
-Building end-to-end match flow that naturally generates Kafka events through real gameplay.
+The core API infrastructure is solid and responsive:
+- **Match Flow**: Create → Submit Responses → Vote → Results
+- **Storage**: In-memory for MVP (fast, simple)  
+- **Authentication**: Lambda IAM roles working
+- **Deployment**: Automated TypeScript → Lambda pipeline
 
-**Strategic Decision**: Generate event data through actual match creation rather than synthetic population scripts. This ensures realistic data flow and tests the full system integration.
-
-### **Next Steps**
-
-1. **Remove DynamoDB** - Clean up all DynamoDB code from codebase and destroy AWS resources
-2. **Build match creation interface** - Frontend flow to start new matches
-3. **Implement match service Lambda** - Handles match lifecycle and publishes to Kafka
-4. **Connect match history to real data** - Display matches created through gameplay
-5. **Test full event flow** - Create → Play → Complete → View History
+### **Next: User Experience Focus**
+- Improve frontend match flow and UI
+- Add match state management  
+- Build complete game experience
+- Polish user interactions
 
 ## 📐 **Kafka Architecture Benefits**
 

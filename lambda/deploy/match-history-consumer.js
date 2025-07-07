@@ -1,0 +1,183 @@
+"use strict";
+// Match History Consumer Lambda
+// Consumes Kafka match events and builds match history for API
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.MatchHistoryConsumer = void 0;
+exports.handler = handler;
+const schemas_1 = require("./kafka-schemas/schemas");
+class MatchHistoryConsumer {
+    constructor() {
+        this.matches = new Map();
+    }
+    async processEvent(event) {
+        const { matchId, eventType, data } = event;
+        // Validate basic event structure first
+        if (!event || !eventType || !matchId || !data) {
+            throw new Error('Invalid event format');
+        }
+        switch (eventType) {
+            case schemas_1.EVENT_TYPES.MATCH_STARTED:
+                await this.handleMatchStarted(matchId, data);
+                break;
+            case schemas_1.EVENT_TYPES.ROUND_STARTED:
+                await this.handleRoundStarted(matchId, data);
+                break;
+            case schemas_1.EVENT_TYPES.RESPONSE_SUBMITTED:
+            case schemas_1.EVENT_TYPES.RESPONSE_GENERATED:
+                await this.handleResponseSubmitted(matchId, data);
+                break;
+            case schemas_1.EVENT_TYPES.VOTE_SUBMITTED:
+                await this.handleVoteSubmitted(matchId, data);
+                break;
+            case schemas_1.EVENT_TYPES.MATCH_COMPLETED:
+                await this.handleMatchCompleted(matchId, data);
+                break;
+            default:
+                // Log unknown event types but don't fail
+                console.log(`Unknown event type: ${eventType}`);
+        }
+    }
+    async handleMatchStarted(matchId, data) {
+        if (!data.participants || !Array.isArray(data.participants) || data.participants.length !== 4) {
+            throw new Error('Invalid match started data');
+        }
+        if (!data.humanParticipant || !data.robotParticipants || !Array.isArray(data.robotParticipants)) {
+            throw new Error('Invalid match started data');
+        }
+        const match = {
+            matchId,
+            status: 'in_progress',
+            humanParticipant: data.humanParticipant,
+            robotParticipants: data.robotParticipants,
+            rounds: [],
+            createdAt: data.createdAt
+        };
+        this.matches.set(matchId, match);
+    }
+    async handleRoundStarted(matchId, data) {
+        const match = this.matches.get(matchId);
+        if (!match) {
+            // Handle gracefully - might be processing events out of order
+            console.warn(`Round started for unknown match: ${matchId}`);
+            return;
+        }
+        const round = {
+            round: data.round,
+            prompt: data.prompt,
+            responses: [],
+            startedAt: Date.now()
+        };
+        // Ensure we have the right number of rounds
+        while (match.rounds.length < data.round) {
+            if (match.rounds.length === data.round - 1) {
+                match.rounds.push(round);
+            }
+            else {
+                // Fill in missing rounds with placeholder
+                match.rounds.push({
+                    round: match.rounds.length + 1,
+                    prompt: 'Unknown prompt',
+                    responses: [],
+                    startedAt: 0
+                });
+            }
+        }
+    }
+    async handleResponseSubmitted(matchId, data) {
+        const match = this.matches.get(matchId);
+        if (!match) {
+            console.warn(`Response submitted for unknown match: ${matchId}`);
+            return;
+        }
+        const roundIndex = data.round - 1;
+        if (roundIndex < 0 || roundIndex >= match.rounds.length) {
+            console.warn(`Response for unknown round ${data.round} in match ${matchId}`);
+            return;
+        }
+        const response = {
+            participantId: data.participantId,
+            participantType: data.participantType,
+            response: data.response,
+            ...(data.robotType && { robotType: data.robotType })
+        };
+        // Check if response already exists (avoid duplicates)
+        const existingIndex = match.rounds[roundIndex].responses.findIndex(r => r.participantId === data.participantId);
+        if (existingIndex >= 0) {
+            match.rounds[roundIndex].responses[existingIndex] = response;
+        }
+        else {
+            match.rounds[roundIndex].responses.push(response);
+        }
+    }
+    async handleVoteSubmitted(matchId, data) {
+        const match = this.matches.get(matchId);
+        if (!match) {
+            console.warn(`Vote submitted for unknown match: ${matchId}`);
+            return;
+        }
+        // Assume vote is for the last round (current round)
+        if (match.rounds.length > 0) {
+            const lastRound = match.rounds[match.rounds.length - 1];
+            lastRound.humanGuess = data.humanGuess;
+        }
+    }
+    async handleMatchCompleted(matchId, data) {
+        const match = this.matches.get(matchId);
+        if (!match) {
+            console.warn(`Match completed for unknown match: ${matchId}`);
+            return;
+        }
+        match.status = 'completed';
+        match.result = data.result;
+        match.completedAt = data.completedAt;
+        match.duration = data.duration;
+    }
+    getMatchHistory(matchId) {
+        return this.matches.get(matchId) || null;
+    }
+    getAllMatches() {
+        return Array.from(this.matches.values())
+            .sort((a, b) => b.createdAt - a.createdAt);
+    }
+    getCompletedMatches() {
+        return this.getAllMatches()
+            .filter(match => match.status === 'completed');
+    }
+}
+exports.MatchHistoryConsumer = MatchHistoryConsumer;
+// Lambda handler for API Gateway
+async function handler(_event, _context) {
+    const consumer = new MatchHistoryConsumer();
+    try {
+        // For now, return sample data
+        // In real implementation, this would connect to Kafka and process events
+        const response = {
+            statusCode: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+            },
+            body: JSON.stringify({
+                matches: consumer.getAllMatches(),
+                timestamp: Date.now()
+            })
+        };
+        return response;
+    }
+    catch (error) {
+        console.error('Error in match history handler:', error);
+        return {
+            statusCode: 500,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({
+                error: 'Internal server error',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            })
+        };
+    }
+}

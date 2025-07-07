@@ -1,15 +1,15 @@
 #!/bin/bash
 set -e
 
-# Deploy Lambda Functions
-# Builds and deploys Lambda functions for Kafka-based architecture
+# Deploy Lambda Functions - Fixed for Unified Match API
+# Builds TypeScript and deploys both Lambda functions properly
 
-echo "⚡ Deploying Lambda Functions..."
+echo "⚡ Deploying Lambda Functions (Fixed)..."
 
 # Check environment variables
 if [ -z "$TF_VAR_openai_api_key" ]; then
     echo "❌ Error: TF_VAR_openai_api_key environment variable is required"
-    echo "Usage: export TF_VAR_openai_api_key='your-api-key' && ./deploy-lambda.sh"
+    echo "Usage: export TF_VAR_openai_api_key='your-api-key' && ./deploy-lambda-fixed.sh"
     exit 1
 fi
 
@@ -17,31 +17,65 @@ fi
 cd "$(dirname "$0")/../../lambda"
 
 echo "📦 Installing Lambda dependencies..."
-npm ci --production
+npm ci
 
-echo "🔨 Building Lambda package..."
-npm run build
+echo "🔨 Compiling TypeScript..."
+npx tsc
 
-echo "📤 Deploying Lambda functions via Terraform..."
-cd ../infrastructure
+echo "📦 Building deployment packages..."
 
-# Deploy match history Lambda function
-terraform apply -target=aws_lambda_function.match_history -auto-approve
+# Create deployment package directory (different from tsc output)
+mkdir -p deploy
+rm -rf deploy/*
 
-# Deploy match history API Gateway
-terraform apply -target=aws_api_gateway_rest_api.match_history -auto-approve
+# Copy compiled JS files from TypeScript dist directory and package.json
+cp dist/*.js deploy/
+cp package*.json deploy/
+# Copy the kafka-schemas directory (needed by the compiled code)
+cp -r dist/kafka-schemas deploy/ 2>/dev/null || true
+
+# Copy node_modules for production dependencies only
+cd deploy
+npm ci --production --silent
+
+# Create match-service package with proper structure
+echo "📦 Creating match-service package..."
+zip -r match-service.zip . -q
+
+# Create match-history package with proper structure
+echo "📦 Creating match-history package..."
+zip -r match-history.zip . -q
+
+echo "📤 Uploading Lambda functions..."
+
+# Upload match service function
+aws lambda update-function-code \
+    --function-name robot-orchestra-match-service \
+    --zip-file fileb://match-service.zip
+
+# Upload match history function
+aws lambda update-function-code \
+    --function-name robot-orchestra-match-history \
+    --zip-file fileb://match-history.zip
+
+echo "⏳ Waiting for functions to update..."
+aws lambda wait function-updated --function-name robot-orchestra-match-service
+aws lambda wait function-updated --function-name robot-orchestra-match-history
 
 echo "✅ Lambda deployment complete!"
 
 # Get function info
-FUNCTION_NAME=$(terraform output -raw match_history_lambda_name 2>/dev/null || echo "")
-if [ -n "$FUNCTION_NAME" ]; then
-    echo "🔗 Function: $FUNCTION_NAME"
-    echo "📊 Function info:"
-    aws lambda get-function --function-name "$FUNCTION_NAME" --query 'Configuration.{Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
-fi
+echo "📊 Match Service Function:"
+aws lambda get-function --function-name robot-orchestra-match-service --query 'Configuration.{Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
 
-API_ENDPOINT=$(terraform output -raw match_history_endpoint 2>/dev/null || echo "")
-if [ -n "$API_ENDPOINT" ]; then
-    echo "🌐 API Endpoint: $API_ENDPOINT"
-fi
+echo "📊 Match History Function:"
+aws lambda get-function --function-name robot-orchestra-match-history --query 'Configuration.{Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
+
+# Test functions
+echo "🧪 Testing functions..."
+echo "Testing match service..."
+aws lambda invoke --function-name robot-orchestra-match-service --payload '{"httpMethod":"OPTIONS","path":"/matches"}' /tmp/test-response.json
+cat /tmp/test-response.json
+
+echo ""
+echo "✅ Deployment complete! Functions should now handle CORS properly."

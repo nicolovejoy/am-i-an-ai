@@ -17,6 +17,8 @@ export interface Participant {
   type: ParticipantType;
   /** AI personality (only for AI participants) */
   personality?: string;
+  /** Connection ID for WebSocket (legacy - now optional) */
+  connectionId?: string | null;
 }
 
 export interface Round {

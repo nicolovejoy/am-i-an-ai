@@ -3,8 +3,7 @@
 
 import { 
   generateCompleteMatch, 
-  createSampleMatches,
-  MatchEventSequence 
+  createSampleMatches
 } from './kafka-sample-generator';
 import { 
   validateMatchEvent, 
