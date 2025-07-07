@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSessionStore, Identity } from '@/store/sessionStore';
 import { Card, Button } from './ui';
 
@@ -21,8 +21,32 @@ export default function MusicianRecognition({ responses }: MusicianRecognitionPr
   const isTimeRunningOut = timeRemaining !== null && timeRemaining < 10;
   const responseEntries = Object.entries(responses) as [Identity, string][];
 
-  // Shuffle responses to avoid position bias
-  const shuffledResponses = [...responseEntries].sort(() => Math.random() - 0.5);
+  // Create a stable seed for shuffling
+  const responseSeed = useMemo(() => 
+    responseEntries.map(([id, resp]) => `${id}:${resp}`).join('|'), 
+    [responseEntries]
+  );
+
+  // Shuffle responses to avoid position bias - use useMemo to prevent re-shuffling on every render
+  const shuffledResponses = useMemo(() => {
+    // Create a stable seed based on the response content to ensure consistent shuffling
+    let hash = 0;
+    for (let i = 0; i < responseSeed.length; i++) {
+      const char = responseSeed.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    // Use seeded random for consistent shuffling
+    const seededRandom = (function(seed) {
+      return function() {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+      };
+    })(Math.abs(hash));
+    
+    return [...responseEntries].sort(() => seededRandom() - 0.5);
+  }, [responseEntries, responseSeed]);
 
   return (
     <Card>

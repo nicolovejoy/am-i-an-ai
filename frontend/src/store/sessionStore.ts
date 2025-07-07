@@ -168,6 +168,12 @@ export const useSessionStore = create<SessionStore>()(
           const humanParticipant = matchData.participants?.find((p: any) => p.isHuman);
           const myIdentity = humanParticipant?.identity || 'A';
 
+          // Get the current round's prompt
+          const currentRound = match.rounds?.find(
+            (r: any) => r.roundNumber === match.currentRound
+          );
+          const currentPrompt = currentRound?.prompt || "Waiting for match to start...";
+
           set({
             connectionStatus: "connected",
             match,
@@ -176,7 +182,7 @@ export const useSessionStore = create<SessionStore>()(
             sessionStartTime: Date.now(),
             timeRemaining: 180, // 3 minutes default
             testingMode: false,
-            currentPrompt: "Waiting for match to start...",
+            currentPrompt,
           });
 
         } catch (error) {
@@ -287,7 +293,26 @@ export const useSessionStore = create<SessionStore>()(
                 throw new Error(`Failed to submit response: ${apiResponse.statusText}`);
               }
 
-              console.log("Response submitted successfully");
+              const result = await apiResponse.json();
+              console.log("Response submitted successfully", result);
+              
+              // Update match state if response includes updated match data
+              if (result.match) {
+                set({ match: result.match });
+                
+                // Update current prompt if we moved to a new round
+                const currentRound = result.match.rounds?.find(
+                  (r: any) => r.roundNumber === result.match.currentRound
+                );
+                if (currentRound?.prompt) {
+                  set({ currentPrompt: currentRound.prompt });
+                }
+                
+                // Update round responses if we're in voting phase
+                if (currentRound?.status === 'voting' && currentRound?.responses) {
+                  set({ roundResponses: currentRound.responses });
+                }
+              }
             } catch (error) {
               console.error("Failed to submit response:", error);
               set({
@@ -338,7 +363,28 @@ export const useSessionStore = create<SessionStore>()(
                 throw new Error(`Failed to submit vote: ${apiResponse.statusText}`);
               }
 
-              console.log("Vote submitted successfully");
+              const result = await apiResponse.json();
+              console.log("Vote submitted successfully", result);
+              
+              // Update match state if response includes updated match data
+              if (result.match) {
+                set({ match: result.match });
+                
+                // Update current prompt if we moved to a new round
+                const currentRound = result.match.rounds?.find(
+                  (r: any) => r.roundNumber === result.match.currentRound
+                );
+                if (currentRound?.prompt) {
+                  set({ 
+                    currentPrompt: currentRound.prompt,
+                    // Reset round state for new round
+                    hasSubmittedResponse: false,
+                    hasSubmittedVote: false,
+                    myResponse: null,
+                    roundResponses: {},
+                  });
+                }
+              }
             } catch (error) {
               console.error("Failed to submit vote:", error);
               set({
@@ -350,9 +396,12 @@ export const useSessionStore = create<SessionStore>()(
           submitVoteAsync();
         }
 
-        set({
-          hasSubmittedVote: true,
-        });
+        // Only set hasSubmittedVote for the current round if not moving to new round
+        if (!result?.match || result.match.currentRound === get().match?.currentRound) {
+          set({
+            hasSubmittedVote: true,
+          });
+        }
       },
 
       startTestingMode: () => {
