@@ -15,6 +15,7 @@
 
 ### **🐛 Known Issues**
 
+- **Next.js RSC Errors** - Static export incompatible with App Router (fixing with Vite migration)
 - **Responses Jumping Around** - Responses appear then reorder themselves, need stable positioning
 - **Match History Broken** - Match history page not displaying correctly
 - **Duplicate Prompts** - Same prompt can appear twice in one match
@@ -36,27 +37,52 @@ Frontend (Next.js) → API Gateway → Lambda Functions → DynamoDB
 
 ## 📋 **Next Steps (Priority Order)**
 
-### 1. **Server-Sent Events (SSE) Implementation**
+### 1. **Migrate Frontend to Vite** (URGENT)
+Next.js static export is fundamentally incompatible with our SPA architecture:
+- **Week 1**: Set up Vite, migrate components, replace Next.js routing with React Router
+- **Week 2**: Update CI/CD, test thoroughly, deploy
+- **Benefits**: Fix RSC errors permanently, 10x faster builds, simpler architecture
+
+#### Quick Migration Plan:
+```bash
+# 1. Create new Vite app
+npm create vite@latest frontend-vite -- --template react-ts
+
+# 2. Copy over:
+- src/components/* (no changes needed)
+- src/store/* (no changes needed)  
+- src/services/* (no changes needed)
+- src/contexts/* (no changes needed)
+- src/types/* (no changes needed)
+
+# 3. Replace:
+- next/navigation → react-router-dom
+- next/image → <img>
+- app/* → routes/*
+
+# 4. Delete:
+- All Next.js specific tests
+- next.config.js
+- app directory structure
+
+# 5. Update CI/CD:
+- npm run build → vite build
+- dist/ → dist/ (same output)
+```
+
+### 2. **Server-Sent Events (SSE) Implementation**
 Replace noisy 1-second polling with clean real-time updates:
 - Add SSE endpoint to Lambda
 - Update frontend to use EventSource
 - Maintain polling as fallback
 - Cleaner console, better performance
 
-### 2. **Multi-Human Matches (2 humans + 2 robots)**
+### 3. **Multi-Human Matches (2 humans + 2 robots)**
 Enable more social gameplay:
 - Update match creation logic
 - Add matchmaking/lobby system
 - Handle multiple human participants
 - Adjust voting/scoring logic
-
-### 3. **User Profiles & Trust System**
-Build community features:
-- User profiles (name, location, age range)
-- Trust/reputation system
-- Ability to vouch for other users
-- Community guidelines
-- Admin console for user management
 
 ## 🛠️ **Development Notes**
 
