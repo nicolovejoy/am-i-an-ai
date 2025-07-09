@@ -119,34 +119,60 @@ async function processRobotResponse(record: SQSRecord): Promise<void> {
   // Update the match with the robot's response
   const updateExpression = `SET rounds[${roundIndex}].responses.#robotId = :response, updatedAt = :updatedAt`;
   
-  // Check if all responses are in
-  const currentResponses = match.rounds[roundIndex].responses || {};
-  currentResponses[robotId] = response;
-  const allResponsesIn = Object.keys(currentResponses).length === 3; // 3 robots (B, C, D)
-  
-  // If human has already responded and all robot responses are in, update status
-  let statusUpdate = '';
-  if (allResponsesIn && currentResponses['A']) {
-    statusUpdate = ', rounds[' + roundIndex + '].#status = :voting, #matchStatus = :matchVoting';
-  }
-
   await docClient.send(new UpdateCommand({
     TableName: TABLE_NAME,
     Key: {
       matchId,
       timestamp: 0,
     },
-    UpdateExpression: updateExpression + statusUpdate,
+    UpdateExpression: updateExpression,
     ExpressionAttributeNames: {
       '#robotId': robotId,
-      ...(statusUpdate ? { '#status': 'status', '#matchStatus': 'status' } : {}),
     },
     ExpressionAttributeValues: {
       ':response': response,
       ':updatedAt': new Date().toISOString(),
-      ...(statusUpdate ? { ':voting': 'voting', ':matchVoting': 'round_voting' } : {}),
     },
   }));
+
+  console.log(`Robot ${robotId} response stored for match ${matchId}`);
+
+  // Check if we need to update status after storing the response
+  // Get the updated match to check all responses
+  const updatedResult = await docClient.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      matchId,
+      timestamp: 0,
+    },
+  }));
+
+  if (updatedResult.Item) {
+    const updatedMatch = updatedResult.Item;
+    const round = updatedMatch.rounds[roundIndex];
+    const responseCount = Object.keys(round.responses || {}).length;
+    
+    // If all 4 responses are in and status is still 'responding', update to 'voting'
+    if (responseCount === 4 && round.status === 'responding') {
+      console.log(`All responses collected for match ${matchId} round ${roundNumber}, updating status to voting`);
+      
+      await docClient.send(new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          matchId,
+          timestamp: 0,
+        },
+        UpdateExpression: `SET rounds[${roundIndex}].#status = :votingStatus, updatedAt = :updatedAt`,
+        ExpressionAttributeNames: {
+          '#status': 'status',
+        },
+        ExpressionAttributeValues: {
+          ':votingStatus': 'voting',
+          ':updatedAt': new Date().toISOString(),
+        },
+      }));
+    }
+  }
 
   console.log(`Robot ${robotId} response added to match ${matchId}, round ${roundNumber}`);
   } catch (error) {

@@ -351,6 +351,14 @@ async function submitResponse(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     // The frontend will poll for updates
   }
 
+  // Check if all 4 responses are now collected
+  const responseCount = Object.keys(round.responses).length;
+  if (responseCount === 4 && round.status === 'responding') {
+    // Update round status to voting
+    round.status = 'voting';
+    console.log(`All responses collected for match ${matchId} round ${body.round}, transitioning to voting`);
+  }
+
   // Update match in DynamoDB
   try {
     await docClient.send(new UpdateCommand({
@@ -464,26 +472,30 @@ async function submitVote(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
     // Robot D votes
     const dChoices = participants.filter(p => p !== 'D');
     round.votes['D'] = dChoices[Math.floor(Math.random() * dChoices.length)];
+  }
+
+  // Check if all votes are in
+  const voteCount = Object.keys(round.votes).length;
+  if (voteCount === 4 && round.status === 'voting') {
+    round.status = 'complete';
+    console.log(`All votes collected for match ${matchId} round ${body.round}`);
     
-    // If all votes are in, complete the round
-    if (Object.keys(round.votes).length === 4) {
-      round.status = 'complete';
-      
-      // Move to next round or complete match
-      if (match.currentRound < match.totalRounds) {
-        match.currentRound++;
-        match.status = 'round_active';
-        match.rounds.push({
-          roundNumber: match.currentRound,
-          prompt: getRandomPrompt(),
-          responses: {},
-          votes: {},
-          scores: {},
-          status: 'responding',
-        });
-      } else {
-        match.status = 'completed';
-      }
+    // Move to next round or complete match
+    if (match.currentRound < match.totalRounds) {
+      match.currentRound++;
+      match.status = 'round_active';
+      match.rounds.push({
+        roundNumber: match.currentRound,
+        prompt: getRandomPrompt(),
+        responses: {},
+        votes: {},
+        scores: {},
+        status: 'responding',
+      });
+      console.log(`Moving to round ${match.currentRound} for match ${matchId}`);
+    } else {
+      match.status = 'completed';
+      console.log(`Match ${matchId} completed after round ${match.currentRound}`);
     }
   }
 

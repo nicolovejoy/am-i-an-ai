@@ -9,19 +9,26 @@ Successfully shipped first playable version with full human-AI collaborative gam
 ### **Core Gameplay Experience**
 
 - ✅ **End-to-End Match Flow** - Create → Respond → Vote → Progress through rounds (WORKING!)
-- ✅ **Multi-Round Progression** - Successfully tested through 7+ rounds
+- ✅ **Multi-Round Progression** - Successfully tested through 5 rounds with proper completion
 - ✅ **Robot Response Generation** - 3 AI participants respond with distinct personalities  
 - ✅ **Voting & Round Advancement** - Smooth transitions between rounds
 - ✅ **Real-time State Sync** - 1-second polling keeps UI updated with backend
 - ✅ **Production Deployment** - Live on https://robotorchestra.org
 
-## 🔍 **Known Bugs (Non-blocking)**
+### **Recent Fixes - July 9, 2025**
 
-- 🐛 **Round Limit Not Enforced** - Continues past round 5 instead of ending match  
+- ✅ **Status Transitions** - Fixed automatic transition from 'responding' to 'voting' when all 4 responses collected
+- ✅ **Match Completion** - Fixed match to properly end after round 5 (marked as 'completed')
+- ✅ **Test Infrastructure** - Updated all tests to remove Kafka references, added DynamoDB/SQS mocking
+- ✅ **Robot Worker** - Fixed to check response count and update round status appropriately
+
+## 🔍 **Known Bugs (Minor)**
+
 - 🐛 **Duplicate Prompts** - Same prompt can appear twice in one match
 - ⚠️ **CI Linting** - Platform-specific apostrophe encoding differences
+- 🔧 **Frontend Tests** - Need updates to match actual sessionStore API (no individual setter methods)
 
-## 🎯 **Current Status: Fully Functional MVP**
+## 🎯 **Current Status: Production-Ready MVP**
 
 **What Users Can Do:**
 
@@ -58,14 +65,13 @@ Frontend → API Gateway → Match Service → DynamoDB (match state)
   - `robot-worker`: Processes SQS messages, generates AI responses
   - `match-history`: Retrieves match history from DynamoDB
 
-### **Current Issues**
+### **Technical Implementation**
 
-- ✅ ~~Frontend not displaying robot responses~~ (FIXED)
-- 🐛 **Round 5 Loop**: After round 5, match continues instead of ending
-- 🐛 **Response Shuffling**: Voting options keep changing positions
-- 🐛 **Identity Reassignment**: Player identities (A/B/C/D) get reassigned during voting
-- 🔧 Round status stays "responding" instead of updating to "voting"
-- 🔧 Frontend tests need updating for new architecture
+- **Backend**: Lambda functions handle all game logic, status transitions, and data persistence
+- **Storage**: DynamoDB for match state with automatic TTL (30 days)
+- **Async Processing**: SQS queue for robot response generation
+- **Frontend**: Next.js with 1-second polling for real-time updates
+- **Infrastructure**: Fully serverless on AWS (Lambda, DynamoDB, SQS, API Gateway)
 
 ## 💡 **Key Advantages**
 

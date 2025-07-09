@@ -117,30 +117,32 @@ Just run them and continue with your work.
 
 - always write tests before writing features. However, when existing tests are failing the first question is, can I delete the test or is it serving a purpose? No worries if we break the front end. We do it every day during this phase of experimental development.
 
-## 🚨 CURRENT PRIORITY: FIX FRONTEND DISPLAY & TDD
+## 🚨 KEY LEARNINGS FROM JULY 9, 2025 FIXES
 
-**FOCUS**: Fix frontend to display robot responses and update tests.
+### TDD Approach Success
+- Writing tests first helped identify the exact behavior needed
+- Tests described the desired state transitions clearly
+- Implementation was straightforward once tests defined the requirements
 
-**STATUS**:
+### Status Transition Logic
+- Both match-service AND robot-worker need to check for all responses
+- Status transitions are critical for proper game flow
+- Always check response count after updates to trigger transitions
 
-- ✅ DynamoDB + SQS infrastructure working correctly
-- ✅ Robot responses ARE being generated and stored
-- 🔧 Frontend not showing responses (sessionStore issue)
-- 🔧 Need to update status transitions (responding → voting)
-- 🔧 Frontend tests need updating for new architecture
+### Test Infrastructure
+- AWS SDK v3 mocks must be defined before importing handlers
+- Mock clients need to be in scope before jest.mock() calls
+- Each DynamoDB operation in the implementation needs a corresponding mock
 
-**KEY BUGS**:
-1. ✅ ~~`roundResponses` only populates when status='voting'~~ (FIXED)
-2. Status remains 'responding' after all responses collected
-3. Robot-worker should update status when all 4 responses exist
-4. Round 5 loops infinitely instead of ending match
-5. Voting options shuffle positions (should be stable)
-6. Player identities get reassigned during voting
+### Frontend Store Pattern
+- sessionStore uses direct `set()` calls, not individual setter methods
+- Tests expecting `setMyIdentity()` etc. need to be updated
+- Store actions modify state directly within the action implementation
 
-**CLEANUP NEEDED**:
-- Remove timer-related code from sessionStore
-- Delete obsolete test files (SessionTimer, GameHeader, TestingModeToggle)
-- Update tests that reference testingMode/startTestingMode
+### Architecture Benefits
+- DynamoDB + SQS is much simpler than Kafka
+- Serverless approach reduces operational overhead
+- Polling from frontend works well for this use case
 
 **KEY DOCUMENTS**:
 

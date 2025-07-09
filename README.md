@@ -9,8 +9,9 @@ Players join matches with 4 participants (MVP: 1 human + 3 robots), playing 5 ro
 - ✅ **MVP Live** - Fully functional gameplay at [robotorchestra.org](https://robotorchestra.org)
 - ✅ **Core Features** - Match creation, AI responses, voting, round progression
 - ✅ **Persistent Storage** - DynamoDB for match state, SQS for async processing
-- ✅ **Robot Responses** - Working via SQS/Lambda
-- 🔧 **Bug Fixes** - Round 5 loop, response shuffling, status transitions
+- ✅ **Robot Responses** - Working via SQS/Lambda with automatic status transitions
+- ✅ **Match Completion** - Properly ends after round 5
+- ✅ **Status Transitions** - Automatic progression from responding → voting → next round
 
 ## 🚀 Live Site
 
@@ -24,11 +25,12 @@ Players join matches with 4 participants (MVP: 1 human + 3 robots), playing 5 ro
 - **Storage**: In-memory (sufficient for experimental phase)
 - **AI**: 3 robot participants with distinct personalities
 
-### Target Architecture (DynamoDB + SQS)
+### Current Architecture (DynamoDB + SQS) - ✅ IMPLEMENTED
 - **Storage**: DynamoDB for match state and history
-- **Queue**: SQS for async robot response generation
+- **Queue**: SQS for async robot response generation  
 - **Cost**: ~$5-10/month (vs $50-80 for Kafka)
 - **Benefits**: Serverless, simple, reliable
+- **Status**: Fully operational with automatic status transitions
 
 ## 🏃 Development
 

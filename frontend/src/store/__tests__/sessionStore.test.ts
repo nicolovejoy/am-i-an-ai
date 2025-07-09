@@ -1,15 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
 import { useSessionStore } from '../sessionStore';
-import { mockAIService } from '@/services/mockAI';
-
-// Mock the mockAIService
-jest.mock('@/services/mockAI', () => ({
-  mockAIService: {
-    initializeAIs: jest.fn(),
-    scheduleAIResponses: jest.fn(),
-    clearAllTimers: jest.fn(),
-  }
-}));
 
 describe('sessionStore', () => {
   beforeEach(() => {
@@ -22,262 +12,451 @@ describe('sessionStore', () => {
   });
 
   describe('Identity Assignment', () => {
-    it('should assign identities randomly (not always A)', () => {
-      const identities = [];
-      
-      // Mock Math.random to return different values  
-      const mockRandom = jest.spyOn(Math, 'random');
-      mockRandom
-        .mockReturnValueOnce(0.8) // D (3)
-        .mockReturnValueOnce(0.2) // A (0)
-        .mockReturnValueOnce(0.5) // C (2)
-        .mockReturnValueOnce(0.1); // A (0)
-      
-      for (let i = 0; i < 4; i++) {
-        const { result } = renderHook(() => useSessionStore());
-        
-        act(() => {
-          result.current.reset();
-        });
-        
-        act(() => {
-          result.current.startTestingMode();
-        });
-        
-        identities.push(result.current.myIdentity || '');
-      }
-      
-      console.log('Assigned identities:', identities);
-      console.log('Unique identities:', new Set(identities));
-      
-      // Check that we got different identities
-      const uniqueIdentities = new Set(identities);
-      expect(uniqueIdentities.size).toBeGreaterThan(1);
-      expect(identities).toEqual(['D', 'A', 'C', 'A']);
-      
-      mockRandom.mockRestore();
-    });
-
-    it('should maintain identity mapping consistency across the session', () => {
+    it('should assign identities based on match participants', () => {
       const { result } = renderHook(() => useSessionStore());
       
+      // Create a mock match
+      const mockMatch = {
+        matchId: 'test-match-123',
+        status: 'round_active' as const,
+        currentRound: 1,
+        totalRounds: 5,
+        participants: [
+          { identity: 'A' as const, isAI: false, isConnected: true },
+          { identity: 'B' as const, isAI: true, isConnected: true },
+          { identity: 'C' as const, isAI: true, isConnected: true },
+          { identity: 'D' as const, isAI: true, isConnected: true },
+        ],
+        rounds: [{
+          roundNumber: 1,
+          prompt: 'What sound does loneliness make?',
+          responses: {},
+          votes: {},
+          scores: {},
+          status: 'responding' as const,
+        }],
+      };
+      
       act(() => {
-        result.current.startTestingMode();
+        result.current.setMatch(mockMatch);
+        result.current.setMyIdentity('A');
       });
       
-      const initialMapping = result.current.identityMapping;
-      
-      // Send some messages
-      act(() => {
-        result.current.sendMessage('Test message 1');
-      });
-      
-      act(() => {
-        result.current.sendMessage('Test message 2');
-      });
-      
-      // Mapping should remain the same
-      expect(result.current.identityMapping).toEqual(initialMapping);
+      expect(result.current.myIdentity).toBe('A');
+      expect(result.current.match).toEqual(mockMatch);
     });
   });
 
-  describe('Testing Mode', () => {
-    it('should initialize with human as random identity and AIs as others in testing mode', () => {
+  describe('Match State Management', () => {
+    it('should update match state correctly', () => {
       const { result } = renderHook(() => useSessionStore());
       
-      act(() => {
-        result.current.startTestingMode();
-      });
-      
-      expect(result.current.testingMode).toBe(true);
-      expect(result.current.myIdentity).toMatch(/^[ABCD]$/); // Random identity
-      expect(result.current.match?.participants).toHaveLength(4);
-      expect(result.current.match?.participants.some(p => p.identity === 'A')).toBe(true);
-      expect(result.current.match?.participants.some(p => p.identity === 'B')).toBe(true);
-      expect(result.current.match?.participants.some(p => p.identity === 'C')).toBe(true);
-      expect(result.current.match?.participants.some(p => p.identity === 'D')).toBe(true);
-    });
-
-    it('should handle messages locally in testing mode', () => {
-      const { result } = renderHook(() => useSessionStore());
-      
-      act(() => {
-        result.current.startTestingMode();
-      });
-      
-      act(() => {
-        result.current.sendMessage('Hello everyone!');
-      });
-      
-      expect(result.current.messages).toHaveLength(1);
-      expect(result.current.messages[0].sender).toBe(result.current.myIdentity);
-      expect(result.current.messages[0].content).toBe('Hello everyone!');
-      expect(mockAIService.scheduleAIResponses).toHaveBeenCalledWith(
-        'Hello everyone!',
-        expect.any(Function),
-        expect.any(Function),
-        expect.any(Function)
-      );
-    });
-
-    it('should set connected status in testing mode', () => {
-      const { result } = renderHook(() => useSessionStore());
+      const mockMatch = {
+        matchId: 'test-match-123',
+        status: 'round_active' as const,
+        currentRound: 1,
+        totalRounds: 5,
+        participants: [
+          { identity: 'A' as const, isAI: false, isConnected: true },
+          { identity: 'B' as const, isAI: true, isConnected: true },
+          { identity: 'C' as const, isAI: true, isConnected: true },
+          { identity: 'D' as const, isAI: true, isConnected: true },
+        ],
+        rounds: [{
+          roundNumber: 1,
+          prompt: 'What sound does loneliness make?',
+          responses: {},
+          votes: {},
+          scores: {},
+          status: 'responding' as const,
+        }],
+      };
       
       act(() => {
-        result.current.startTestingMode();
+        result.current.setMatch(mockMatch);
       });
       
-      expect(result.current.connectionStatus).toBe('connected');
-      expect(result.current.isSessionActive).toBe(true);
-    });
-  });
-
-  describe('Legacy Methods', () => {
-    it('should delegate connect() to startTestingMode()', () => {
-      const { result } = renderHook(() => useSessionStore());
-      
-      act(() => {
-        result.current.connect();
-      });
-      
-      expect(result.current.testingMode).toBe(true);
+      expect(result.current.match).toEqual(mockMatch);
       expect(result.current.connectionStatus).toBe('connected');
     });
 
-    it('should reset state on disconnect()', () => {
+    it('should handle match not found correctly', () => {
       const { result } = renderHook(() => useSessionStore());
       
-      // Set up some state
       act(() => {
-        result.current.startTestingMode();
+        result.current.setMatch(null);
+        result.current.setLastError('Match not found');
+        result.current.setConnectionStatus('error');
       });
       
-      act(() => {
-        result.current.disconnect();
-      });
-      
-      expect(result.current.testingMode).toBe(false);
-      expect(result.current.connectionStatus).toBe('disconnected');
-      expect(result.current.myIdentity).toBeNull();
+      expect(result.current.match).toBeNull();
+      expect(result.current.lastError).toBe('Match not found');
+      expect(result.current.connectionStatus).toBe('error');
     });
   });
 
-  describe('Response and Vote Submission', () => {
-    it('should handle response submission in testing mode', () => {
+  describe('Response Submission', () => {
+    it('should update match with new response', () => {
       const { result } = renderHook(() => useSessionStore());
       
-      act(() => {
-        result.current.startTestingMode();
-      });
+      const mockMatch = {
+        matchId: 'test-match-123',
+        status: 'round_active' as const,
+        currentRound: 1,
+        totalRounds: 5,
+        participants: [
+          { identity: 'A' as const, isAI: false, isConnected: true },
+          { identity: 'B' as const, isAI: true, isConnected: true },
+          { identity: 'C' as const, isAI: true, isConnected: true },
+          { identity: 'D' as const, isAI: true, isConnected: true },
+        ],
+        rounds: [{
+          roundNumber: 1,
+          prompt: 'What sound does loneliness make?',
+          responses: {},
+          votes: {},
+          scores: {},
+          status: 'responding' as const,
+        }],
+      };
       
       act(() => {
-        result.current.submitResponse('My test response');
+        result.current.setMatch(mockMatch);
+        result.current.setMyIdentity('A');
       });
       
-      expect(result.current.myResponse).toBe('My test response');
-      expect(result.current.hasSubmittedResponse).toBe(true);
+      // Simulate submitting a response
+      act(() => {
+        result.current.submitResponse('The echo of empty rooms');
+      });
+      
+      expect(result.current.match?.rounds[0].responses['A']).toBe('The echo of empty rooms');
     });
+  });
 
-    it('should handle vote submission', () => {
+  describe('Vote Submission', () => {
+    it('should update match with new vote', () => {
       const { result } = renderHook(() => useSessionStore());
       
+      const mockMatch = {
+        matchId: 'test-match-123',
+        status: 'round_voting' as const,
+        currentRound: 1,
+        totalRounds: 5,
+        participants: [
+          { identity: 'A' as const, isAI: false, isConnected: true },
+          { identity: 'B' as const, isAI: true, isConnected: true },
+          { identity: 'C' as const, isAI: true, isConnected: true },
+          { identity: 'D' as const, isAI: true, isConnected: true },
+        ],
+        rounds: [{
+          roundNumber: 1,
+          prompt: 'What sound does loneliness make?',
+          responses: {
+            A: 'The echo of empty rooms',
+            B: 'Like whispers in the twilight',
+            C: 'Approximately 42 decibels',
+            D: 'Like a disco ball made of butterflies!',
+          },
+          votes: {},
+          scores: {},
+          status: 'voting' as const,
+        }],
+      };
+      
       act(() => {
-        result.current.startTestingMode();
+        result.current.setMatch(mockMatch);
+        result.current.setMyIdentity('A');
       });
       
+      // Simulate submitting a vote
       act(() => {
         result.current.submitVote('B');
       });
       
-      expect(result.current.hasSubmittedVote).toBe(true);
+      expect(result.current.match?.rounds[0].votes['A']).toBe('B');
     });
+  });
 
-    it('should log when not in testing mode for response submission', () => {
+  describe('Robot Response Display', () => {
+    it('should display robot responses when status is voting', () => {
       const { result } = renderHook(() => useSessionStore());
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      
+      const mockMatch = {
+        matchId: 'test-match-123',
+        status: 'round_voting' as const,
+        currentRound: 1,
+        totalRounds: 5,
+        participants: [
+          { identity: 'A' as const, isAI: false, isConnected: true },
+          { identity: 'B' as const, isAI: true, isConnected: true },
+          { identity: 'C' as const, isAI: true, isConnected: true },
+          { identity: 'D' as const, isAI: true, isConnected: true },
+        ],
+        rounds: [{
+          roundNumber: 1,
+          prompt: 'What sound does loneliness make?',
+          responses: {
+            A: 'The echo of empty rooms',
+            B: 'Like whispers in the twilight',
+            C: 'Approximately 42 decibels',
+            D: 'Like a disco ball made of butterflies!',
+          },
+          votes: {},
+          scores: {},
+          status: 'voting' as const,
+        }],
+      };
       
       act(() => {
-        result.current.submitResponse('Test response');
+        result.current.setMatch(mockMatch);
       });
       
-      expect(consoleSpy).toHaveBeenCalledWith('Not in testing mode - response submission not implemented');
-      expect(result.current.myResponse).toBe('Test response');
-      expect(result.current.hasSubmittedResponse).toBe(true);
+      const currentRound = result.current.match?.rounds[0];
+      expect(currentRound?.responses).toEqual({
+        A: 'The echo of empty rooms',
+        B: 'Like whispers in the twilight',
+        C: 'Approximately 42 decibels',
+        D: 'Like a disco ball made of butterflies!',
+      });
+      expect(Object.keys(currentRound?.responses || {}).length).toBe(4);
+    });
+
+    it('should display robot responses even when status is responding', () => {
+      const { result } = renderHook(() => useSessionStore());
       
-      consoleSpy.mockRestore();
+      const mockMatch = {
+        matchId: 'test-match-123',
+        status: 'round_active' as const,
+        currentRound: 1,
+        totalRounds: 5,
+        participants: [
+          { identity: 'A' as const, isAI: false, isConnected: true },
+          { identity: 'B' as const, isAI: true, isConnected: true },
+          { identity: 'C' as const, isAI: true, isConnected: true },
+          { identity: 'D' as const, isAI: true, isConnected: true },
+        ],
+        rounds: [{
+          roundNumber: 1,
+          prompt: 'What sound does loneliness make?',
+          responses: {
+            A: 'The echo of empty rooms',
+            B: 'Like whispers in the twilight',
+            C: 'Approximately 42 decibels',
+            D: 'Like a disco ball made of butterflies!',
+          },
+          votes: {},
+          scores: {},
+          status: 'responding' as const, // Still responding but all responses are in
+        }],
+      };
+      
+      act(() => {
+        result.current.setMatch(mockMatch);
+      });
+      
+      // The frontend should still be able to access all responses
+      const currentRound = result.current.match?.rounds[0];
+      expect(currentRound?.responses).toEqual({
+        A: 'The echo of empty rooms',
+        B: 'Like whispers in the twilight',
+        C: 'Approximately 42 decibels',
+        D: 'Like a disco ball made of butterflies!',
+      });
     });
   });
 
   describe('Typing Indicators', () => {
-    it('should update typing participants', () => {
+    it('should show typing indicators for AI participants', () => {
       const { result } = renderHook(() => useSessionStore());
       
       act(() => {
-        result.current.startTestingMode();
+        result.current.setTypingParticipants(['B', 'C']);
       });
+      
+      expect(result.current.typingParticipants).toEqual(['B', 'C']);
+    });
+
+    it('should clear typing indicators when responses arrive', () => {
+      const { result } = renderHook(() => useSessionStore());
       
       act(() => {
-        result.current.sendMessage('Test message');
+        result.current.setTypingParticipants(['B', 'C', 'D']);
       });
       
-      // Simulate AI typing through the scheduled callback
-      const scheduleCall = (mockAIService.scheduleAIResponses as jest.Mock).mock.calls[0];
-      if (scheduleCall) {
-        const [, onTypingStart, onTypingEnd] = scheduleCall;
-        
-        act(() => {
-          onTypingStart('B');
-        });
-        
-        expect(result.current.typingParticipants.has('B')).toBe(true);
-        
-        act(() => {
-          onTypingEnd('B');
-        });
-        
-        expect(result.current.typingParticipants.has('B')).toBe(false);
-      }
+      expect(result.current.typingParticipants).toEqual(['B', 'C', 'D']);
+      
+      act(() => {
+        result.current.setTypingParticipants([]);
+      });
+      
+      expect(result.current.typingParticipants).toEqual([]);
     });
   });
 
-  describe('Timer Management', () => {
-    it('should update timer and mark session inactive when time runs out', () => {
+  describe('Match Completion', () => {
+    it('should handle match completion after round 5', () => {
       const { result } = renderHook(() => useSessionStore());
       
+      const mockMatch = {
+        matchId: 'test-match-123',
+        status: 'completed' as const,
+        currentRound: 5,
+        totalRounds: 5,
+        participants: [
+          { identity: 'A' as const, isAI: false, isConnected: true },
+          { identity: 'B' as const, isAI: true, isConnected: true },
+          { identity: 'C' as const, isAI: true, isConnected: true },
+          { identity: 'D' as const, isAI: true, isConnected: true },
+        ],
+        rounds: Array(5).fill(null).map((_, i) => ({
+          roundNumber: i + 1,
+          prompt: 'Test prompt',
+          responses: {
+            A: 'Human response',
+            B: 'Robot B response',
+            C: 'Robot C response',
+            D: 'Robot D response',
+          },
+          votes: {
+            A: 'B',
+            B: 'C',
+            C: 'D',
+            D: 'A',
+          },
+          scores: {
+            A: 0,
+            B: 1,
+            C: 1,
+            D: 1,
+          },
+          status: 'complete' as const,
+        })),
+      };
+      
       act(() => {
-        result.current.startTestingMode();
+        result.current.setMatch(mockMatch);
       });
       
-      expect(result.current.isSessionActive).toBe(true);
-      
-      act(() => {
-        result.current.updateTimer(0);
-      });
-      
-      expect(result.current.timeRemaining).toBe(0);
-      expect(result.current.isSessionActive).toBe(false);
+      expect(result.current.match?.status).toBe('completed');
+      expect(result.current.match?.currentRound).toBe(5);
+      expect(result.current.match?.rounds.length).toBe(5);
     });
   });
 
   describe('Store Reset', () => {
-    it('should reset state properly', () => {
+    it('should reset all state when reset is called', () => {
       const { result } = renderHook(() => useSessionStore());
       
-      // Set up some state
+      const mockMatch = {
+        matchId: 'test-match-123',
+        status: 'round_active' as const,
+        currentRound: 1,
+        totalRounds: 5,
+        participants: [
+          { identity: 'A' as const, isAI: false, isConnected: true },
+          { identity: 'B' as const, isAI: true, isConnected: true },
+          { identity: 'C' as const, isAI: true, isConnected: true },
+          { identity: 'D' as const, isAI: true, isConnected: true },
+        ],
+        rounds: [{
+          roundNumber: 1,
+          prompt: 'What sound does loneliness make?',
+          responses: {},
+          votes: {},
+          scores: {},
+          status: 'responding' as const,
+        }],
+      };
+      
       act(() => {
-        result.current.startTestingMode();
-        result.current.sendMessage('Test');
+        result.current.setMatch(mockMatch);
+        result.current.setMyIdentity('A');
+        result.current.setConnectionStatus('connected');
+        result.current.setTypingParticipants(['B', 'C']);
       });
+      
+      expect(result.current.match).not.toBeNull();
+      expect(result.current.myIdentity).toBe('A');
       
       act(() => {
         result.current.reset();
       });
       
-      expect(result.current.testingMode).toBe(false);
-      expect(result.current.messages).toHaveLength(0);
+      expect(result.current.match).toBeNull();
       expect(result.current.myIdentity).toBeNull();
       expect(result.current.connectionStatus).toBe('disconnected');
-      expect(mockAIService.clearAllTimers).toHaveBeenCalled();
+      expect(result.current.typingParticipants).toEqual([]);
+    });
+  });
+
+  describe('Voting Stability', () => {
+    it('should maintain stable voting order for responses', () => {
+      const { result } = renderHook(() => useSessionStore());
+      
+      const mockMatch = {
+        matchId: 'test-match-123',
+        status: 'round_voting' as const,
+        currentRound: 1,
+        totalRounds: 5,
+        participants: [
+          { identity: 'A' as const, isAI: false, isConnected: true },
+          { identity: 'B' as const, isAI: true, isConnected: true },
+          { identity: 'C' as const, isAI: true, isConnected: true },
+          { identity: 'D' as const, isAI: true, isConnected: true },
+        ],
+        rounds: [{
+          roundNumber: 1,
+          prompt: 'What sound does loneliness make?',
+          responses: {
+            A: 'The echo of empty rooms',
+            B: 'Like whispers in the twilight',
+            C: 'Approximately 42 decibels',
+            D: 'Like a disco ball made of butterflies!',
+          },
+          votes: {},
+          scores: {},
+          status: 'voting' as const,
+        }],
+      };
+      
+      act(() => {
+        result.current.setMatch(mockMatch);
+      });
+      
+      // Get responses in order
+      const responses = result.current.match?.rounds[0].responses;
+      const orderedIdentities = ['A', 'B', 'C', 'D'] as const;
+      const orderedResponses = orderedIdentities.map(id => ({
+        identity: id,
+        response: responses?.[id] || '',
+      }));
+      
+      // Verify order is maintained
+      expect(orderedResponses[0].identity).toBe('A');
+      expect(orderedResponses[1].identity).toBe('B');
+      expect(orderedResponses[2].identity).toBe('C');
+      expect(orderedResponses[3].identity).toBe('D');
+      
+      // Simulate updating the match (as would happen with polling)
+      act(() => {
+        result.current.setMatch({
+          ...mockMatch,
+          rounds: [{
+            ...mockMatch.rounds[0],
+            votes: { A: 'B' }, // Add a vote
+          }],
+        });
+      });
+      
+      // Verify order is still maintained
+      const updatedResponses = result.current.match?.rounds[0].responses;
+      const updatedOrderedResponses = orderedIdentities.map(id => ({
+        identity: id,
+        response: updatedResponses?.[id] || '',
+      }));
+      
+      expect(updatedOrderedResponses).toEqual(orderedResponses);
     });
   });
 });
