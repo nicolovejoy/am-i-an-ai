@@ -1,3 +1,5 @@
+import { BUILD_TIMESTAMP } from '@/build-timestamp';
+
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-slate-50" data-page="about">
@@ -106,6 +108,12 @@ export default function AboutPage() {
           >
             Start Your First Match
           </a>
+        </div>
+
+        <div className="text-center pt-8 pb-4 border-t border-slate-200">
+          <p className="text-sm text-slate-500">
+            Build version: {BUILD_TIMESTAMP}
+          </p>
         </div>
       </div>
     </div>
