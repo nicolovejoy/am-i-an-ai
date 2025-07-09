@@ -21,10 +21,8 @@ export default function WelcomeDashboard() {
     
     try {
       await createRealMatch(playerName.trim());
-      // Small delay to ensure state is updated before navigation
-      setTimeout(() => {
-        router.push('/match');
-      }, 100);
+      // Use hard navigation to avoid RSC issues in production
+      window.location.href = '/match';
     } catch (error) {
       console.error('Failed to create match:', error);
       alert('Failed to create match. Please try again.');

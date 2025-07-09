@@ -9,7 +9,6 @@ import MessageList from './MessageList';
 import ParticipantBar from './ParticipantBar';
 import RoundInterface from './RoundInterface';
 import MatchComplete from './MatchComplete';
-import { BUILD_TIMESTAMP } from '../build-timestamp';
 import { Card, Button } from './ui';
 
 export default function ChatInterface() {
