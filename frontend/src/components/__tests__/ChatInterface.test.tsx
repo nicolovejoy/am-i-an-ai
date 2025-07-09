@@ -241,8 +241,8 @@ describe("ChatInterface", () => {
       const leaveButton = screen.getByText("Leave Match");
       fireEvent.click(leaveButton);
 
-      // Assert: Should navigate to home page
-      expect(mockPush).toHaveBeenCalledWith("/");
+      // Assert: Should navigate to dashboard page
+      expect(mockPush).toHaveBeenCalledWith("/dashboard");
       expect(mockDisconnect).toHaveBeenCalledTimes(1);
     });
   });

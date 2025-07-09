@@ -34,12 +34,15 @@ export default function ChatInterface() {
   const { user, signOut } = useAuth();
   const router = useRouter();
 
-  // Auto-connect on mount
+  // Auto-connect on mount (only if no match exists)
   useEffect(() => {
-    if (connectionStatus === 'disconnected') {
-      connect();
+    // Don't call connect if we have a match or are already connecting
+    // connect() is a legacy method that redirects to dashboard
+    if (connectionStatus === 'disconnected' && !match) {
+      // Instead of calling connect, we should show a message or redirect
+      // But don't auto-redirect as the match page handles that
     }
-  }, [connect, connectionStatus]);
+  }, [connectionStatus, match]);
 
   // Focus input when connected
   useEffect(() => {
@@ -81,7 +84,7 @@ export default function ChatInterface() {
 
   const handleLeaveMatch = () => {
     disconnect();
-    router.push('/');
+    router.push('/dashboard');
   };
 
   // Show testing mode toggle if not connected and not in error state and not in testing mode
