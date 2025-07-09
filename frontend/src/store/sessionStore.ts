@@ -115,6 +115,13 @@ const MATCH_SERVICE_API =
   process.env.NEXT_PUBLIC_MATCH_SERVICE_API ||
   "https://api.robotorchestra.org";
 
+// Debug logging
+console.log('MATCH_SERVICE_API configured as:', MATCH_SERVICE_API);
+console.log('Environment:', {
+  NEXT_PUBLIC_MATCH_SERVICE_API: process.env.NEXT_PUBLIC_MATCH_SERVICE_API,
+  NODE_ENV: process.env.NODE_ENV
+});
+
 export const useSessionStore = create<SessionStore>()(
   devtools(
     (set, get) => ({
@@ -160,7 +167,11 @@ export const useSessionStore = create<SessionStore>()(
         try {
           get().setConnectionStatus("connecting");
 
-          const response = await fetch(`${MATCH_SERVICE_API}/matches`, {
+          const url = `${MATCH_SERVICE_API}/matches`;
+          console.log('Creating match at URL:', url);
+          console.log('With payload:', { playerName });
+
+          const response = await fetch(url, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
