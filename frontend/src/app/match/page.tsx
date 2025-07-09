@@ -6,30 +6,38 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function MatchPage() {
-  const { match, connectionStatus } = useSessionStore();
+  const { match, connectionStatus, pollMatchUpdates } = useSessionStore();
   const router = useRouter();
   
-  // Only redirect if we're sure there's no match attempt happening
+  // Check for match in sessionStorage on mount
   useEffect(() => {
-    // Don't redirect if we're connecting or have a match
-    if (connectionStatus === 'connecting' || match) {
-      return;
-    }
-    
-    // Only redirect if disconnected AND no match after a short delay
-    // This gives time for the match creation to complete
-    if (connectionStatus === 'disconnected' && !match) {
-      const timeout = setTimeout(() => {
-        // Re-check after delay
-        const state = useSessionStore.getState();
-        if (state.connectionStatus === 'disconnected' && !state.match) {
-          router.push('/dashboard');
-        }
-      }, 1000); // 1 second delay
+    const checkForMatch = async () => {
+      // If we already have a match, we're good
+      if (match) return;
       
-      return () => clearTimeout(timeout);
-    }
-  }, [match, connectionStatus, router]);
+      // Check sessionStorage for matchId
+      const matchId = window.sessionStorage.getItem('currentMatchId');
+      if (matchId) {
+        // Try to reload the match data
+        await pollMatchUpdates(matchId);
+        return;
+      }
+      
+      // Only redirect if no match and no matchId in storage
+      if (connectionStatus === 'disconnected' && !match) {
+        const timeout = setTimeout(() => {
+          const state = useSessionStore.getState();
+          if (state.connectionStatus === 'disconnected' && !state.match) {
+            router.push('/dashboard');
+          }
+        }, 1000);
+        
+        return () => clearTimeout(timeout);
+      }
+    };
+    
+    checkForMatch();
+  }, [match, connectionStatus, router, pollMatchUpdates]);
 
   return (
     <div className="min-h-screen bg-slate-50" data-page="match">

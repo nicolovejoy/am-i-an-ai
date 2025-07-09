@@ -39,6 +39,11 @@ export const createMatchActions: StateCreator<
         isSessionActive: true,
         currentPrompt,
       });
+      
+      // Store matchId in sessionStorage for page reloads
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem('currentMatchId', match.matchId);
+      }
 
     } catch (error) {
       console.error("Failed to create match:", error);
@@ -58,19 +63,28 @@ export const createMatchActions: StateCreator<
     try {
       const match = await matchService.getMatch(matchId);
       
-      // Update match in store
-      set({ match });
-
-      // Update current round info if needed
+      // Find human participant to get identity
+      const humanParticipant = match.participants?.find(p => !p.isAI);
+      const myIdentity = humanParticipant?.identity || 'A';
+      
+      // Update current round info
       const currentRound = match.rounds?.find(
         r => r.roundNumber === match.currentRound
       );
       
-      if (currentRound) {
-        set({
-          currentPrompt: currentRound.prompt,
-          roundResponses: currentRound.responses || {},
-        });
+      // Update all match-related state
+      set({
+        match,
+        myIdentity,
+        connectionStatus: "connected",
+        isSessionActive: true,
+        currentPrompt: currentRound?.prompt || null,
+        roundResponses: currentRound?.responses || {},
+      });
+      
+      // Store in sessionStorage
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem('currentMatchId', matchId);
       }
     } catch (error) {
       console.error("Failed to poll match updates:", error);
