@@ -5,6 +5,9 @@ import ChatInterface from '@/components/ChatInterface';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+// Force dynamic rendering to avoid static optimization issues
+export const dynamic = 'force-dynamic';
+
 export default function MatchPage() {
   const { match, connectionStatus, pollMatchUpdates } = useSessionStore();
   const router = useRouter();
