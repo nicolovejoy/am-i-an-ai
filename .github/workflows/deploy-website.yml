@@ -85,4 +85,10 @@ jobs:
 
       - name: Invalidate CloudFront
         run: |
-          aws cloudfront create-invalidation --distribution-id ${{ steps.get-terraform.outputs.cloudfront_id }} --paths "/*"
+          # Create comprehensive invalidation to ensure all cached files are refreshed
+          aws cloudfront create-invalidation --distribution-id ${{ steps.get-terraform.outputs.cloudfront_id }} --paths "/*" "/_next/*" "/_next/static/*" "/_next/static/chunks/*"
+          
+      - name: Wait for invalidation
+        run: |
+          echo "Waiting 30 seconds for CloudFront invalidation to propagate..."
+          sleep 30

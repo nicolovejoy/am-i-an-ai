@@ -3,12 +3,10 @@
 import { useSessionStore } from '@/store/sessionStore';
 import ChatInterface from '@/components/ChatInterface';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 
-// Force dynamic rendering to avoid static optimization issues
-export const dynamic = 'force-dynamic';
-
-export default function MatchPage() {
+// Wrap in Suspense to handle loading states better
+function MatchContent() {
   const { match, connectionStatus, pollMatchUpdates } = useSessionStore();
   const router = useRouter();
   
@@ -42,9 +40,19 @@ export default function MatchPage() {
     checkForMatch();
   }, [match, connectionStatus, router, pollMatchUpdates]);
 
+  return <ChatInterface />;
+}
+
+export default function MatchPage() {
   return (
     <div className="min-h-screen bg-slate-50" data-page="match">
-      <ChatInterface />
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      }>
+        <MatchContent />
+      </Suspense>
     </div>
   );
 }
