@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import MessageList from './MessageList';
 import ParticipantBar from './ParticipantBar';
 import RoundInterface from './RoundInterface';
+import MatchComplete from './MatchComplete';
 import { BUILD_TIMESTAMP } from '../build-timestamp';
 import { Card, Button } from './ui';
 
@@ -154,6 +155,12 @@ export default function ChatInterface() {
     );
   }
 
+  // Show match complete screen when match is completed
+  if (match?.status === 'completed' && myIdentity) {
+    return <MatchComplete match={match} myIdentity={myIdentity} />;
+  }
+  
+  // Legacy reveal screen (kept for backward compatibility)
   if (isRevealed) {
     return (
       <div className="flex items-center justify-center min-h-screen">
