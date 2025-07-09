@@ -12,6 +12,8 @@
 
 ### **🐛 Known Issues**
 
+- **Responses Jumping Around** - Responses appear then reorder themselves, need stable positioning
+- **Match History Broken** - Match history page not displaying correctly
 - **Duplicate Prompts** - Same prompt can appear twice in one match
 - **Polling Noise** - Console logs every second (will be fixed with SSE implementation)
 
