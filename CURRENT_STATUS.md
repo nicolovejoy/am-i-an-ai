@@ -9,10 +9,10 @@
 - **Robot Personalities** - 3 distinct AI participants with unique response styles
 - **Real-time Updates** - 1-second polling keeps UI in sync (SSE planned for cleaner implementation)
 - **Production Ready** - Live at https://robotorchestra.org
+- **Admin Console** - Debug panel at /admin (restricted to nlovejoy@me.com)
 
 ### **🐛 Known Issues**
 
-- **Production Match Start Broken** - Can't start matches in production (works locally)
 - **Responses Jumping Around** - Responses appear then reorder themselves, need stable positioning
 - **Match History Broken** - Match history page not displaying correctly
 - **Duplicate Prompts** - Same prompt can appear twice in one match
