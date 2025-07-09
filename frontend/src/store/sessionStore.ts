@@ -170,22 +170,43 @@ export const useSessionStore = create<SessionStore>()(
           const url = `${MATCH_SERVICE_API}/matches`;
           console.log('Creating match at URL:', url);
           console.log('With payload:', { playerName });
+          console.log('Using API base:', MATCH_SERVICE_API);
 
-          const response = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              playerName,
-            }),
-          });
+          let response;
+          try {
+            response = await fetch(url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                playerName,
+              }),
+            });
+          } catch (error) {
+            console.error('Network error during fetch:', error);
+            console.error('Failed URL:', url);
+            if (error instanceof Error) {
+              console.error('Error type:', error.constructor.name);
+              console.error('Error stack:', error.stack);
+              console.error('Error message:', error.message);
+              throw new Error(`Network error: ${error.message}`);
+            } else {
+              throw new Error(`Network error: ${String(error)}`);
+            }
+          }
+
+          console.log('Response status:', response.status);
+          console.log('Response headers:', response.headers);
 
           if (!response.ok) {
-            throw new Error(`Failed to create match: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error('Error response body:', errorText);
+            throw new Error(`Failed to create match: ${response.status} ${response.statusText} - ${errorText}`);
           }
 
           const matchData = await response.json();
+          console.log('Match created successfully:', matchData);
           
           // Backend now returns correct format, no conversion needed
           const match: Match = matchData;
@@ -208,8 +229,14 @@ export const useSessionStore = create<SessionStore>()(
 
         } catch (error) {
           console.error("Failed to create real match:", error);
+          console.error("Error details:", {
+            message: error instanceof Error ? error.message : "Unknown error",
+            stack: error instanceof Error ? error.stack : undefined,
+            error: error
+          });
           get().setConnectionStatus("error");
           get().setLastError(error instanceof Error ? error.message : "Unknown error");
+          throw error; // Re-throw so the UI can handle it
         }
       },
 
