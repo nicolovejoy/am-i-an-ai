@@ -21,7 +21,10 @@ export default function WelcomeDashboard() {
     
     try {
       await createRealMatch(playerName.trim());
-      router.push('/match');
+      // Small delay to ensure state is updated before navigation
+      setTimeout(() => {
+        router.push('/match');
+      }, 100);
     } catch (error) {
       console.error('Failed to create match:', error);
       alert('Failed to create match. Please try again.');
