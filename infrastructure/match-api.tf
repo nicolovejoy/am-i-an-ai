@@ -994,6 +994,11 @@ output "match_api_endpoint" {
   value       = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod"
 }
 
+output "match_history_endpoint" {
+  description = "Match History API endpoint"
+  value       = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/history"
+}
+
 output "match_api_endpoints" {
   description = "All Match API endpoints"
   value = {
