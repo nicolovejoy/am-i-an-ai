@@ -12,6 +12,7 @@
 
 ### **🐛 Known Issues**
 
+- **Production Match Start Broken** - Can't start matches in production (works locally)
 - **Responses Jumping Around** - Responses appear then reorder themselves, need stable positioning
 - **Match History Broken** - Match history page not displaying correctly
 - **Duplicate Prompts** - Same prompt can appear twice in one match
