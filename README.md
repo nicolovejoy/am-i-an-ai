@@ -19,17 +19,22 @@ Players join matches with 4 participants (MVP: 1 human + 3 robots), playing 5 ro
 
 ## 🏗️ Architecture
 
-### Current MVP (In-Memory)
-- **Frontend**: Next.js with real-time polling
-- **API**: Lambda functions via API Gateway
-- **Storage**: In-memory (sufficient for experimental phase)
-- **AI**: 3 robot participants with distinct personalities
+### Current Production Architecture
 
-### Current Architecture (DynamoDB + SQS) - ✅ IMPLEMENTED
-- **Storage**: DynamoDB for match state and history
-- **Queue**: SQS for async robot response generation  
-- **Cost**: ~$5-10/month (vs $50-80 for Kafka)
-- **Benefits**: Serverless, simple, reliable
+```
+Frontend (Next.js) → CloudFront → S3 (Static Export)
+        ↓
+   API Gateway → Lambda Functions → DynamoDB
+                       ↓
+                 SQS Queue → Robot Worker → DynamoDB
+```
+
+- **Frontend**: Next.js static export with Zustand state management
+- **API**: RESTful Lambda functions via API Gateway
+- **Storage**: DynamoDB with 30-day TTL for automatic cleanup
+- **Queue**: SQS for async robot response generation
+- **AI**: 3 distinct robot personalities via OpenAI API
+- **Cost**: ~$5-10/month (serverless, pay-per-use)
 - **Status**: Fully operational with automatic status transitions
 
 ## 🏃 Development
