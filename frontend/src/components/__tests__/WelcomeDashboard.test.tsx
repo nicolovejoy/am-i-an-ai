@@ -4,6 +4,13 @@ import React from 'react';
 // Mock modules before imports
 jest.mock('@/store/sessionStore');
 jest.mock('@/contexts/AuthContext');
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+  })
+}));
 
 import WelcomeDashboard from '../WelcomeDashboard';
 
@@ -16,11 +23,8 @@ const { useSessionStore } = require('@/store/sessionStore');
 const { useAuth } = require('@/contexts/AuthContext');
 
 useSessionStore.mockReturnValue({
-  startTestingMode: mockStartTestingMode,
-  connect: jest.fn(),
+  createRealMatch: jest.fn(),
   connectionStatus: 'disconnected',
-  myIdentity: null,
-  match: null
 });
 
 useAuth.mockReturnValue({
@@ -33,62 +37,86 @@ describe('WelcomeDashboard', () => {
     jest.clearAllMocks();
   });
 
-  it('renders welcome header with user info', () => {
+  it('renders RobotOrchestra header', () => {
     render(<WelcomeDashboard />);
     
-    expect(screen.getByText('Welcome back, testuser!')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /RobotOrchestra/ })).toBeInTheDocument();
+    expect(screen.getByText('A social experiment for the AI age')).toBeInTheDocument();
   });
 
-  it('displays Start Test Performance button prominently', () => {
+  it('displays Start Match button and name input', () => {
     render(<WelcomeDashboard />);
     
-    const startButton = screen.getByRole('button', { name: /start test performance/i });
+    const nameInput = screen.getByPlaceholderText('Enter your name');
+    expect(nameInput).toHaveValue('testuser');
+    
+    const startButton = screen.getByRole('button', { name: /start match/i });
     expect(startButton).toBeInTheDocument();
     expect(startButton).not.toBeDisabled();
   });
 
-  it('starts testing mode when Start Test Performance is clicked', () => {
+  it('creates real match when Start Match is clicked', () => {
+    const mockCreateRealMatch = jest.fn();
+    useSessionStore.mockReturnValue({
+      createRealMatch: mockCreateRealMatch,
+      connectionStatus: 'disconnected',
+    });
+    
     render(<WelcomeDashboard />);
     
-    const startButton = screen.getByRole('button', { name: /start test performance/i });
+    const startButton = screen.getByRole('button', { name: /start match/i });
     fireEvent.click(startButton);
     
-    expect(mockStartTestingMode).toHaveBeenCalledTimes(1);
+    expect(mockCreateRealMatch).toHaveBeenCalledWith('testuser');
   });
 
-  it('shows available performances section with mock data', () => {
+  it('shows History and About links', () => {
     render(<WelcomeDashboard />);
     
-    expect(screen.getByText(/available performances/i)).toBeInTheDocument();
-    expect(screen.getByText(/ensemble #1/i)).toBeInTheDocument();
-    expect(screen.getByText(/ensemble #2/i)).toBeInTheDocument();
+    const historyLink = screen.getByText('📊 History').closest('a');
+    expect(historyLink).toHaveAttribute('href', '/history');
+    
+    const aboutLink = screen.getByText('ℹ️ About').closest('a');
+    expect(aboutLink).toHaveAttribute('href', '/about');
   });
 
-  it('displays not implemented badges on performance browser items', () => {
+  it('disables button when name input is empty', () => {
     render(<WelcomeDashboard />);
     
-    const badges = screen.getAllByText(/not implemented/i);
-    expect(badges.length).toBeGreaterThan(0);
+    const nameInput = screen.getByPlaceholderText('Enter your name');
+    const startButton = screen.getByRole('button', { name: /start match/i });
+    
+    // Clear the name input
+    fireEvent.change(nameInput, { target: { value: '' } });
+    
+    expect(startButton).toBeDisabled();
   });
 
-  it('shows recent performance history section with placeholder data', () => {
+  it('shows loading state when connecting', () => {
+    useSessionStore.mockReturnValue({
+      createRealMatch: jest.fn(),
+      connectionStatus: 'connecting',
+    });
+    
     render(<WelcomeDashboard />);
     
-    expect(screen.getByText(/recent performances/i)).toBeInTheDocument();
-    expect(screen.getByText(/last performance/i)).toBeInTheDocument();
+    const startButton = screen.getByRole('button', { name: /starting/i });
+    expect(startButton).toBeDisabled();
   });
 
-  it('displays About link', () => {
+  it('allows changing player name', () => {
     render(<WelcomeDashboard />);
     
-    const aboutLink = screen.getByText(/about robotorchestra/i);
-    expect(aboutLink).toBeInTheDocument();
+    const nameInput = screen.getByPlaceholderText('Enter your name');
+    fireEvent.change(nameInput, { target: { value: 'NewPlayer' } });
+    
+    expect(nameInput).toHaveValue('NewPlayer');
   });
 
-  it('shows performance description and instructions', () => {
+  it('shows game description', () => {
     render(<WelcomeDashboard />);
     
-    expect(screen.getByText(/join the ensemble and discover who's human/i)).toBeInTheDocument();
+    expect(screen.getByText(/Join an anonymous creative collaboration/i)).toBeInTheDocument();
+    expect(screen.getByText(/try to identify who.*s human/i)).toBeInTheDocument();
   });
 });

@@ -51,42 +51,12 @@ export default function ChatInterface() {
   useEffect(() => {
     if (!match) return;
     
-    const pollInterval = setInterval(async () => {
-      try {
-        const MATCH_SERVICE_API = process.env.NEXT_PUBLIC_MATCH_SERVICE_API || "https://api.robotorchestra.org";
-        const response = await fetch(`${MATCH_SERVICE_API}/matches/${match.matchId}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-          const updatedMatch = await response.json();
-          if (updatedMatch) {
-            useSessionStore.getState().setMatch(updatedMatch);
-            
-            // Update current prompt if we moved to a new round
-            const currentRound = updatedMatch.rounds?.find(
-              (r: any) => r.roundNumber === updatedMatch.currentRound
-            );
-            if (currentRound?.prompt !== currentPrompt) {
-              useSessionStore.getState().setCurrentPrompt(currentRound.prompt);
-              // Reset round state for new round
-              useSessionStore.getState().resetRoundState();
-            }
-            
-            // Update round responses whenever they exist
-            if (currentRound?.responses) {
-              useSessionStore.getState().setRoundResponses(currentRound.responses);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to poll match state:', error);
-      }
+    const pollInterval = setInterval(() => {
+      useSessionStore.getState().pollMatchUpdates(match.matchId);
     }, 1000);
 
     return () => clearInterval(pollInterval);
-  }, [match?.matchId, match, currentPrompt]);
+  }, [match]);
 
   const handleSendMessage = () => {
     const content = messageInput.trim();

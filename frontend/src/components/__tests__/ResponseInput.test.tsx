@@ -58,16 +58,5 @@ describe('PhraseComposer - TDD Minimal Tests', () => {
     expect(screen.getByText('268 characters remaining')).toBeInTheDocument();
   });
 
-  it('should show time warning when less than 30 seconds remain', () => {
-    mockUseSessionStore.mockReturnValue({
-      submitResponse: mockSubmitResponse,
-      timeRemaining: 25 // 25 seconds
-    });
-    
-    render(<PhraseComposer />);
-    
-    // Timer should show in red/warning style
-    const timer = screen.getByText('0:25 remaining');
-    expect(timer).toHaveClass('bg-red-100');
-  });
+  // Removed timer test - component doesn't display time remaining
 });

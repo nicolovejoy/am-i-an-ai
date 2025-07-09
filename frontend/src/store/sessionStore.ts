@@ -74,25 +74,35 @@ interface SessionState {
 }
 
 interface SessionActions {
-  // Actions
+  // Individual State Setters
+  setConnectionStatus: (status: ConnectionStatus) => void;
+  setLastError: (error: string | null) => void;
+  setMatch: (match: Match | null) => void;
+  setMyIdentity: (identity: Identity | null) => void;
+  setMessages: (messages: Message[]) => void;
+  setCurrentPrompt: (prompt: string | null) => void;
+  setMyResponse: (response: string | null) => void;
+  setHasSubmittedResponse: (submitted: boolean) => void;
+  setRoundResponses: (responses: Partial<Record<Identity, string>>) => void;
+  setHasSubmittedVote: (submitted: boolean) => void;
+  setIsSessionActive: (active: boolean) => void;
+  setIsRevealed: (revealed: boolean) => void;
+  setIdentityReveal: (reveal: Record<Identity, { isAI: boolean; personality?: string }> | null) => void;
+  setTypingParticipants: (participants: Set<Identity>) => void;
+
+  // Complex Actions
   createRealMatch: (playerName: string) => Promise<void>;
   submitResponse: (response: string) => void;
   submitVote: (humanIdentity: Identity) => void;
-
-
-  // Reset
-  reset: () => void;
-
-  // State setters for polling
-  setMatch: (match: Match) => void;
-  setCurrentPrompt: (prompt: string) => void;
-  setRoundResponses: (responses: Record<string, string>) => void;
+  pollMatchUpdates: (matchId: string) => Promise<void>;
   resetRoundState: () => void;
+  resetSession: () => void;
 
   // Legacy methods (for backward compatibility)
   connect: () => void;
   disconnect: () => void;
   sendMessage: (content: string) => void;
+  reset: () => void;
 }
 
 type SessionStore = SessionState & SessionActions;
@@ -125,6 +135,22 @@ export const useSessionStore = create<SessionStore>()(
       identityMapping: { A: 1, B: 2, C: 3, D: 4 },
       typingParticipants: new Set(),
 
+      // Individual State Setters
+      setConnectionStatus: (status) => set({ connectionStatus: status }),
+      setLastError: (error) => set({ lastError: error }),
+      setMatch: (match) => set({ match }),
+      setMyIdentity: (identity) => set({ myIdentity: identity }),
+      setMessages: (messages) => set({ messages }),
+      setCurrentPrompt: (prompt) => set({ currentPrompt: prompt }),
+      setMyResponse: (response) => set({ myResponse: response }),
+      setHasSubmittedResponse: (submitted) => set({ hasSubmittedResponse: submitted }),
+      setRoundResponses: (responses) => set({ roundResponses: responses }),
+      setHasSubmittedVote: (submitted) => set({ hasSubmittedVote: submitted }),
+      setIsSessionActive: (active) => set({ isSessionActive: active }),
+      setIsRevealed: (revealed) => set({ isRevealed: revealed }),
+      setIdentityReveal: (reveal) => set({ identityReveal: reveal }),
+      setTypingParticipants: (participants) => set({ typingParticipants: participants }),
+
       // Legacy connect method - redirects to dashboard
       connect: () => {
         window.location.href = '/dashboard';
@@ -132,7 +158,7 @@ export const useSessionStore = create<SessionStore>()(
 
       createRealMatch: async (playerName: string) => {
         try {
-          set({ connectionStatus: "connecting" });
+          get().setConnectionStatus("connecting");
 
           const response = await fetch(`${MATCH_SERVICE_API}/matches`, {
             method: "POST",
@@ -163,35 +189,29 @@ export const useSessionStore = create<SessionStore>()(
           );
           const currentPrompt = currentRound?.prompt || "Waiting for match to start...";
 
-          set({
-            connectionStatus: "connected",
-            match,
-            myIdentity,
-            isSessionActive: true,
-            currentPrompt,
-          });
+          get().setConnectionStatus("connected");
+          get().setMatch(match);
+          get().setMyIdentity(myIdentity);
+          get().setIsSessionActive(true);
+          get().setCurrentPrompt(currentPrompt);
 
         } catch (error) {
           console.error("Failed to create real match:", error);
-          set({
-            connectionStatus: "error",
-            lastError: error instanceof Error ? error.message : "Unknown error",
-          });
+          get().setConnectionStatus("error");
+          get().setLastError(error instanceof Error ? error.message : "Unknown error");
         }
       },
 
       // Legacy disconnect method
       disconnect: () => {
-        set({
-          connectionStatus: "disconnected",
-          lastError: null,
-          match: null,
-          myIdentity: null,
-          messages: [],
-          currentPrompt: null,
-          isSessionActive: false,
-          isRevealed: false,
-            });
+        get().setConnectionStatus("disconnected");
+        get().setLastError(null);
+        get().setMatch(null);
+        get().setMyIdentity(null);
+        get().setMessages([]);
+        get().setCurrentPrompt(null);
+        get().setIsSessionActive(false);
+        get().setIsRevealed(false);
       },
 
       sendMessage: (content: string) => {
@@ -233,35 +253,31 @@ export const useSessionStore = create<SessionStore>()(
             
             // Update match state if response includes updated match data
             if (result.match) {
-              set({ match: result.match });
+              get().setMatch(result.match);
               
               // Update current prompt if we moved to a new round
               const currentRound = result.match.rounds?.find(
                 (r: any) => r.roundNumber === result.match.currentRound
               );
               if (currentRound?.prompt) {
-                set({ currentPrompt: currentRound.prompt });
+                get().setCurrentPrompt(currentRound.prompt);
               }
               
               // Update round responses whenever they exist
               if (currentRound?.responses) {
-                set({ roundResponses: currentRound.responses });
+                get().setRoundResponses(currentRound.responses);
               }
             }
           } catch (error) {
             console.error("Failed to submit response:", error);
-            set({
-              lastError: error instanceof Error ? error.message : "Failed to submit response",
-            });
+            get().setLastError(error instanceof Error ? error.message : "Failed to submit response");
           }
         };
 
         submitResponseAsync();
 
-        set({
-          myResponse: response.trim(),
-          hasSubmittedResponse: true,
-        });
+        get().setMyResponse(response.trim());
+        get().setHasSubmittedResponse(true);
       },
 
       submitVote: (humanIdentity: Identity) => {
@@ -301,80 +317,81 @@ export const useSessionStore = create<SessionStore>()(
               
               // Update match state if response includes updated match data
               if (result.match) {
-                set({ match: result.match });
+                get().setMatch(result.match);
                 
                 // Update current prompt if we moved to a new round
                 const currentRound = result.match.rounds?.find(
                   (r: any) => r.roundNumber === result.match.currentRound
                 );
                 if (currentRound?.prompt) {
-                  set({ 
-                    currentPrompt: currentRound.prompt,
-                    // Reset round state for new round
-                    hasSubmittedResponse: false,
-                    hasSubmittedVote: false,
-                    myResponse: null,
-                    roundResponses: {},
-                  });
+                  get().setCurrentPrompt(currentRound.prompt);
+                  // Reset round state for new round
+                  get().resetRoundState();
                 }
               }
             } catch (error) {
               console.error("Failed to submit vote:", error);
-              set({
-                lastError: error instanceof Error ? error.message : "Failed to submit vote",
-              });
+              get().setLastError(error instanceof Error ? error.message : "Failed to submit vote");
             }
           };
 
           submitVoteAsync();
 
-        set({
-          hasSubmittedVote: true,
-        });
+        get().setHasSubmittedVote(true);
       },
 
 
 
-      reset: () => {
-        set({
-          connectionStatus: "disconnected",
-          lastError: null,
-          match: null,
-          myIdentity: null,
-          messages: [],
-          currentPrompt: null,
-          myResponse: null,
-          hasSubmittedResponse: false,
-          roundResponses: {},
-          hasSubmittedVote: false,
-          isSessionActive: false,
-          isRevealed: false,
-          identityReveal: null,
-          identityMapping: { A: 1, B: 2, C: 3, D: 4 },
-          typingParticipants: new Set(),
-        });
-      },
+      pollMatchUpdates: async (matchId: string) => {
+        try {
+          const response = await fetch(`${MATCH_SERVICE_API}/matches/${matchId}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch match: ${response.statusText}`);
+          }
+          const matchData = await response.json();
+          get().setMatch(matchData);
 
-      // State setters for polling
-      setMatch: (match: Match) => {
-        set({ match });
-      },
-
-      setCurrentPrompt: (prompt: string) => {
-        set({ currentPrompt: prompt });
-      },
-      
-      setRoundResponses: (responses: Record<string, string>) => {
-        set({ roundResponses: responses });
+          // Update current round info if needed
+          const currentRound = matchData.rounds?.find(
+            (r: any) => r.roundNumber === matchData.currentRound
+          );
+          if (currentRound) {
+            get().setCurrentPrompt(currentRound.prompt);
+            get().setRoundResponses(currentRound.responses || {});
+          }
+        } catch (error) {
+          console.error("Failed to poll match updates:", error);
+          get().setLastError(error instanceof Error ? error.message : "Failed to fetch match updates");
+        }
       },
 
       resetRoundState: () => {
-        set({
-          hasSubmittedResponse: false,
-          hasSubmittedVote: false,
-          myResponse: null,
-          roundResponses: {},
-        });
+        get().setHasSubmittedResponse(false);
+        get().setHasSubmittedVote(false);
+        get().setMyResponse(null);
+        get().setRoundResponses({});
+      },
+
+      resetSession: () => {
+        get().setConnectionStatus("disconnected");
+        get().setLastError(null);
+        get().setMatch(null);
+        get().setMyIdentity(null);
+        get().setMessages([]);
+        get().setCurrentPrompt(null);
+        get().setMyResponse(null);
+        get().setHasSubmittedResponse(false);
+        get().setRoundResponses({});
+        get().setHasSubmittedVote(false);
+        get().setIsSessionActive(false);
+        get().setIsRevealed(false);
+        get().setIdentityReveal(null);
+        get().setTypingParticipants(new Set());
+      },
+
+      // Legacy reset method (alias to resetSession)
+      reset: () => {
+        get().resetSession();
       },
     }),
     {
