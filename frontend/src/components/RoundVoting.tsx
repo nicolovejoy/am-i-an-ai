@@ -10,7 +10,7 @@ interface MusicianRecognitionProps {
 
 export default function MusicianRecognition({ responses }: MusicianRecognitionProps) {
   const [selectedIdentity, setSelectedIdentity] = useState<Identity | null>(null);
-  const { submitVote, myIdentity, timeRemaining } = useSessionStore();
+  const { submitVote, myIdentity } = useSessionStore();
 
   const handleVote = () => {
     if (selectedIdentity) {
@@ -18,7 +18,6 @@ export default function MusicianRecognition({ responses }: MusicianRecognitionPr
     }
   };
 
-  const isTimeRunningOut = timeRemaining !== null && timeRemaining < 10;
   const responseEntries = Object.entries(responses) as [Identity, string][];
 
   // Create a stable seed for shuffling
@@ -56,13 +55,6 @@ export default function MusicianRecognition({ responses }: MusicianRecognitionPr
           <p className="text-slate-600">
             Which phrase sounds most human to you? Listen carefully and identify the human musicians.
           </p>
-          {timeRemaining !== null && (
-            <div className={`mt-3 text-sm font-mono px-3 py-1 rounded inline-block ${
-              isTimeRunningOut ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
-            }`}>
-              {timeRemaining} seconds to identify
-            </div>
-          )}
         </div>
 
         <div className="space-y-4">

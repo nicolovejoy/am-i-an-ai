@@ -1,6 +1,5 @@
 // Main components
 export { Navigation } from './Navigation';
-export { GameHeader } from './GameHeader';
 export { VotingInterface } from './VotingInterface';
 export { ResultsScreen } from './ResultsScreen';
 export { UserProfile } from './UserProfile';
@@ -10,7 +9,6 @@ export { AdminConsole } from './AdminConsole';
 export { default as ChatInterface } from './ChatInterface';
 export { default as MessageList } from './MessageList';
 export { default as ParticipantBar } from './ParticipantBar';
-export { default as SessionTimer } from './SessionTimer';
 
 // Auth components
 export { default as ProtectedRoute } from './auth/ProtectedRoute';

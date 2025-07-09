@@ -59,9 +59,9 @@ describe('Navigation', () => {
 
     render(<Navigation />);
     
-    expect(screen.getByText('🎮 Play')).toBeInTheDocument();
+    expect(screen.getByText('🏠 Dashboard')).toBeInTheDocument();
     expect(screen.getByText('📖 About')).toBeInTheDocument();
-    expect(screen.getByText('📊 History')).toBeInTheDocument();
+    expect(screen.getByText('📊 Match History')).toBeInTheDocument();
   });
 
   it('should highlight the current page', () => {

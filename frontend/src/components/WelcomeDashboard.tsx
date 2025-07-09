@@ -41,7 +41,7 @@ export default function WelcomeDashboard() {
           </p>
           <p className="text-slate-600 max-w-xl mx-auto">
             Join an anonymous creative collaboration where humans and AI work together. 
-            Through 5 rounds of creative prompts, try to identify who's human while 
+            Through 5 rounds of creative prompts, try to identify who&apos;s human while 
             exploring the fascinating dynamics of trust, creativity, and connection 
             in our AI-integrated future.
           </p>

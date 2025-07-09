@@ -6,31 +6,29 @@ Players join matches with 4 participants (MVP: 1 human + 3 robots), playing 5 ro
 
 ## 🎯 Current Status
 
-- ✅ **MSK Serverless deployed** - Kafka cluster with full VPC setup
-- ✅ **Event schemas** - Comprehensive validation with 18 tests
-- ✅ **Sample data generation** - Population script with CLI interface
-- 🔄 **Consumer Lambda** - Building match history API
-- ⏳ **Frontend integration** - Display Kafka-sourced match history
+- ✅ **MVP Live** - Fully functional gameplay at [robotorchestra.org](https://robotorchestra.org)
+- ✅ **Core Features** - Match creation, AI responses, voting, round progression
+- ✅ **Persistent Storage** - DynamoDB for match state, SQS for async processing
+- ✅ **Robot Responses** - Working via SQS/Lambda
+- 🔧 **Bug Fixes** - Round 5 loop, response shuffling, status transitions
 
 ## 🚀 Live Site
 
 [RobotOrchestra.org](https://robotorchestra.org)
 
-## 🏗️ Architecture Evolution
+## 🏗️ Architecture
 
-Key documents:
+### Current MVP (In-Memory)
+- **Frontend**: Next.js with real-time polling
+- **API**: Lambda functions via API Gateway
+- **Storage**: In-memory (sufficient for experimental phase)
+- **AI**: 3 robot participants with distinct personalities
 
-- `KAFKA_MIGRATION_STRATEGY.md` - Migration plan and phases
-- `KAFKA_SERVICE_ARCHITECTURE.md` - Service separation design
-- `ROBOT_ORCHESTRATION.md` - Robot management via Kafka
-
-## 🛠️ Tech Stack
-
-### Target (Kafka Migration)
-
-- **Event Streaming**: MSK Serverless (~$50-80/month)
-- **Services**: Match Service + Robot Orchestration Service
-- **Storage**: Kafka as event store + DynamoDB for materialized views
+### Target Architecture (DynamoDB + SQS)
+- **Storage**: DynamoDB for match state and history
+- **Queue**: SQS for async robot response generation
+- **Cost**: ~$5-10/month (vs $50-80 for Kafka)
+- **Benefits**: Serverless, simple, reliable
 
 ## 🏃 Development
 

@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { mockAIService } from "@/services/mockAI";
 
 export type Identity = "A" | "B" | "C" | "D";
 
@@ -59,8 +58,7 @@ interface SessionState {
   hasSubmittedVote: boolean;
 
   // Timer
-  sessionStartTime: number | null;
-  timeRemaining: number | null; // in seconds
+ // in seconds
   isSessionActive: boolean;
 
   // Match completion
@@ -71,23 +69,25 @@ interface SessionState {
   > | null;
 
   // Testing mode
-  testingMode: boolean;
   identityMapping: Record<string, number>; // Maps A,B,C,D to player numbers 1,2,3,4
   typingParticipants: Set<Identity>;
 }
 
 interface SessionActions {
   // Actions
-  startTestingMode: () => void;
   createRealMatch: (playerName: string) => Promise<void>;
   submitResponse: (response: string) => void;
   submitVote: (humanIdentity: Identity) => void;
 
-  // Timer
-  updateTimer: (seconds: number) => void;
 
   // Reset
   reset: () => void;
+
+  // State setters for polling
+  setMatch: (match: Match) => void;
+  setCurrentPrompt: (prompt: string) => void;
+  setRoundResponses: (responses: Record<string, string>) => void;
+  resetRoundState: () => void;
 
   // Legacy methods (for backward compatibility)
   connect: () => void;
@@ -119,19 +119,15 @@ export const useSessionStore = create<SessionStore>()(
       hasSubmittedResponse: false,
       roundResponses: {},
       hasSubmittedVote: false,
-      sessionStartTime: null,
-      timeRemaining: null,
       isSessionActive: false,
       isRevealed: false,
       identityReveal: null,
-      testingMode: false,
       identityMapping: { A: 1, B: 2, C: 3, D: 4 },
       typingParticipants: new Set(),
 
-      // Legacy connect method (now just starts testing mode)
+      // Legacy connect method - redirects to dashboard
       connect: () => {
-        console.log("Connect called - starting testing mode");
-        get().startTestingMode();
+        window.location.href = '/dashboard';
       },
 
       createRealMatch: async (playerName: string) => {
@@ -154,18 +150,11 @@ export const useSessionStore = create<SessionStore>()(
 
           const matchData = await response.json();
           
-          // Convert API response to our internal match format
-          const match: Match = {
-            matchId: matchData.matchId,
-            status: matchData.status === 'waiting' ? 'waiting' : 'round_active',
-            currentRound: matchData.currentRound || 0,
-            totalRounds: matchData.totalRounds || 5,
-            participants: matchData.participants || [],
-            rounds: matchData.rounds || [],
-          };
+          // Backend now returns correct format, no conversion needed
+          const match: Match = matchData;
 
           // Set the human identity based on the participant data
-          const humanParticipant = matchData.participants?.find((p: any) => p.isHuman);
+          const humanParticipant = matchData.participants?.find((p: any) => !p.isAI);
           const myIdentity = humanParticipant?.identity || 'A';
 
           // Get the current round's prompt
@@ -179,9 +168,6 @@ export const useSessionStore = create<SessionStore>()(
             match,
             myIdentity,
             isSessionActive: true,
-            sessionStartTime: Date.now(),
-            timeRemaining: 180, // 3 minutes default
-            testingMode: false,
             currentPrompt,
           });
 
@@ -205,8 +191,7 @@ export const useSessionStore = create<SessionStore>()(
           currentPrompt: null,
           isSessionActive: false,
           isRevealed: false,
-          testingMode: false,
-        });
+            });
       },
 
       sendMessage: (content: string) => {
@@ -215,119 +200,68 @@ export const useSessionStore = create<SessionStore>()(
       },
 
       submitResponse: (response: string) => {
-        const state = get();
-
-        if (state.testingMode) {
-          // Testing mode - handle locally with mock AI
-          const message: Message = {
-            sender: state.myIdentity!,
-            content: response.trim(),
-            timestamp: Date.now(),
-          };
-
-          // Add human message
-          set((currentState) => ({
-            messages: [...currentState.messages, message],
-            myResponse: response.trim(),
-            hasSubmittedResponse: true,
-          }));
-
-          // Schedule AI responses
-          mockAIService.scheduleAIResponses(
-            response.trim(),
-            (identity) => {
-              // Start typing indicator
-              set((currentState) => {
-                const newTyping = new Set(currentState.typingParticipants);
-                newTyping.add(identity as Identity);
-                return { typingParticipants: newTyping };
-              });
-            },
-            (identity) => {
-              // End typing indicator
-              set((currentState) => {
-                const newTyping = new Set(currentState.typingParticipants);
-                newTyping.delete(identity as Identity);
-                return { typingParticipants: newTyping };
-              });
-            },
-            (identity, messageContent) => {
-              // Add AI message
-              const aiMessage: Message = {
-                sender: identity as Identity,
-                content: messageContent,
-                timestamp: Date.now(),
-              };
-
-              set((currentState) => ({
-                messages: [...currentState.messages, aiMessage],
-              }));
-            }
-          );
-        } else {
-          // Real mode - submit via API
-          const currentState = get();
-          if (!currentState.match?.matchId || !currentState.myIdentity) {
-            console.error("Cannot submit response: no active match or identity");
-            return;
-          }
-
-          const submitResponseAsync = async () => {
-            try {
-              const apiResponse = await fetch(
-                `${MATCH_SERVICE_API}/matches/${currentState.match!.matchId}/responses`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    identity: currentState.myIdentity,
-                    response: response.trim(),
-                    round: currentState.match!.currentRound || 1,
-                  }),
-                }
-              );
-
-              if (!apiResponse.ok) {
-                throw new Error(`Failed to submit response: ${apiResponse.statusText}`);
-              }
-
-              const result = await apiResponse.json();
-              console.log("Response submitted successfully", result);
-              
-              // Update match state if response includes updated match data
-              if (result.match) {
-                set({ match: result.match });
-                
-                // Update current prompt if we moved to a new round
-                const currentRound = result.match.rounds?.find(
-                  (r: any) => r.roundNumber === result.match.currentRound
-                );
-                if (currentRound?.prompt) {
-                  set({ currentPrompt: currentRound.prompt });
-                }
-                
-                // Update round responses if we're in voting phase
-                if (currentRound?.status === 'voting' && currentRound?.responses) {
-                  set({ roundResponses: currentRound.responses });
-                }
-              }
-            } catch (error) {
-              console.error("Failed to submit response:", error);
-              set({
-                lastError: error instanceof Error ? error.message : "Failed to submit response",
-              });
-            }
-          };
-
-          submitResponseAsync();
-
-          set({
-            myResponse: response.trim(),
-            hasSubmittedResponse: true,
-          });
+        // Submit response via API
+        const currentState = get();
+        if (!currentState.match?.matchId || !currentState.myIdentity) {
+          console.error("Cannot submit response: no active match or identity");
+          return;
         }
+
+        const submitResponseAsync = async () => {
+          try {
+            const apiResponse = await fetch(
+              `${MATCH_SERVICE_API}/matches/${currentState.match!.matchId}/responses`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  identity: currentState.myIdentity,
+                  response: response.trim(),
+                  round: currentState.match!.currentRound || 1,
+                }),
+              }
+            );
+
+            if (!apiResponse.ok) {
+              throw new Error(`Failed to submit response: ${apiResponse.statusText}`);
+            }
+
+            const result = await apiResponse.json();
+            console.log("Response submitted successfully", result);
+            
+            // Update match state if response includes updated match data
+            if (result.match) {
+              set({ match: result.match });
+              
+              // Update current prompt if we moved to a new round
+              const currentRound = result.match.rounds?.find(
+                (r: any) => r.roundNumber === result.match.currentRound
+              );
+              if (currentRound?.prompt) {
+                set({ currentPrompt: currentRound.prompt });
+              }
+              
+              // Update round responses whenever they exist
+              if (currentRound?.responses) {
+                set({ roundResponses: currentRound.responses });
+              }
+            }
+          } catch (error) {
+            console.error("Failed to submit response:", error);
+            set({
+              lastError: error instanceof Error ? error.message : "Failed to submit response",
+            });
+          }
+        };
+
+        submitResponseAsync();
+
+        set({
+          myResponse: response.trim(),
+          hasSubmittedResponse: true,
+        });
       },
 
       submitVote: (humanIdentity: Identity) => {
@@ -335,8 +269,7 @@ export const useSessionStore = create<SessionStore>()(
         
         const currentState = get();
         
-        if (!currentState.testingMode) {
-          // Real mode - submit via API
+        // Submit via API
           if (!currentState.match?.matchId || !currentState.myIdentity) {
             console.error("Cannot submit vote: no active match or identity");
             return;
@@ -394,66 +327,15 @@ export const useSessionStore = create<SessionStore>()(
           };
 
           submitVoteAsync();
-        }
 
-        // Only set hasSubmittedVote for the current round if not moving to new round
-        if (!result?.match || result.match.currentRound === get().match?.currentRound) {
-          set({
-            hasSubmittedVote: true,
-          });
-        }
-      },
-
-      startTestingMode: () => {
-        // Initialize testing mode with random human identity
-        const identities: Identity[] = ["A", "B", "C", "D"];
-        const humanIdentity: Identity =
-          identities[Math.floor(Math.random() * 4)];
-        const allParticipants: Participant[] = [
-          { identity: "A", isAI: humanIdentity !== "A", isConnected: true },
-          { identity: "B", isAI: humanIdentity !== "B", isConnected: true },
-          { identity: "C", isAI: humanIdentity !== "C", isConnected: true },
-          { identity: "D", isAI: humanIdentity !== "D", isConnected: true },
-        ];
-
-        // Create test match
-        const testMatch: Match = {
-          matchId: `test-${Date.now()}`,
-          status: "round_active",
-          currentRound: 1,
-          totalRounds: 5,
-          participants: allParticipants,
-          rounds: [],
-        };
-
-        // Initialize mock AI service
-        mockAIService.initializeAIs(humanIdentity, get().identityMapping);
-
-        // Set testing mode state
         set({
-          testingMode: true,
-          connectionStatus: "connected",
-          myIdentity: humanIdentity,
-          match: testMatch,
-          isSessionActive: true,
-          sessionStartTime: Date.now(),
-          timeRemaining: 180, // 3 minutes for testing mode
-          currentPrompt:
-            "What's one thing that recently surprised you in a good way?",
+          hasSubmittedVote: true,
         });
       },
 
-      updateTimer: (seconds) => {
-        set({ timeRemaining: seconds });
-        if (seconds <= 0) {
-          set({ isSessionActive: false });
-        }
-      },
+
 
       reset: () => {
-        // Clear mock AI timers
-        mockAIService.clearAllTimers();
-
         set({
           connectionStatus: "disconnected",
           lastError: null,
@@ -465,14 +347,33 @@ export const useSessionStore = create<SessionStore>()(
           hasSubmittedResponse: false,
           roundResponses: {},
           hasSubmittedVote: false,
-          sessionStartTime: null,
-          timeRemaining: null,
           isSessionActive: false,
           isRevealed: false,
           identityReveal: null,
-          testingMode: false,
           identityMapping: { A: 1, B: 2, C: 3, D: 4 },
           typingParticipants: new Set(),
+        });
+      },
+
+      // State setters for polling
+      setMatch: (match: Match) => {
+        set({ match });
+      },
+
+      setCurrentPrompt: (prompt: string) => {
+        set({ currentPrompt: prompt });
+      },
+      
+      setRoundResponses: (responses: Record<string, string>) => {
+        set({ roundResponses: responses });
+      },
+
+      resetRoundState: () => {
+        set({
+          hasSubmittedResponse: false,
+          hasSubmittedVote: false,
+          myResponse: null,
+          roundResponses: {},
         });
       },
     }),

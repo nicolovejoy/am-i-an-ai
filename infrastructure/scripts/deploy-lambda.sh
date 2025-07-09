@@ -46,6 +46,10 @@ zip -r match-service.zip . -q
 echo "📦 Creating match-history package..."
 zip -r match-history.zip . -q
 
+# Create robot-worker package with proper structure
+echo "📦 Creating robot-worker package..."
+zip -r robot-worker.zip . -q
+
 echo "📤 Uploading Lambda functions..."
 
 # Upload match service function
@@ -58,9 +62,15 @@ aws lambda update-function-code \
     --function-name robot-orchestra-match-history \
     --zip-file fileb://match-history.zip
 
+# Upload robot worker function
+aws lambda update-function-code \
+    --function-name robot-orchestra-robot-worker \
+    --zip-file fileb://robot-worker.zip
+
 echo "⏳ Waiting for functions to update..."
 aws lambda wait function-updated --function-name robot-orchestra-match-service
 aws lambda wait function-updated --function-name robot-orchestra-match-history
+aws lambda wait function-updated --function-name robot-orchestra-robot-worker
 
 echo "✅ Lambda deployment complete!"
 
@@ -71,11 +81,8 @@ aws lambda get-function --function-name robot-orchestra-match-service --query 'C
 echo "📊 Match History Function:"
 aws lambda get-function --function-name robot-orchestra-match-history --query 'Configuration.{Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
 
-# Test functions
-echo "🧪 Testing functions..."
-echo "Testing match service..."
-aws lambda invoke --function-name robot-orchestra-match-service --payload '{"httpMethod":"OPTIONS","path":"/matches"}' /tmp/test-response.json
-cat /tmp/test-response.json
+echo "📊 Robot Worker Function:"
+aws lambda get-function --function-name robot-orchestra-robot-worker --query 'Configuration.{Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
 
 echo ""
-echo "✅ Deployment complete! Functions should now handle CORS properly."
+echo "✅ Deployment complete!"

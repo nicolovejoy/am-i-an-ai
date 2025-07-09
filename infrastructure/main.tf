@@ -27,7 +27,7 @@ locals {
   
   tags = merge(var.tags, {
     Version = "2.0"
-    Purpose = "kafka-event-driven-conversations"
+    Purpose = "human-ai-collaborative-matches"
   })
 }
 

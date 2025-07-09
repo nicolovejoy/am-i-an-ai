@@ -1,75 +1,76 @@
 # Current Status - July 2025
 
-## 🎯 **Core Match API Working**
+## 🎯 **RobotOrchestra MVP Complete & Live**
 
-Successfully implemented unified Match API with Lambda backend.
+Successfully shipped first playable version with full human-AI collaborative gameplay.
 
 ## ✅ **Completed - July 2025**
 
-- ✅ **Unified Match API Gateway** - Single API for all match operations
-- ✅ **Match Service Lambda** - TypeScript compilation and deployment working  
-- ✅ **CORS Configuration** - Frontend can call API without issues
-- ✅ **Match Creation** - POST /matches returns 201 with match data
-- ✅ **Response Submission** - POST /matches/{id}/responses working
-- ✅ **Vote Submission** - POST /matches/{id}/votes endpoint ready
-- ✅ **Match Retrieval** - GET /matches/{id} for loading match state
+### **Core Gameplay Experience**
 
-## 🎯 **Current Status: UX Development Phase**
+- ✅ **End-to-End Match Flow** - Create → Respond → Vote → Progress through rounds (WORKING!)
+- ✅ **Multi-Round Progression** - Successfully tested through 7+ rounds
+- ✅ **Robot Response Generation** - 3 AI participants respond with distinct personalities  
+- ✅ **Voting & Round Advancement** - Smooth transitions between rounds
+- ✅ **Real-time State Sync** - 1-second polling keeps UI updated with backend
+- ✅ **Production Deployment** - Live on https://robotorchestra.org
 
-The core API infrastructure is solid and responsive:
-- **Match Flow**: Create → Submit Responses → Vote → Results
-- **Storage**: In-memory for MVP (fast, simple)  
-- **Authentication**: Lambda IAM roles working
-- **Deployment**: Automated TypeScript → Lambda pipeline
+## 🔍 **Known Bugs (Non-blocking)**
 
-### **Next: User Experience Focus**
-- Improve frontend match flow and UI
-- Add match state management  
-- Build complete game experience
-- Polish user interactions
+- 🐛 **Round Limit Not Enforced** - Continues past round 5 instead of ending match  
+- 🐛 **Duplicate Prompts** - Same prompt can appear twice in one match
+- ⚠️ **CI Linting** - Platform-specific apostrophe encoding differences
 
-## 📐 **Kafka Architecture Benefits**
+## 🎯 **Current Status: Fully Functional MVP**
 
-### **Solves Robot Orchestration**
+**What Users Can Do:**
 
-- Robots become independent Kafka consumers
-- Natural async processing via consumer groups
-- Decoupled from WebSocket handler
-- Each robot processes at its own pace
+1. **Create matches** with 1 human + 3 AI participants
+2. **Respond to creative prompts** exploring human vs AI communication
+3. **Vote on responses** to identify the human participant
+4. **Experience** the fascinating dynamics of human-AI collaboration
 
-### **Permanent Event Storage**
+**Architecture Status:**
 
-- Complete match history preserved forever
-- Replay any match for debugging
-- Natural audit trail
-- No separate database needed for events
+- **Match Flow**: ✅ Create → Submit Response → See Robot Responses → Vote → Next Round (WORKING!)
+- **State Management**: ✅ Fixed - removed timers, testing mode, and data structure mismatches
+- **Real-time Updates**: ✅ 1-second polling ensures UI stays synchronized with backend  
+- **Storage**: In-memory MVP (sufficient for current usage)
+- **Deployment**: `./scripts/deploy-lambda.sh` for Lambda updates
+- **Monitoring**: CloudWatch logs for debugging
 
-### **Clean Service Architecture**
+## 🏗️ **Architecture: DynamoDB + SQS**
+
+### **Implementation Complete**
 
 ```
-Frontend → API Gateway → Match Service → Kafka Events
-    ↓                                           ↓
-    └─────── Match History API ←── History Consumer
+Frontend → API Gateway → Match Service → DynamoDB (match state)
+                              ↓
+                            SQS Queue → Robot Worker → DynamoDB
 ```
 
-**Future State**: Add robot orchestration that consumes match events and generates AI responses.
+### **What's Deployed**
 
-## 🏗️ **Implementation Approach**
+- ✅ **DynamoDB Table**: `robot-orchestra-matches` storing all match data
+- ✅ **SQS Queue**: Async robot response generation with DLQ
+- ✅ **Lambda Functions**: 
+  - `match-service`: Creates matches, handles responses/votes
+  - `robot-worker`: Processes SQS messages, generates AI responses
+  - `match-history`: Retrieves match history from DynamoDB
 
-1. **Phase 1** (Current): Build match creation → Kafka → history flow
-2. **Phase 2**: Add robot consumers for AI responses
-3. **Phase 3**: Enhanced features (analytics, personalities, etc.)
+### **Current Issues**
 
-## 💡 **Key Decisions Made**
+- ✅ ~~Frontend not displaying robot responses~~ (FIXED)
+- 🐛 **Round 5 Loop**: After round 5, match continues instead of ending
+- 🐛 **Response Shuffling**: Voting options keep changing positions
+- 🐛 **Identity Reassignment**: Player identities (A/B/C/D) get reassigned during voting
+- 🔧 Round status stays "responding" instead of updating to "voting"
+- 🔧 Frontend tests need updating for new architecture
 
-- **MSK Serverless** over Kinesis (true Kafka, consumer groups)
-- **Event sourcing** with infinite retention
-- **Direct to Kafka** - No intermediate storage needed
-- **Natural data generation** through actual gameplay
+## 💡 **Key Advantages**
 
-## ✅ **Architecture Benefits**
-
-- **No DynamoDB needed** - Kafka is the source of truth
-- **Simple deployment** - Match service writes directly to Kafka
-- **Clean data flow** - Events flow one direction
-- **Future-ready** - Easy to add robot consumers later
+- **Serverless**: True pay-per-use pricing
+- **Simple**: No infrastructure overhead
+- **Reliable**: AWS managed services
+- **Scalable**: Can handle growth easily
+- **Pragmatic**: Right-sized for current needs

@@ -14,7 +14,6 @@ export default function RoundInterface() {
     hasSubmittedVote,
     roundResponses,
     isSessionActive,
-    timeRemaining,
   } = useSessionStore();
 
   if (!match || !isSessionActive) {
@@ -46,12 +45,6 @@ export default function RoundInterface() {
                 {isWaitingForOthers && "⏳ Waiting for other musicians..."}
                 {isRecognitionPhase && "👂 Identify the humans"}
               </span>
-              {timeRemaining !== null && (
-                <span className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-                  {Math.floor(timeRemaining / 60)}:
-                  {String(timeRemaining % 60).padStart(2, "0")}
-                </span>
-              )}
             </div>
           </div>
 

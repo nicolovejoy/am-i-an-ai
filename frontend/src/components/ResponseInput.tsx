@@ -8,7 +8,7 @@ import { FiSend } from 'react-icons/fi';
 export default function PhraseComposer() {
   const [phrase, setPhrase] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { submitResponse, timeRemaining } = useSessionStore();
+  const { submitResponse } = useSessionStore();
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -32,20 +32,12 @@ export default function PhraseComposer() {
   };
 
   const remainingChars = 280 - phrase.length;
-  const isTimeRunningOut = timeRemaining !== null && timeRemaining < 30;
 
   return (
     <Card>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Your Musical Phrase</h3>
-          {timeRemaining !== null && (
-            <div className={`text-sm font-mono px-3 py-1 rounded ${
-              isTimeRunningOut ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
-            }`}>
-              {Math.floor(timeRemaining / 60)}:{String(timeRemaining % 60).padStart(2, '0')} remaining
-            </div>
-          )}
         </div>
 
         <div className="space-y-3">

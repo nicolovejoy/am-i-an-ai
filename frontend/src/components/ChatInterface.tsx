@@ -7,9 +7,7 @@ import { useSessionStore } from '@/store/sessionStore';
 import { useAuth } from '@/contexts/AuthContext';
 import MessageList from './MessageList';
 import ParticipantBar from './ParticipantBar';
-import SessionTimer from './SessionTimer';
 import RoundInterface from './RoundInterface';
-import { TestingModeToggle } from './TestingModeToggle';
 import { BUILD_TIMESTAMP } from '../build-timestamp';
 import { Card, Button } from './ui';
 
@@ -26,23 +24,21 @@ export default function ChatInterface() {
     currentPrompt,
     isSessionActive,
     isRevealed,
-    testingMode,
     connect,
     disconnect,
     sendMessage,
     reset,
-    startTestingMode
   } = useSessionStore();
 
   const { user, signOut } = useAuth();
   const router = useRouter();
 
-  // Auto-connect on mount (unless in testing mode)
+  // Auto-connect on mount
   useEffect(() => {
-    if (connectionStatus === 'disconnected' && !testingMode) {
+    if (connectionStatus === 'disconnected') {
       connect();
     }
-  }, [connect, connectionStatus, testingMode]);
+  }, [connect, connectionStatus]);
 
   // Focus input when connected
   useEffect(() => {
@@ -50,6 +46,47 @@ export default function ChatInterface() {
       inputRef.current.focus();
     }
   }, [connectionStatus]);
+
+  // Poll for match state updates every second when in active match
+  useEffect(() => {
+    if (!match) return;
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const MATCH_SERVICE_API = process.env.NEXT_PUBLIC_MATCH_SERVICE_API || "https://api.robotorchestra.org";
+        const response = await fetch(`${MATCH_SERVICE_API}/matches/${match.matchId}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const updatedMatch = await response.json();
+          if (updatedMatch) {
+            useSessionStore.getState().setMatch(updatedMatch);
+            
+            // Update current prompt if we moved to a new round
+            const currentRound = updatedMatch.rounds?.find(
+              (r: any) => r.roundNumber === updatedMatch.currentRound
+            );
+            if (currentRound?.prompt !== currentPrompt) {
+              useSessionStore.getState().setCurrentPrompt(currentRound.prompt);
+              // Reset round state for new round
+              useSessionStore.getState().resetRoundState();
+            }
+            
+            // Update round responses whenever they exist
+            if (currentRound?.responses) {
+              useSessionStore.getState().setRoundResponses(currentRound.responses);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to poll match state:', error);
+      }
+    }, 1000);
+
+    return () => clearInterval(pollInterval);
+  }, [match?.matchId, match, currentPrompt]);
 
   const handleSendMessage = () => {
     const content = messageInput.trim();
@@ -68,9 +105,7 @@ export default function ChatInterface() {
 
   const handleNewSession = () => {
     reset();
-    if (!testingMode) {
-      setTimeout(() => connect(), 100);
-    }
+    setTimeout(() => connect(), 100);
   };
 
   const handleLeaveMatch = () => {
@@ -79,7 +114,7 @@ export default function ChatInterface() {
   };
 
   // Show testing mode toggle if not connected and not in error state and not in testing mode
-  if ((connectionStatus === 'disconnected' || connectionStatus === 'connecting') && !testingMode) {
+  if (connectionStatus === 'disconnected' || connectionStatus === 'connecting') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="space-y-4 max-w-md w-full mx-4">
@@ -97,13 +132,12 @@ export default function ChatInterface() {
             </div>
           </Card>
           
-          <TestingModeToggle onActivate={startTestingMode} />
         </div>
       </div>
     );
   }
 
-  if (connectionStatus === 'error' && !testingMode) {
+  if (connectionStatus === 'error') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="text-center max-w-md w-full mx-4">
@@ -121,9 +155,7 @@ export default function ChatInterface() {
             <Button
               onClick={() => {
                 reset();
-                if (!testingMode) {
-                  setTimeout(() => connect(), 100);
-                }
+                setTimeout(() => connect(), 100);
               }}
               fullWidth
             >
@@ -146,8 +178,7 @@ export default function ChatInterface() {
             </Button>
           </div>
           <div className="mt-4">
-            <TestingModeToggle onActivate={startTestingMode} />
-          </div>
+            </div>
         </Card>
       </div>
     );
@@ -190,7 +221,6 @@ export default function ChatInterface() {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <SessionTimer />
             <Button
               onClick={handleLeaveMatch}
               variant="ghost"

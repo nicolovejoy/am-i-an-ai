@@ -1,8 +1,17 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 
-// In-memory store for MVP (will be replaced with DynamoDB later)
-const matchStore = new Map<string, Match>();
+// Initialize AWS clients
+const dynamoClient = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(dynamoClient);
+const sqsClient = new SQSClient({});
+
+// Get environment variables
+const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'robot-orchestra-matches';
+const SQS_QUEUE_URL = process.env.SQS_QUEUE_URL || '';
 
 // Sample prompts for the game
 const PROMPTS = [
@@ -22,54 +31,45 @@ function getRandomPrompt(): string {
   return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
 }
 
-// Simple robot response generator for MVP
-function generateRobotResponse(_prompt: string, robotId: string): string {
-  const robotPersonalities = {
-    'B': {
-      style: 'poetic',
-      responses: [
-        'Like whispers in the twilight, it dances on the edge of perception',
-        'A symphony of shadows, playing in minor keys',
-        'Crystalline fragments of yesterday, scattered across tomorrow',
-        'It breathes in colors that have no names',
-        'Soft as moth wings against the window of time',
-      ],
-    },
-    'C': {
-      style: 'analytical',
-      responses: [
-        'Approximately 42 decibels of introspective resonance',
-        'The quantifiable essence measures 3.7 on the emotional scale',
-        'Statistical analysis suggests a correlation with ambient frequencies',
-        'Data indicates a wavelength between visible and invisible spectrums',
-        'Empirically speaking, it registers as a null hypothesis of sensation',
-      ],
-    },
-    'D': {
-      style: 'whimsical',
-      responses: [
-        'Like a disco ball made of butterflies!',
-        'It\'s the giggles of invisible unicorns, obviously',
-        'Tastes like purple mixed with the sound of Tuesday',
-        'Bouncy castle vibes but for your feelings',
-        'Imagine a kazoo orchestra playing underwater ballet',
-      ],
-    },
-  };
-
-  const personality = robotPersonalities[robotId as keyof typeof robotPersonalities];
-  if (!personality) {
-    return 'A mysterious essence beyond description';
+// Robot response generation moved to robot-worker Lambda
+// This function now sends a message to SQS for async processing
+async function triggerRobotResponses(matchId: string, roundNumber: number, prompt: string): Promise<void> {
+  console.log('triggerRobotResponses called with:', { matchId, roundNumber, prompt });
+  console.log('SQS_QUEUE_URL:', SQS_QUEUE_URL);
+  
+  if (!SQS_QUEUE_URL) {
+    console.error('SQS_QUEUE_URL is not set!');
+    return;
   }
-
-  // For MVP, just return a random response from the robot's style
-  const responses = personality.responses;
-  return responses[Math.floor(Math.random() * responses.length)];
+  
+  const robots = ['B', 'C', 'D'];
+  
+  for (const robotId of robots) {
+    const message = {
+      matchId,
+      roundNumber,
+      prompt,
+      robotId,
+      timestamp: new Date().toISOString(),
+    };
+    
+    try {
+      await sqsClient.send(new SendMessageCommand({
+        QueueUrl: SQS_QUEUE_URL,
+        MessageBody: JSON.stringify(message),
+      }));
+      console.log(`Sent robot response request for ${robotId}`);
+    } catch (error) {
+      console.error(`Failed to send SQS message for robot ${robotId}:`, error);
+    }
+  }
 }
+
+// Robot response generation moved to robot-worker Lambda
 
 interface Match {
   matchId: string;
-  status: 'waiting' | 'active' | 'completed';
+  status: 'waiting' | 'round_active' | 'round_voting' | 'completed';
   currentRound: number;
   totalRounds: number;
   participants: Participant[];
@@ -80,7 +80,7 @@ interface Match {
 
 interface Participant {
   identity: 'A' | 'B' | 'C' | 'D';
-  isHuman: boolean;
+  isAI?: boolean;
   playerName?: string;
   isConnected: boolean;
 }
@@ -90,7 +90,8 @@ interface Round {
   prompt: string;
   responses: Record<string, string>;
   votes: Record<string, string>;
-  status: 'pending' | 'active' | 'voting' | 'completed';
+  scores: Record<string, number>;
+  status: 'waiting' | 'responding' | 'voting' | 'complete';
 }
 
 const CORS_HEADERS = {
@@ -163,31 +164,31 @@ async function createMatch(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
   
   const match: Match = {
     matchId,
-    status: 'active', // Start as active since we have all participants
+    status: 'round_active', // Start as active since we have all participants
     currentRound: 1, // Start at round 1
     totalRounds: 5,
     participants: [
       {
         identity: 'A',
-        isHuman: true,
+        isAI: false,
         playerName: body.playerName,
         isConnected: true,
       },
       {
         identity: 'B',
-        isHuman: false,
+        isAI: true,
         playerName: 'Robot B',
         isConnected: true,
       },
       {
         identity: 'C',
-        isHuman: false,
+        isAI: true,
         playerName: 'Robot C',
         isConnected: true,
       },
       {
         identity: 'D',
-        isHuman: false,
+        isAI: true,
         playerName: 'Robot D',
         isConnected: true,
       },
@@ -198,18 +199,36 @@ async function createMatch(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
         prompt: getRandomPrompt(),
         responses: {},
         votes: {},
-        status: 'active',
+        scores: {},
+        status: 'responding',
       },
     ],
     createdAt: now,
     updatedAt: now,
   };
 
-  // Store match
-  matchStore.set(matchId, match);
-
-  // TODO: Add Kafka event publishing later
-  console.log('Match created:', matchId, 'Status:', match.status);
+  // Store match in DynamoDB
+  try {
+    await docClient.send(new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...match,
+        timestamp: 0, // Use 0 for main match record
+      },
+    }));
+    
+    console.log('Match created in DynamoDB:', matchId, 'Status:', match.status);
+    
+    // Trigger robot responses asynchronously
+    await triggerRobotResponses(matchId, 1, match.rounds[0].prompt);
+  } catch (error) {
+    console.error('Failed to create match in DynamoDB:', error);
+    return {
+      statusCode: 500,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: 'Failed to create match' }),
+    };
+  }
 
   return {
     statusCode: 201,
@@ -231,21 +250,38 @@ async function getMatch(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
     };
   }
 
-  const match = matchStore.get(matchId);
-  
-  if (!match) {
+  // Get match from DynamoDB - we'll use a query since we have timestamp as sort key
+  try {
+    const result = await docClient.send(new GetCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        matchId,
+        timestamp: 0, // Main match record has timestamp 0
+      },
+    }));
+    
+    if (!result.Item) {
+      return {
+        statusCode: 404,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: 'Match not found' }),
+      };
+    }
+    
+    const { timestamp, ...match } = result.Item;
     return {
-      statusCode: 404,
+      statusCode: 200,
       headers: CORS_HEADERS,
-      body: JSON.stringify({ error: 'Match not found' }),
+      body: JSON.stringify(match),
+    };
+  } catch (error) {
+    console.error('Failed to get match from DynamoDB:', error);
+    return {
+      statusCode: 500,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: 'Failed to retrieve match' }),
     };
   }
-
-  return {
-    statusCode: 200,
-    headers: CORS_HEADERS,
-    body: JSON.stringify(match),
-  };
 }
 
 async function submitResponse(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -262,12 +298,33 @@ async function submitResponse(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     };
   }
 
-  const match = matchStore.get(matchId);
-  if (!match) {
+  // Get match from DynamoDB
+  let match: Match;
+  try {
+    const result = await docClient.send(new GetCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        matchId,
+        timestamp: 0,
+      },
+    }));
+    
+    if (!result.Item) {
+      return {
+        statusCode: 404,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: 'Match not found' }),
+      };
+    }
+    
+    const { timestamp, ...matchData } = result.Item;
+    match = matchData as Match;
+  } catch (error) {
+    console.error('Failed to get match from DynamoDB:', error);
     return {
-      statusCode: 404,
+      statusCode: 500,
       headers: CORS_HEADERS,
-      body: JSON.stringify({ error: 'Match not found' }),
+      body: JSON.stringify({ error: 'Failed to retrieve match' }),
     };
   }
 
@@ -287,28 +344,50 @@ async function submitResponse(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
   // Generate robot responses if this is from the human
   if (body.identity === 'A') {
-    // Simple robot responses for MVP
-    round.responses['B'] = generateRobotResponse(round.prompt, 'B');
-    round.responses['C'] = generateRobotResponse(round.prompt, 'C');
-    round.responses['D'] = generateRobotResponse(round.prompt, 'D');
+    // Trigger robot responses asynchronously via SQS
+    await triggerRobotResponses(matchId, body.round, round.prompt);
     
-    // If all responses are in, move to voting phase
-    if (Object.keys(round.responses).length === 4) {
-      round.status = 'voting';
-    }
+    // Note: Robot responses will be added asynchronously by robot-worker
+    // The frontend will poll for updates
   }
 
-  // TODO: Add Kafka event publishing later
-  console.log('Response submitted:', matchId, 'Round:', body.round, 'Identity:', body.identity);
-
-  return {
-    statusCode: 200,
-    headers: CORS_HEADERS,
-    body: JSON.stringify({ 
-      success: true,
-      match: match,
-    }),
-  };
+  // Update match in DynamoDB
+  try {
+    await docClient.send(new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        matchId,
+        timestamp: 0,
+      },
+      UpdateExpression: 'SET rounds = :rounds, updatedAt = :updatedAt, #status = :status',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+      },
+      ExpressionAttributeValues: {
+        ':rounds': match.rounds,
+        ':updatedAt': match.updatedAt,
+        ':status': match.status,
+      },
+    }));
+    
+    console.log('Response submitted:', matchId, 'Round:', body.round, 'Identity:', body.identity);
+    
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ 
+        success: true,
+        match: match,
+      }),
+    };
+  } catch (error) {
+    console.error('Failed to update match in DynamoDB:', error);
+    return {
+      statusCode: 500,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: 'Failed to update match' }),
+    };
+  }
 }
 
 async function submitVote(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -325,12 +404,33 @@ async function submitVote(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
     };
   }
 
-  const match = matchStore.get(matchId);
-  if (!match) {
+  // Get match from DynamoDB
+  let match: Match;
+  try {
+    const result = await docClient.send(new GetCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        matchId,
+        timestamp: 0,
+      },
+    }));
+    
+    if (!result.Item) {
+      return {
+        statusCode: 404,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: 'Match not found' }),
+      };
+    }
+    
+    const { timestamp, ...matchData } = result.Item;
+    match = matchData as Match;
+  } catch (error) {
+    console.error('Failed to get match from DynamoDB:', error);
     return {
-      statusCode: 404,
+      statusCode: 500,
       headers: CORS_HEADERS,
-      body: JSON.stringify({ error: 'Match not found' }),
+      body: JSON.stringify({ error: 'Failed to retrieve match' }),
     };
   }
 
@@ -367,17 +467,19 @@ async function submitVote(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
     
     // If all votes are in, complete the round
     if (Object.keys(round.votes).length === 4) {
-      round.status = 'completed';
+      round.status = 'complete';
       
       // Move to next round or complete match
       if (match.currentRound < match.totalRounds) {
         match.currentRound++;
+        match.status = 'round_active';
         match.rounds.push({
           roundNumber: match.currentRound,
           prompt: getRandomPrompt(),
           responses: {},
           votes: {},
-          status: 'active',
+          scores: {},
+          status: 'responding',
         });
       } else {
         match.status = 'completed';
@@ -385,17 +487,50 @@ async function submitVote(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
     }
   }
 
-  // TODO: Add Kafka event publishing later
-  console.log('Vote submitted:', matchId, 'Voter:', body.voter, 'Voted for:', body.votedFor);
-
-  return {
-    statusCode: 200,
-    headers: CORS_HEADERS,
-    body: JSON.stringify({ 
-      success: true,
-      match: match,
-    }),
-  };
+  // Update match in DynamoDB
+  try {
+    await docClient.send(new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        matchId,
+        timestamp: 0,
+      },
+      UpdateExpression: 'SET rounds = :rounds, updatedAt = :updatedAt, #status = :status, currentRound = :currentRound',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+      },
+      ExpressionAttributeValues: {
+        ':rounds': match.rounds,
+        ':updatedAt': match.updatedAt,
+        ':status': match.status,
+        ':currentRound': match.currentRound,
+      },
+    }));
+    
+    console.log('Vote submitted:', matchId, 'Voter:', body.voter, 'Voted for:', body.votedFor);
+    
+    // If we just started a new round, trigger robot responses
+    if (body.voter === 'A' && match.status === 'round_active' && match.currentRound > 1) {
+      const newRound = match.rounds[match.rounds.length - 1];
+      await triggerRobotResponses(matchId, newRound.roundNumber, newRound.prompt);
+    }
+    
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ 
+        success: true,
+        match: match,
+      }),
+    };
+  } catch (error) {
+    console.error('Failed to update match in DynamoDB:', error);
+    return {
+      statusCode: 500,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: 'Failed to update match' }),
+    };
+  }
 }
 
 // Cleanup on Lambda shutdown - simplified without Kafka
