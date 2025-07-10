@@ -1,8 +1,7 @@
-'use client';
 
 import { Card } from './ui';
-import { PLAYER_CONFIG, getPlayerConfigByIdentity } from '../config/playerConfig';
-import { Identity } from '../store/sessionStore';
+import { PLAYER_CONFIG } from '../config/playerConfig';
+import type { Identity } from '../store/sessionStore';
 
 interface Message {
   id: string;
@@ -26,7 +25,7 @@ interface TableLayoutProps {
   myIdentity: Identity;
 }
 
-export function TableLayout({ participants, messages, identityMapping, myIdentity }: TableLayoutProps) {
+export function TableLayout({ participants, messages, myIdentity }: TableLayoutProps) {
   // Create a map of player positions to participants
   const playerPositions = new Map<number, Participant>();
   participants.forEach(p => {

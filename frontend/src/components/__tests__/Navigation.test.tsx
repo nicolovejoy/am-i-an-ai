@@ -1,25 +1,36 @@
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Navigation } from '../Navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/useAuth';
+import { useLocation } from 'react-router-dom';
+import type { Location } from 'react-router-dom';
 
 // Mock the dependencies
 jest.mock('@/contexts/AuthContext');
-jest.mock('next/navigation');
+interface LinkProps {
+  children: React.ReactNode;
+  to: string;
+  className?: string;
+}
+
+jest.mock('react-router-dom', () => ({
+  Link: ({ children, to, className }: LinkProps) => <a href={to} className={className}>{children}</a>,
+  useLocation: jest.fn()
+}));
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
-const mockUsePathname = usePathname as jest.MockedFunction<typeof usePathname>;
+const mockUseLocation = useLocation as jest.MockedFunction<typeof useLocation>;
 
 describe('Navigation', () => {
   beforeEach(() => {
-    mockUsePathname.mockReturnValue('/');
+    mockUseLocation.mockReturnValue({ pathname: '/' } as Location);
   });
 
   it('should render nothing when no user is logged in', () => {
     mockUseAuth.mockReturnValue({
       user: null,
       signOut: jest.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
 
     const { container } = render(<Navigation />);
     expect(container.firstChild).toBeNull();
@@ -29,7 +40,7 @@ describe('Navigation', () => {
     mockUseAuth.mockReturnValue({
       user: { email: 'test@example.com' },
       signOut: jest.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
 
     render(<Navigation />);
     
@@ -42,7 +53,7 @@ describe('Navigation', () => {
     mockUseAuth.mockReturnValue({
       user: { email: 'test@example.com' },
       signOut: jest.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
 
     render(<Navigation />);
     
@@ -55,7 +66,7 @@ describe('Navigation', () => {
     mockUseAuth.mockReturnValue({
       user: { email: 'test@example.com' },
       signOut: jest.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
 
     render(<Navigation />);
     
@@ -68,9 +79,9 @@ describe('Navigation', () => {
     mockUseAuth.mockReturnValue({
       user: { email: 'test@example.com' },
       signOut: jest.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
-    mockUsePathname.mockReturnValue('/about');
+    mockUseLocation.mockReturnValue({ pathname: '/about' } as Location);
 
     render(<Navigation />);
     

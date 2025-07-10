@@ -1,19 +1,22 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import ChatInterface from "../ChatInterface";
 import { useSessionStore } from "@/store/sessionStore";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import type { SessionStore } from "@/store/types";
+import { useAuth } from "@/contexts/useAuth";
+import { useNavigate } from "react-router-dom";
 
 // Mock dependencies
 jest.mock("@/store/sessionStore");
-jest.mock("@/contexts/AuthContext");
-jest.mock("next/navigation");
+jest.mock("@/contexts/useAuth");
+jest.mock("react-router-dom", () => ({
+  useNavigate: jest.fn()
+}));
 
 const mockUseSessionStore = useSessionStore as jest.MockedFunction<
   typeof useSessionStore
 >;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
-const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
+const mockUseNavigate = useNavigate as jest.MockedFunction<typeof useNavigate>;
 
 describe("ChatInterface", () => {
   const mockDisconnect = jest.fn();
@@ -22,7 +25,7 @@ describe("ChatInterface", () => {
   const mockSendMessage = jest.fn();
   const mockStartTestingMode = jest.fn();
   const mockSignOut = jest.fn();
-  const mockPush = jest.fn();
+  const mockNavigate = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -30,16 +33,9 @@ describe("ChatInterface", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "test@example.com" },
       signOut: mockSignOut,
-    } as any);
+    } as ReturnType<typeof useAuth>);
 
-    mockUseRouter.mockReturnValue({
-      push: mockPush,
-      back: jest.fn(),
-      forward: jest.fn(),
-      refresh: jest.fn(),
-      replace: jest.fn(),
-      prefetch: jest.fn(),
-    } as any);
+    mockUseNavigate.mockReturnValue(mockNavigate);
   });
 
   describe("Leave Match Button", () => {
@@ -65,7 +61,7 @@ describe("ChatInterface", () => {
         sendMessage: mockSendMessage,
         reset: mockReset,
         startTestingMode: mockStartTestingMode,
-      } as any);
+      } as SessionStore);
 
       // Act: Render the component
       render(<ChatInterface />);
@@ -103,7 +99,7 @@ describe("ChatInterface", () => {
         sendMessage: mockSendMessage,
         reset: mockReset,
         startTestingMode: mockStartTestingMode,
-      } as any);
+      } as SessionStore);
 
       // Act: Render the component
       render(<ChatInterface />);
@@ -143,7 +139,7 @@ describe("ChatInterface", () => {
         startTestingMode: mockStartTestingMode,
       };
 
-      mockUseSessionStore.mockReturnValue(mockStore as any);
+      mockUseSessionStore.mockReturnValue(mockStore as SessionStore);
 
       // Act: Render the component
       const { rerender } = render(<ChatInterface />);
@@ -162,7 +158,7 @@ describe("ChatInterface", () => {
         match: null,
         myIdentity: null,
         isSessionActive: false,
-      } as any);
+      } as SessionStore);
 
       rerender(<ChatInterface />);
 
@@ -199,7 +195,7 @@ describe("ChatInterface", () => {
         startTestingMode: mockStartTestingMode,
       };
 
-      mockUseSessionStore.mockReturnValue(mockStore as any);
+      mockUseSessionStore.mockReturnValue(mockStore as SessionStore);
       render(<ChatInterface />);
 
       const leaveButton = screen.getByText("Leave Match");
@@ -232,7 +228,7 @@ describe("ChatInterface", () => {
         sendMessage: mockSendMessage,
         reset: mockReset,
         startTestingMode: mockStartTestingMode,
-      } as any);
+      } as SessionStore);
 
       // Act: Render the component
       render(<ChatInterface />);
@@ -242,7 +238,7 @@ describe("ChatInterface", () => {
       fireEvent.click(leaveButton);
 
       // Assert: Should navigate to dashboard page
-      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
       expect(mockDisconnect).toHaveBeenCalledTimes(1);
     });
   });
@@ -264,7 +260,7 @@ describe("ChatInterface", () => {
         sendMessage: mockSendMessage,
         reset: mockReset,
         startTestingMode: mockStartTestingMode,
-      } as any);
+      } as SessionStore);
 
       render(<ChatInterface />);
 
@@ -287,7 +283,7 @@ describe("ChatInterface", () => {
         sendMessage: mockSendMessage,
         reset: mockReset,
         startTestingMode: mockStartTestingMode,
-      } as any);
+      } as SessionStore);
 
       render(<ChatInterface />);
 

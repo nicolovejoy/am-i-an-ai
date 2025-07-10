@@ -7,7 +7,11 @@ const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 const client_sqs_1 = require("@aws-sdk/client-sqs");
 // Initialize AWS clients
 const dynamoClient = new client_dynamodb_1.DynamoDBClient({});
-const docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(dynamoClient);
+const docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(dynamoClient, {
+    marshallOptions: {
+        removeUndefinedValues: true,
+    },
+});
 const sqsClient = new client_sqs_1.SQSClient({});
 // Get environment variables
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'robot-orchestra-matches';
@@ -27,6 +31,29 @@ const PROMPTS = [
 ];
 function getRandomPrompt() {
     return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+}
+// Seeded random number generator for consistent shuffling
+function seededRandom(seed) {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+        const char = seed.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return function () {
+        hash = (hash * 9301 + 49297) % 233280;
+        return hash / 233280;
+    };
+}
+// Shuffle array using a seed for consistency
+function shuffleArray(array, seed) {
+    const random = seededRandom(seed);
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
 }
 // Robot response generation moved to robot-worker Lambda
 // This function now sends a message to SQS for async processing
@@ -291,6 +318,22 @@ async function submitResponse(event) {
         // Note: Robot responses will be added asynchronously by robot-worker
         // The frontend will poll for updates
     }
+    // Check if all 4 responses are now collected
+    const responseCount = Object.keys(round.responses).length;
+    console.log(`Response count after update: ${responseCount}, round status: ${round.status}`);
+    console.log(`Current responses:`, Object.keys(round.responses));
+    if (responseCount === 4 && round.status === 'responding') {
+        // Update round status to voting
+        round.status = 'voting';
+        // Generate randomized presentation order for voting phase
+        // Use matchId and round number as seed for consistent ordering
+        const identities = ['A', 'B', 'C', 'D'];
+        const seed = `${matchId}-round-${body.round}`;
+        round.presentationOrder = shuffleArray(identities, seed);
+        console.log(`All responses collected for match ${matchId} round ${body.round}, transitioning to voting`);
+        console.log(`Presentation order for voting: ${round.presentationOrder.join(', ')}`);
+        console.log(`Shuffled array result:`, round.presentationOrder);
+    }
     // Update match in DynamoDB
     try {
         await docClient.send(new lib_dynamodb_1.UpdateCommand({
@@ -393,25 +436,29 @@ async function submitVote(event) {
         // Robot D votes
         const dChoices = participants.filter(p => p !== 'D');
         round.votes['D'] = dChoices[Math.floor(Math.random() * dChoices.length)];
-        // If all votes are in, complete the round
-        if (Object.keys(round.votes).length === 4) {
-            round.status = 'complete';
-            // Move to next round or complete match
-            if (match.currentRound < match.totalRounds) {
-                match.currentRound++;
-                match.status = 'round_active';
-                match.rounds.push({
-                    roundNumber: match.currentRound,
-                    prompt: getRandomPrompt(),
-                    responses: {},
-                    votes: {},
-                    scores: {},
-                    status: 'responding',
-                });
-            }
-            else {
-                match.status = 'completed';
-            }
+    }
+    // Check if all votes are in
+    const voteCount = Object.keys(round.votes).length;
+    if (voteCount === 4 && round.status === 'voting') {
+        round.status = 'complete';
+        console.log(`All votes collected for match ${matchId} round ${body.round}`);
+        // Move to next round or complete match
+        if (match.currentRound < match.totalRounds) {
+            match.currentRound++;
+            match.status = 'round_active';
+            match.rounds.push({
+                roundNumber: match.currentRound,
+                prompt: getRandomPrompt(),
+                responses: {},
+                votes: {},
+                scores: {},
+                status: 'responding',
+            });
+            console.log(`Moving to round ${match.currentRound} for match ${matchId}`);
+        }
+        else {
+            match.status = 'completed';
+            console.log(`Match ${matchId} completed after round ${match.currentRound}`);
         }
     }
     // Update match in DynamoDB

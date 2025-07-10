@@ -1,15 +1,16 @@
-import { Match } from '../types';
+import type { Match } from '../types';
+import { cognitoService } from '../../services/cognito';
 
 const MATCH_SERVICE_API = 
-  process.env.NEXT_PUBLIC_MATCH_SERVICE_API || 
+  import.meta.env.VITE_MATCH_SERVICE_API || 
   "https://api.robotorchestra.org";
 
 const MATCH_HISTORY_API =
-  process.env.NEXT_PUBLIC_MATCH_HISTORY_API ||
+  import.meta.env.VITE_MATCH_HISTORY_API ||
   "https://api.robotorchestra.org/matches/history";
 
 // API Response types
-interface CreateMatchResponse extends Match {}
+type CreateMatchResponse = Match;
 interface SubmitResponseResult {
   success: boolean;
   match?: Match;
@@ -20,14 +21,34 @@ interface SubmitVoteResult {
 }
 
 class MatchServiceError extends Error {
+  status?: number;
+  responseText?: string;
+  
   constructor(
     message: string,
-    public status?: number,
-    public responseText?: string
+    status?: number,
+    responseText?: string
   ) {
     super(message);
     this.name = 'MatchServiceError';
+    this.status = status;
+    this.responseText = responseText;
   }
+}
+
+// Helper function to get headers with authorization
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const idToken = await cognitoService.getIdToken();
+  
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  
+  if (idToken) {
+    headers["Authorization"] = `Bearer ${idToken}`;
+  }
+  
+  return headers;
 }
 
 export const matchService = {
@@ -37,9 +58,7 @@ export const matchService = {
     try {
       const response = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ playerName }),
       });
 
@@ -70,7 +89,9 @@ export const matchService = {
     const url = `${MATCH_SERVICE_API}/matches/${matchId}`;
     
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: await getAuthHeaders(),
+      });
       
       if (!response.ok) {
         throw new MatchServiceError(
@@ -102,9 +123,7 @@ export const matchService = {
     try {
       const apiResponse = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({
           identity,
           response: response.trim(),
@@ -142,9 +161,7 @@ export const matchService = {
     try {
       const apiResponse = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({
           voter,
           votedFor,
@@ -173,7 +190,9 @@ export const matchService = {
 
   async getMatchHistory(): Promise<Match[]> {
     try {
-      const response = await fetch(MATCH_HISTORY_API);
+      const response = await fetch(MATCH_HISTORY_API, {
+        headers: await getAuthHeaders(),
+      });
       
       if (!response.ok) {
         throw new MatchServiceError(

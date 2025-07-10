@@ -1,4 +1,3 @@
-'use client';
 
 import { useState } from 'react';
 import { Card, Button } from './ui';
@@ -49,17 +48,6 @@ export function VotingInterfaceV2({
     onSubmitVote(selectedPlayers);
   };
 
-  const getSelectionStyle = (playerNumber: number) => {
-    const config = PLAYER_CONFIG[playerNumber as 1 | 2 | 3 | 4];
-    if (!selectedPlayers.includes(playerNumber)) return {};
-    
-    return {
-      borderColor: config.color,
-      borderWidth: '3px',
-      backgroundColor: config.bgColor,
-      transform: 'scale(1.05)'
-    };
-  };
 
   return (
     <Card className="p-6">

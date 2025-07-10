@@ -14,6 +14,7 @@ export interface Round {
   votes: Partial<Record<Identity, Identity>>;
   scores: Partial<Record<Identity, number>>;
   status: "waiting" | "responding" | "voting" | "complete";
+  presentationOrder?: Identity[];
 }
 
 export interface Match {

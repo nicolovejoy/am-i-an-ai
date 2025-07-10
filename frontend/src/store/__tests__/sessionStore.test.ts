@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
-import { useSessionStore, Identity } from '../sessionStore';
+import { useSessionStore } from '../sessionStore';
+import type { Identity } from '../sessionStore';
 
 // Mock fetch globally
 global.fetch = jest.fn();

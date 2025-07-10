@@ -27,11 +27,12 @@ Don't archive old copies of files that are in git, silly.
 ### Deployment
 
 - **User handles ALL deployments** - Claude never runs deployment commands
+- **User happy to move and remove directories and such** - Claude should encourage users assistance whenever helpful
 - **Scripts**: reside in `/infrastructure/scripts` -- for details see readme in this directory.
 
 ### Development Commands
 
-**IMPORTANT**: Never prefix commands with "cd". Instead, specify the directory first, then the command on a new line.
+**IMPORTANT**: Never prefix commands for the user to execute with "cd". Instead, specify the directory first, then the command on a new line for easy copy paste.
 
 Frontend development (run from `frontend/`):
 
@@ -120,26 +121,31 @@ Just run them and continue with your work.
 ## 🚨 KEY LEARNINGS FROM JULY 9, 2025 FIXES
 
 ### TDD Approach Success
+
 - Writing tests first helped identify the exact behavior needed
 - Tests described the desired state transitions clearly
 - Implementation was straightforward once tests defined the requirements
 
 ### Status Transition Logic
+
 - Both match-service AND robot-worker need to check for all responses
 - Status transitions are critical for proper game flow
 - Always check response count after updates to trigger transitions
 
 ### Test Infrastructure
+
 - AWS SDK v3 mocks must be defined before importing handlers
 - Mock clients need to be in scope before jest.mock() calls
 - Each DynamoDB operation in the implementation needs a corresponding mock
 
 ### Frontend Store Pattern
+
 - sessionStore uses direct `set()` calls, not individual setter methods
 - Tests expecting `setMyIdentity()` etc. need to be updated
 - Store actions modify state directly within the action implementation
 
 ### Architecture Benefits
+
 - DynamoDB + SQS is much simpler than Kafka
 - Serverless approach reduces operational overhead
 - Polling from frontend works well for this use case

@@ -1,5 +1,5 @@
-import { StateCreator } from 'zustand';
-import { SessionStore, Match } from '../types';
+import type { StateCreator } from 'zustand';
+import type { SessionStore } from '../types';
 import { matchService } from '../api/matchService';
 
 export type MatchActions = Pick<
@@ -12,7 +12,7 @@ export const createMatchActions: StateCreator<
   [],
   [],
   MatchActions
-> = (set, get) => ({
+> = (set) => ({
   createRealMatch: async (playerName: string) => {
     try {
       // Update UI state

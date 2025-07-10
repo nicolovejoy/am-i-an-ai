@@ -3,10 +3,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
+import { Identity } from './types';
 
 // Initialize AWS clients
 const dynamoClient = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
+const docClient = DynamoDBDocumentClient.from(dynamoClient, {
+  marshallOptions: {
+    removeUndefinedValues: true,
+  },
+});
 const sqsClient = new SQSClient({});
 
 // Get environment variables
@@ -29,6 +34,34 @@ const PROMPTS = [
 
 function getRandomPrompt(): string {
   return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+}
+
+// Seeded random number generator for consistent shuffling
+function seededRandom(seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  return function() {
+    hash = (hash * 9301 + 49297) % 233280;
+    return hash / 233280;
+  };
+}
+
+// Shuffle array using a seed for consistency
+function shuffleArray<T>(array: T[], seed: string): T[] {
+  const random = seededRandom(seed);
+  const shuffled = [...array];
+  
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  return shuffled;
 }
 
 // Robot response generation moved to robot-worker Lambda
@@ -92,6 +125,7 @@ interface Round {
   votes: Record<string, string>;
   scores: Record<string, number>;
   status: 'waiting' | 'responding' | 'voting' | 'complete';
+  presentationOrder?: Identity[];
 }
 
 const CORS_HEADERS = {
@@ -353,10 +387,22 @@ async function submitResponse(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
   // Check if all 4 responses are now collected
   const responseCount = Object.keys(round.responses).length;
+  console.log(`Response count after update: ${responseCount}, round status: ${round.status}`);
+  console.log(`Current responses:`, Object.keys(round.responses));
+  
   if (responseCount === 4 && round.status === 'responding') {
     // Update round status to voting
     round.status = 'voting';
+    
+    // Generate randomized presentation order for voting phase
+    // Use matchId and round number as seed for consistent ordering
+    const identities: Identity[] = ['A', 'B', 'C', 'D'];
+    const seed = `${matchId}-round-${body.round}`;
+    round.presentationOrder = shuffleArray(identities, seed);
+    
     console.log(`All responses collected for match ${matchId} round ${body.round}, transitioning to voting`);
+    console.log(`Presentation order for voting: ${round.presentationOrder.join(', ')}`);
+    console.log(`Shuffled array result:`, round.presentationOrder);
   }
 
   // Update match in DynamoDB

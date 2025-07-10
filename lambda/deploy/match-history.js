@@ -5,7 +5,11 @@ const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 // Initialize AWS clients
 const dynamoClient = new client_dynamodb_1.DynamoDBClient({});
-const docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(dynamoClient);
+const docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(dynamoClient, {
+    marshallOptions: {
+        removeUndefinedValues: true,
+    },
+});
 // Get environment variables
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'robot-orchestra-matches';
 const CORS_HEADERS = {

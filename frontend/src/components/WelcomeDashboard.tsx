@@ -1,16 +1,15 @@
-"use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { useSessionStore } from "@/store/sessionStore";
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Card, Button, Input } from "./ui";
 
 export default function WelcomeDashboard() {
   const { user } = useAuth();
   const { createRealMatch, connectionStatus } = useSessionStore();
-  const router = useRouter();
+  const navigate = useNavigate();
   const [playerName, setPlayerName] = useState(user?.email?.split('@')[0] || '');
 
   const handleStartMatch = async () => {
@@ -22,7 +21,7 @@ export default function WelcomeDashboard() {
     try {
       await createRealMatch(playerName.trim());
       // Navigate to match page
-      router.push('/match');
+      navigate('/match');
     } catch (error) {
       console.error('Failed to create match:', error);
       alert('Failed to create match. Please try again.');
@@ -73,7 +72,7 @@ export default function WelcomeDashboard() {
         {/* Quick Links */}
         <div className="flex gap-4 text-center">
           <Link 
-            href="/history" 
+            to="/history" 
             className="flex-1 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
           >
             <span className="text-blue-600 hover:text-blue-800 font-medium">
@@ -82,7 +81,7 @@ export default function WelcomeDashboard() {
           </Link>
           
           <Link 
-            href="/about" 
+            to="/about" 
             className="flex-1 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
           >
             <span className="text-blue-600 hover:text-blue-800 font-medium">

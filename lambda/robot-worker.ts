@@ -1,13 +1,46 @@
 import { SQSEvent, SQSRecord } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { Identity } from './types';
 
 // Initialize AWS clients
 const dynamoClient = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
+const docClient = DynamoDBDocumentClient.from(dynamoClient, {
+  marshallOptions: {
+    removeUndefinedValues: true,
+  },
+});
 
 // Get environment variables
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'robot-orchestra-matches';
+
+// Seeded random number generator for consistent shuffling
+function seededRandom(seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  return function() {
+    hash = (hash * 9301 + 49297) % 233280;
+    return hash / 233280;
+  };
+}
+
+// Shuffle array using a seed for consistency
+function shuffleArray<T>(array: T[], seed: string): T[] {
+  const random = seededRandom(seed);
+  const shuffled = [...array];
+  
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  return shuffled;
+}
 
 // Robot personalities for response generation
 const robotPersonalities = {
@@ -156,18 +189,26 @@ async function processRobotResponse(record: SQSRecord): Promise<void> {
     if (responseCount === 4 && round.status === 'responding') {
       console.log(`All responses collected for match ${matchId} round ${roundNumber}, updating status to voting`);
       
+      // Generate randomized presentation order for voting phase
+      const identities: Identity[] = ['A', 'B', 'C', 'D'];
+      const seed = `${matchId}-round-${roundNumber}`;
+      const presentationOrder = shuffleArray(identities, seed);
+      
+      console.log(`Presentation order for voting: ${presentationOrder.join(', ')}`);
+      
       await docClient.send(new UpdateCommand({
         TableName: TABLE_NAME,
         Key: {
           matchId,
           timestamp: 0,
         },
-        UpdateExpression: `SET rounds[${roundIndex}].#status = :votingStatus, updatedAt = :updatedAt`,
+        UpdateExpression: `SET rounds[${roundIndex}].#status = :votingStatus, rounds[${roundIndex}].presentationOrder = :presentationOrder, updatedAt = :updatedAt`,
         ExpressionAttributeNames: {
           '#status': 'status',
         },
         ExpressionAttributeValues: {
           ':votingStatus': 'voting',
+          ':presentationOrder': presentationOrder,
           ':updatedAt': new Date().toISOString(),
         },
       }));

@@ -1,19 +1,18 @@
-'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { cognitoService } from '../../services/cognito';
-import { useAuth } from '../../contexts/AuthContext';
-import { SignInFormData, AuthError } from '../../types/auth';
+import { useAuth } from '../../contexts/useAuth';
+import type { SignInFormData, AuthError } from '../../types/auth';
 import { Card, Button, Input } from '../ui';
 
 export default function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
-  const router = useRouter();
+  const navigate = useNavigate();
   const { checkAuth } = useAuth();
 
   const {
@@ -29,7 +28,7 @@ export default function SignInForm() {
     try {
       await cognitoService.signIn(data);
       await checkAuth();
-      router.push('/');
+      navigate('/');
     } catch (err) {
       setError(err as AuthError);
     } finally {
@@ -113,7 +112,7 @@ export default function SignInForm() {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => router.push('/auth/signup')}
+              onClick={() => navigate('/auth/signup')}
             >
               Don&apos;t have an account? Sign up
             </Button>

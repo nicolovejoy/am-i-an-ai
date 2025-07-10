@@ -56,7 +56,7 @@ export class MockAIService {
   // Mock AI response generation
   async generateResponse(
     aiIdentity: 'A' | 'B' | 'C' | 'D',
-    conversationContext: { messages: any[], lastHumanMessage: string }
+    conversationContext: { messages: unknown[], lastHumanMessage: string }
   ): Promise<string> {
     const ai = this.activeAIs.get(aiIdentity);
     if (!ai) return '';

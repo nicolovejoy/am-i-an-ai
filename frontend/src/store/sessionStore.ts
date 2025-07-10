@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { SessionStore, SessionState } from './types';
+import type { SessionStore, SessionState } from './types';
 import { 
   createStateActions,
   createMatchActions,

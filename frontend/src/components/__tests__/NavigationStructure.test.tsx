@@ -1,24 +1,37 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import React from 'react';
+import { render, screen } from "@testing-library/react";
 import Home from "@/app/page";
 import { Navigation } from "../Navigation";
 import { useSessionStore } from "@/store/sessionStore";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter, usePathname } from "next/navigation";
+import type { SessionStore } from "@/store/types";
+import { useAuth } from "@/contexts/useAuth";
+import { useNavigate, useLocation } from "react-router-dom";
+import type { Location } from 'react-router-dom';
 
 // Mock dependencies
 jest.mock("@/store/sessionStore");
-jest.mock("@/contexts/AuthContext");
-jest.mock("next/navigation");
+jest.mock("@/contexts/useAuth");
+interface LinkProps {
+  children: React.ReactNode;
+  to: string;
+  className?: string;
+}
+
+jest.mock("react-router-dom", () => ({
+  useNavigate: jest.fn(),
+  useLocation: jest.fn(),
+  Link: ({ children, to, className }: LinkProps) => <a href={to} className={className}>{children}</a>
+}));
 
 const mockUseSessionStore = useSessionStore as jest.MockedFunction<
   typeof useSessionStore
 >;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
-const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
-const mockUsePathname = usePathname as jest.MockedFunction<typeof usePathname>;
+const mockUseNavigate = useNavigate as jest.MockedFunction<typeof useNavigate>;
+const mockUseLocation = useLocation as jest.MockedFunction<typeof useLocation>;
 
 describe("Navigation Structure (Option B)", () => {
-  const mockPush = jest.fn();
+  const mockNavigate = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -26,13 +39,11 @@ describe("Navigation Structure (Option B)", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "test@example.com" },
       signOut: jest.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
 
-    mockUseRouter.mockReturnValue({
-      push: mockPush,
-    } as any);
+    mockUseNavigate.mockReturnValue(mockNavigate);
 
-    mockUsePathname.mockReturnValue("/");
+    mockUseLocation.mockReturnValue({ pathname: "/" } as Location);
   });
 
   describe("Home Page (/) - Dashboard", () => {
@@ -46,7 +57,7 @@ describe("Navigation Structure (Option B)", () => {
         disconnect: jest.fn(),
         reset: jest.fn(),
         startTestingMode: jest.fn(),
-      } as any);
+      } as SessionStore);
 
       // Act: Render home page
       render(<Home />);
@@ -70,7 +81,7 @@ describe("Navigation Structure (Option B)", () => {
         disconnect: jest.fn(),
         reset: jest.fn(),
         startTestingMode: jest.fn(),
-      } as any);
+      } as SessionStore);
 
       render(<Home />);
 
@@ -124,7 +135,7 @@ describe("Navigation Structure (Option B)", () => {
         disconnect: jest.fn(),
         reset: jest.fn(),
         startTestingMode: jest.fn(),
-      } as any);
+      } as SessionStore);
 
       // Note: This would test the MatchPage component once created
       // render(<MatchPage />);

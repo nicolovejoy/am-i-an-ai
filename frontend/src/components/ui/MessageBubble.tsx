@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { Identity } from '../../store/sessionStore';
+import type { ReactNode } from 'react';
+import type { Identity } from '../../store/sessionStore';
 
 interface MessageBubbleProps {
   sender: Identity | 'You';
@@ -46,8 +46,7 @@ const PLAYER_STYLES = {
 export default function MessageBubble({ 
   sender, 
   children, 
-  timestamp, 
-  isCurrentUser = false 
+  timestamp
 }: MessageBubbleProps) {
   const style = PLAYER_STYLES[sender] || PLAYER_STYLES.You;
   

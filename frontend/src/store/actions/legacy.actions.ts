@@ -1,5 +1,5 @@
-import { StateCreator } from 'zustand';
-import { SessionStore } from '../types';
+import type { StateCreator } from 'zustand';
+import type { SessionStore } from '../types';
 
 export type LegacyActions = Pick<
   SessionStore,
@@ -11,7 +11,7 @@ export const createLegacyActions: StateCreator<
   [],
   [],
   LegacyActions
-> = (set, get) => ({
+> = (_, get) => ({
   // Legacy connect method - redirects to dashboard
   connect: () => {
     window.location.href = '/dashboard';

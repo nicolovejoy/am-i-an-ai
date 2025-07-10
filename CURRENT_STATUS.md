@@ -12,24 +12,31 @@
 - **Admin Console** - Debug panel at /admin (restricted to nlovejoy@me.com)
 - **Match Persistence** - Matches survive page refreshes via sessionStorage
 - **Modular Store Architecture** - Zustand store refactored into clean modules
+- **Vite Migration Complete** - Frontend migrated from Next.js to Vite, fixing RSC errors
+- **Server-Side Response Ordering** - Voting responses now have stable positions determined by backend
+- **HumanOrRobot Terminology** - All musical references removed, clear human vs robot gameplay
+- **Match History Page** - Working history page shows all matches, progress, and scores
+- **Enhanced Lambda Deployment** - New script with parallel uploads, type checking, and validation
 
 ### **🐛 Known Issues**
 
-- **Next.js RSC Errors** - Static export incompatible with App Router (fixing with Vite migration)
-- **Responses Jumping Around** - Responses appear then reorder themselves, need stable positioning
-- **Match History Broken** - Match history page not displaying correctly
+- **Voting Interface Bug** - presentationOrder only contains ['A'] instead of ['A', 'B', 'C', 'D'], causing only one response to show in voting phase
+  - Root cause: Backend only adds existing responses to presentationOrder instead of all participant identities
+  - Fix: Update match-service.ts or robot-worker.ts to always include all 4 identities when setting presentationOrder
 - **Duplicate Prompts** - Same prompt can appear twice in one match
 - **Polling Noise** - Console logs every second (will be fixed with SSE implementation)
+- **Missing Health Endpoint** - match-service Lambda needs /health endpoint
 
 ### **🏗️ Architecture**
 
 ```
-Frontend (Next.js) → API Gateway → Lambda Functions → DynamoDB
-                                          ↓
-                                    SQS Queue → Robot Worker → DynamoDB
+Frontend (Vite/React) → API Gateway → Lambda Functions → DynamoDB
+                                            ↓
+                                      SQS Queue → Robot Worker → DynamoDB
 ```
 
 **Infrastructure:**
+
 - DynamoDB table with 30-day TTL
 - SQS queue for async robot responses
 - Lambda functions: match-service, robot-worker, match-history
@@ -37,48 +44,29 @@ Frontend (Next.js) → API Gateway → Lambda Functions → DynamoDB
 
 ## 📋 **Next Steps (Priority Order)**
 
-### 1. **Migrate Frontend to Vite** (URGENT)
-Next.js static export is fundamentally incompatible with our SPA architecture:
-- **Week 1**: Set up Vite, migrate components, replace Next.js routing with React Router
-- **Week 2**: Update CI/CD, test thoroughly, deploy
-- **Benefits**: Fix RSC errors permanently, 10x faster builds, simpler architecture
+### 1. **Critical Bug Fix - Voting Interface**
+- **Issue**: Only showing one response (A) in voting phase instead of all 4
+- **Fix**: Update backend to set `presentationOrder: ['A', 'B', 'C', 'D']` (shuffled) when transitioning to voting
+- **Location**: Check match-service.ts and robot-worker.ts where status changes to 'round_voting'
 
-#### Quick Migration Plan:
-```bash
-# 1. Create new Vite app
-npm create vite@latest frontend-vite -- --template react-ts
-
-# 2. Copy over:
-- src/components/* (no changes needed)
-- src/store/* (no changes needed)  
-- src/services/* (no changes needed)
-- src/contexts/* (no changes needed)
-- src/types/* (no changes needed)
-
-# 3. Replace:
-- next/navigation → react-router-dom
-- next/image → <img>
-- app/* → routes/*
-
-# 4. Delete:
-- All Next.js specific tests
-- next.config.js
-- app directory structure
-
-# 5. Update CI/CD:
-- npm run build → vite build
-- dist/ → dist/ (same output)
-```
+### 2. **Other Quick Fixes**
+- **Add Health Endpoint**: Add /health endpoint to match-service Lambda returning 200 OK
+- **Duplicate Prompts**: Add deduplication logic when selecting random prompts
+- **Consider**: Temporarily disable polling logs in production build
 
 ### 2. **Server-Sent Events (SSE) Implementation**
+
 Replace noisy 1-second polling with clean real-time updates:
+
 - Add SSE endpoint to Lambda
 - Update frontend to use EventSource
 - Maintain polling as fallback
 - Cleaner console, better performance
 
 ### 3. **Multi-Human Matches (2 humans + 2 robots)**
+
 Enable more social gameplay:
+
 - Update match creation logic
 - Add matchmaking/lobby system
 - Handle multiple human participants
@@ -86,16 +74,23 @@ Enable more social gameplay:
 
 ## 🛠️ **Development Notes**
 
-- **Frontend Tests**: All 65 tests passing ✅
+- **Frontend Migration**: Successfully migrated from Next.js to Vite ✅
+- **Response Ordering**: Implemented server-side randomization for stable voting UI ✅
+- **Lambda Updates**: Added `presentationOrder` field to rounds when transitioning to voting ✅
+- **DynamoDB Fix**: Configured DocumentClient with `removeUndefinedValues: true` ✅
+- **Frontend Tests**: Need to be reconfigured for Vite/Vitest
 - **State Management**: Refactored to modular architecture with separate api, actions, and types ✅
 - **CI/CD**: Enhanced with proper cache headers and comprehensive CloudFront invalidation ✅
 - **Deployment**: Use `./scripts/deploy-lambda.sh` for Lambda updates
 - **Store Architecture**: Reduced from 439 lines to 56 lines with better separation of concerns ✅
 - **Error Handling**: Consistent API error handling with custom MatchServiceError class ✅
+- **Build Timestamps**: Now show PST timezone explicitly ✅
+- **Terminology Cleanup**: All musical references replaced with human/robot terminology ✅
 
 ## 💰 **Cost Status**
 
 Current: ~$5-10/month (within budget)
+
 - Lambda invocations
 - DynamoDB storage/requests
 - CloudFront/S3 hosting
@@ -121,10 +116,10 @@ sequenceDiagram
     participant DB as DynamoDB
     participant SQ as SQS Queue
     participant LW as Lambda Worker
-    
+
     U->>CF: Load App
     CF-->>U: Static Assets
-    
+
     rect rgb(200, 200, 200)
         Note over U: Create Match Flow
         U->>AG: POST /matches
@@ -132,11 +127,11 @@ sequenceDiagram
         LS->>DB: Create Match
         LS->>SQ: Queue Robot Tasks
         LS-->>U: Match Created
-        
+
         SQ->>LW: Process Robot Response
         LW->>DB: Update Match
     end
-    
+
     rect rgb(255, 200, 200)
         Note over U: Current Polling (1s interval)
         loop Every 1 second
@@ -146,7 +141,7 @@ sequenceDiagram
             LS-->>U: Match State
         end
     end
-    
+
     rect rgb(200, 200, 200)
         Note over U: Submit Response/Vote
         U->>AG: POST /matches/{id}/responses
@@ -169,10 +164,10 @@ sequenceDiagram
     participant LH as Lambda Handler (SSE)
     participant SQ as SQS Queue
     participant LW as Lambda Worker
-    
+
     U->>CF: Load App
     CF-->>U: Static Assets
-    
+
     rect rgb(200, 200, 200)
         Note over U: Create Match Flow (unchanged)
         U->>AG: POST /matches
@@ -181,13 +176,13 @@ sequenceDiagram
         LS->>SQ: Queue Robot Tasks
         LS-->>U: Match Created
     end
-    
+
     rect rgb(200, 255, 200)
         Note over U: New SSE Connection
         U->>AG: GET /matches/{id}/events (SSE)
         AG->>LH: Open Connection
         Note over LH,U: Keep connection alive
-        
+
         par DynamoDB Streams Integration
             DB-->>DS: Change Events
             DS->>LH: Match Updates
@@ -200,7 +195,7 @@ sequenceDiagram
             LH-->>U: SSE: data: {new response}
         end
     end
-    
+
     rect rgb(200, 200, 200)
         Note over U: Submit Response/Vote (unchanged)
         U->>AG: POST /matches/{id}/responses

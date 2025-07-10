@@ -1,0 +1,9 @@
+export { default as HomePage } from './HomePage';
+export { default as DashboardPage } from './DashboardPage';
+export { default as MatchPage } from './MatchPage';
+export { default as AdminPage } from './AdminPage';
+export { default as AboutPage } from './AboutPage';
+export { default as HistoryPage } from './HistoryPage';
+export { default as SignInPage } from './auth/SignInPage';
+export { default as SignUpPage } from './auth/SignUpPage';
+export { default as VerifyPage } from './auth/VerifyPage';

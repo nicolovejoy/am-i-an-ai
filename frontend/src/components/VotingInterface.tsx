@@ -1,4 +1,3 @@
-'use client';
 
 import { useState } from 'react';
 import { Card, Button } from '@/components/ui';
@@ -59,24 +58,6 @@ export function VotingInterface({
     return colors[identity as keyof typeof colors] || 'border-slate-200 bg-slate-50';
   };
 
-  const getParticipantStyle = (playerNumber: number) => {
-    // Use the player colors from config
-    const config = {
-      1: { border: '#93C5FD', bg: '#DBEAFE', color: '#3B82F6' }, // Blue
-      2: { border: '#6EE7B7', bg: '#D1FAE5', color: '#10B981' }, // Green
-      3: { border: '#FBCFE8', bg: '#FCE7F3', color: '#881337' }, // Maroon
-      4: { border: '#F3E8FF', bg: '#FAE8FF', color: '#D946EF' }  // Fuchsia
-    };
-    
-    const playerConfig = config[playerNumber as keyof typeof config];
-    if (!playerConfig) return {};
-    
-    return {
-      borderColor: playerConfig.border,
-      backgroundColor: playerConfig.bg,
-      accentColor: playerConfig.color
-    };
-  };
 
   const getSelectionStyle = (identity: string) => {
     if (!selectedAIs.includes(identity)) return '';

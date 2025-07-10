@@ -3,34 +3,40 @@ import React from 'react';
 
 // Mock modules before imports
 jest.mock('@/store/sessionStore');
-jest.mock('@/contexts/AuthContext');
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    replace: jest.fn(),
-    prefetch: jest.fn(),
-  })
+jest.mock('@/contexts/useAuth');
+interface LinkProps {
+  children: React.ReactNode;
+  to: string;
+  className?: string;
+}
+
+jest.mock('react-router-dom', () => ({
+  useNavigate: () => jest.fn(),
+  Link: ({ children, to, className }: LinkProps) => <a href={to} className={className}>{children}</a>
 }));
 
 import WelcomeDashboard from '../WelcomeDashboard';
 
 // Setup mocks
-const mockStartTestingMode = jest.fn();
 const mockUser = { email: 'testuser@example.com', sub: '123' };
 
-// Mock implementations
-const { useSessionStore } = require('@/store/sessionStore');
-const { useAuth } = require('@/contexts/AuthContext');
+// Import mocks
+import { useSessionStore } from '@/store/sessionStore';
+import type { SessionStore } from '@/store/types';
+import { useAuth } from '@/contexts/useAuth';
 
-useSessionStore.mockReturnValue({
+const mockUseSessionStore = useSessionStore as jest.MockedFunction<typeof useSessionStore>;
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+
+mockUseSessionStore.mockReturnValue({
   createRealMatch: jest.fn(),
   connectionStatus: 'disconnected',
-});
+} as Partial<SessionStore> as SessionStore);
 
-useAuth.mockReturnValue({
+mockUseAuth.mockReturnValue({
   user: mockUser,
   signOut: jest.fn()
-});
+} as ReturnType<typeof useAuth>);
 
 describe('WelcomeDashboard', () => {
   beforeEach(() => {
@@ -57,10 +63,10 @@ describe('WelcomeDashboard', () => {
 
   it('creates real match when Start Match is clicked', () => {
     const mockCreateRealMatch = jest.fn();
-    useSessionStore.mockReturnValue({
+    mockUseSessionStore.mockReturnValue({
       createRealMatch: mockCreateRealMatch,
       connectionStatus: 'disconnected',
-    });
+    } as Partial<SessionStore> as SessionStore);
     
     render(<WelcomeDashboard />);
     
@@ -93,10 +99,10 @@ describe('WelcomeDashboard', () => {
   });
 
   it('shows loading state when connecting', () => {
-    useSessionStore.mockReturnValue({
+    mockUseSessionStore.mockReturnValue({
       createRealMatch: jest.fn(),
       connectionStatus: 'connecting',
-    });
+    } as Partial<SessionStore> as SessionStore);
     
     render(<WelcomeDashboard />);
     

@@ -1,20 +1,18 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
-import { FiSend, FiLogOut } from 'react-icons/fi';
-import { useRouter } from 'next/navigation';
-import { useSessionStore } from '@/store/sessionStore';
-import { useAuth } from '@/contexts/AuthContext';
-import MessageList from './MessageList';
-import ParticipantBar from './ParticipantBar';
-import RoundInterface from './RoundInterface';
-import MatchComplete from './MatchComplete';
-import { Card, Button } from './ui';
+import { useEffect, useRef, useState } from "react";
+import { FiSend } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
+import { useSessionStore } from "@/store/sessionStore";
+import { useAuth } from "@/contexts/useAuth";
+import MessageList from "./MessageList";
+import ParticipantBar from "./ParticipantBar";
+import RoundInterface from "./RoundInterface";
+import MatchComplete from "./MatchComplete";
+import { Card, Button } from "./ui";
 
 export default function ChatInterface() {
-  const [messageInput, setMessageInput] = useState('');
+  const [messageInput, setMessageInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   const {
     connectionStatus,
     lastError,
@@ -30,14 +28,14 @@ export default function ChatInterface() {
     reset,
   } = useSessionStore();
 
-  const { user, signOut } = useAuth();
-  const router = useRouter();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
 
   // Auto-connect on mount (only if no match exists)
   useEffect(() => {
     // Don't call connect if we have a match or are already connecting
     // connect() is a legacy method that redirects to dashboard
-    if (connectionStatus === 'disconnected' && !match) {
+    if (connectionStatus === "disconnected" && !match) {
       // Instead of calling connect, we should show a message or redirect
       // But don't auto-redirect as the match page handles that
     }
@@ -45,7 +43,7 @@ export default function ChatInterface() {
 
   // Focus input when connected
   useEffect(() => {
-    if (connectionStatus === 'connected' && inputRef.current) {
+    if (connectionStatus === "connected" && inputRef.current) {
       inputRef.current.focus();
     }
   }, [connectionStatus]);
@@ -53,7 +51,7 @@ export default function ChatInterface() {
   // Poll for match state updates every second when in active match
   useEffect(() => {
     if (!match) return;
-    
+
     const pollInterval = setInterval(() => {
       useSessionStore.getState().pollMatchUpdates(match.matchId);
     }, 1000);
@@ -63,14 +61,14 @@ export default function ChatInterface() {
 
   const handleSendMessage = () => {
     const content = messageInput.trim();
-    if (!content || connectionStatus !== 'connected') return;
+    if (!content || connectionStatus !== "connected") return;
 
     sendMessage(content);
-    setMessageInput('');
+    setMessageInput("");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -83,11 +81,14 @@ export default function ChatInterface() {
 
   const handleLeaveMatch = () => {
     disconnect();
-    router.push('/dashboard');
+    navigate("/dashboard");
   };
 
   // Show testing mode toggle if not connected and not in error state and not in testing mode
-  if (connectionStatus === 'disconnected' || connectionStatus === 'connecting') {
+  if (
+    connectionStatus === "disconnected" ||
+    connectionStatus === "connecting"
+  ) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="space-y-4 max-w-md w-full mx-4">
@@ -96,30 +97,29 @@ export default function ChatInterface() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             </div>
             <h2 className="text-xl font-semibold mb-2">
-              {connectionStatus === 'disconnected' ? 'Connecting...' : 'Joining Session...'}
+              {connectionStatus === "disconnected"
+                ? "Connecting..."
+                : "Joining Session..."}
             </h2>
             <div className="text-slate-600 space-y-1">
-              <p>
-                Connecting to match with four participants
-              </p>
+              <p>Connecting to match with four participants</p>
             </div>
           </Card>
-          
         </div>
       </div>
     );
   }
 
-  if (connectionStatus === 'error') {
+  if (connectionStatus === "error") {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="text-center max-w-md w-full mx-4">
           <div className="text-4xl mb-4">🔌</div>
-          <h2 className="text-xl font-semibold text-red-600 mb-2">Connection Error</h2>
+          <h2 className="text-xl font-semibold text-red-600 mb-2">
+            Connection Error
+          </h2>
           <div className="text-slate-600 mb-4 space-y-2">
-            <p>
-              {lastError || 'Failed to connect to the API server.'}
-            </p>
+            <p>{lastError || "Failed to connect to the API server."}</p>
             <p className="text-sm">
               Please check your internet connection and try again.
             </p>
@@ -141,27 +141,21 @@ export default function ChatInterface() {
             >
               Reload Page
             </Button>
-            <Button
-              onClick={signOut}
-              variant="ghost"
-              size="sm"
-              fullWidth
-            >
+            <Button onClick={signOut} variant="ghost" size="sm" fullWidth>
               Sign Out
             </Button>
           </div>
-          <div className="mt-4">
-            </div>
+          <div className="mt-4"></div>
         </Card>
       </div>
     );
   }
 
   // Show match complete screen when match is completed
-  if (match?.status === 'completed' && myIdentity) {
+  if (match?.status === "completed" && myIdentity) {
     return <MatchComplete match={match} myIdentity={myIdentity} />;
   }
-  
+
   // Legacy reveal screen (kept for backward compatibility)
   if (isRevealed) {
     return (
@@ -171,16 +165,15 @@ export default function ChatInterface() {
           <p className="text-lg text-slate-700 mb-6">
             Time&apos;s up! Here&apos;s who was who:
           </p>
-          
+
           {/* Identity reveal will be implemented here */}
           <div className="mb-6 p-4 bg-slate-100 rounded-lg">
-            <p className="text-sm text-slate-600">Identity reveal coming soon...</p>
+            <p className="text-sm text-slate-600">
+              Identity reveal coming soon...
+            </p>
           </div>
-          
-          <Button
-            onClick={handleNewSession}
-            size="lg"
-          >
+
+          <Button onClick={handleNewSession} size="lg">
             Start New Session
           </Button>
         </Card>
@@ -194,7 +187,9 @@ export default function ChatInterface() {
       <Card className="text-center" padding="sm">
         <div className="flex items-center justify-between">
           <div className="text-left">
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900">Robot Orchestra</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900">
+              Robot Orchestra
+            </h1>
             <p className="text-xs sm:text-sm text-slate-600 hidden sm:block">
               Figure out who&apos;s human and who&apos;s AI
             </p>
@@ -218,18 +213,17 @@ export default function ChatInterface() {
             </Button>
           </div>
         </div>
-        
+
         {/* Game info */}
         <div className="flex justify-between items-center text-xs text-slate-600 mt-2 pt-2 border-t border-slate-200">
           <span className="hidden sm:inline">
             Round {match?.currentRound || 1} of {match?.totalRounds || 5}
           </span>
-          <span className="sm:hidden">
-            R{match?.currentRound || 1}
-          </span>
+          <span className="sm:hidden">R{match?.currentRound || 1}</span>
           <span>💬 {messages?.length || 0}</span>
           <span className="hidden sm:inline">
-            You are participant <span className="font-semibold text-blue-600">{myIdentity}</span>
+            You are participant{" "}
+            <span className="font-semibold text-blue-600">{myIdentity}</span>
           </span>
           <span className="sm:hidden font-semibold text-blue-600">
             You: {myIdentity}
@@ -249,7 +243,7 @@ export default function ChatInterface() {
             <div className="flex-1 overflow-y-auto p-2 sm:p-4">
               <MessageList />
             </div>
-            
+
             {/* Legacy Input - Only show if not in round mode */}
             {isSessionActive && !currentPrompt && (
               <div className="mt-4">

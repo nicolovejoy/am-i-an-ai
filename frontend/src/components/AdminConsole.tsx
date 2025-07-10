@@ -1,132 +1,141 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { Card, Button } from '@/components/ui';
+import { useState } from "react";
+import { Card, Button } from "@/components/ui";
 
 interface HealthCheckResult {
   endpoint: string;
-  status: 'checking' | 'healthy' | 'error' | 'not-checked';
+  status: "checking" | "healthy" | "error" | "not-checked";
   responseTime?: number;
   error?: string;
 }
 
 export function AdminConsole() {
-  const [healthChecks, setHealthChecks] = useState<Record<string, HealthCheckResult>>({});
-  
+  const [healthChecks, setHealthChecks] = useState<
+    Record<string, HealthCheckResult>
+  >({});
+
   // Get all configured endpoints
   const endpoints = {
-    MATCH_SERVICE_API: process.env.NEXT_PUBLIC_MATCH_SERVICE_API || 'NOT SET',
-    MATCH_HISTORY_API: process.env.NEXT_PUBLIC_MATCH_HISTORY_API || 'NOT SET',
-    COGNITO_USER_POOL_ID: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || 'NOT SET',
-    COGNITO_CLIENT_ID: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || 'NOT SET',
-    DOMAIN_NAME: process.env.NEXT_PUBLIC_DOMAIN_NAME || 'NOT SET',
+    MATCH_SERVICE_API: import.meta.env.VITE_MATCH_SERVICE_API || "NOT SET",
+    MATCH_HISTORY_API: import.meta.env.VITE_MATCH_HISTORY_API || "NOT SET",
+    COGNITO_USER_POOL_ID:
+      import.meta.env.VITE_COGNITO_USER_POOL_ID || "NOT SET",
+    COGNITO_CLIENT_ID: import.meta.env.VITE_COGNITO_CLIENT_ID || "NOT SET",
+    DOMAIN_NAME: import.meta.env.VITE_DOMAIN_NAME || "NOT SET",
   };
 
   // Fallback URLs that are used in the code
   const fallbacks = {
-    MATCH_SERVICE_API: 'https://api.robotorchestra.org',
-    MATCH_HISTORY_API: 'https://api.robotorchestra.org/matches/history',
+    MATCH_SERVICE_API: "https://api.robotorchestra.org",
+    MATCH_HISTORY_API: "https://api.robotorchestra.org/matches/history",
   };
 
   // API endpoints to test
   const apiEndpoints = [
     {
-      name: 'Create Match',
+      name: "Create Match",
       url: `${endpoints.MATCH_SERVICE_API}/matches`,
-      method: 'OPTIONS', // Use OPTIONS to avoid creating actual matches
+      method: "OPTIONS", // Use OPTIONS to avoid creating actual matches
     },
     {
-      name: 'Get Match',
+      name: "Get Match",
       url: `${endpoints.MATCH_SERVICE_API}/matches/test-id`,
-      method: 'OPTIONS',
+      method: "OPTIONS",
     },
     {
-      name: 'Submit Response',
+      name: "Submit Response",
       url: `${endpoints.MATCH_SERVICE_API}/matches/test-id/responses`,
-      method: 'OPTIONS',
+      method: "OPTIONS",
     },
     {
-      name: 'Submit Vote',
+      name: "Submit Vote",
       url: `${endpoints.MATCH_SERVICE_API}/matches/test-id/votes`,
-      method: 'OPTIONS',
+      method: "OPTIONS",
     },
     {
-      name: 'Match History',
+      name: "Match History",
       url: endpoints.MATCH_HISTORY_API,
-      method: 'OPTIONS',
+      method: "OPTIONS",
     },
   ];
 
-  const checkEndpointHealth = async (endpoint: typeof apiEndpoints[0]) => {
-    setHealthChecks(prev => ({
+  const checkEndpointHealth = async (endpoint: (typeof apiEndpoints)[0]) => {
+    setHealthChecks((prev) => ({
       ...prev,
-      [endpoint.name]: { endpoint: endpoint.url, status: 'checking' }
+      [endpoint.name]: { endpoint: endpoint.url, status: "checking" },
     }));
 
     const startTime = Date.now();
-    
+
     try {
       const response = await fetch(endpoint.url, {
         method: endpoint.method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
       const responseTime = Date.now() - startTime;
-      
-      setHealthChecks(prev => ({
+
+      setHealthChecks((prev) => ({
         ...prev,
         [endpoint.name]: {
           endpoint: endpoint.url,
-          status: response.ok ? 'healthy' : 'error',
+          status: response.ok ? "healthy" : "error",
           responseTime,
           error: !response.ok ? `Status: ${response.status}` : undefined,
-        }
+        },
       }));
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      setHealthChecks(prev => ({
+      setHealthChecks((prev) => ({
         ...prev,
         [endpoint.name]: {
           endpoint: endpoint.url,
-          status: 'error',
+          status: "error",
           responseTime,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
       }));
     }
   };
 
   const checkAllEndpoints = () => {
-    apiEndpoints.forEach(endpoint => {
-      if (endpoint.url !== 'NOT SET') {
+    apiEndpoints.forEach((endpoint) => {
+      if (endpoint.url !== "NOT SET") {
         checkEndpointHealth(endpoint);
       }
     });
   };
 
-  const getStatusColor = (status: HealthCheckResult['status']) => {
+  const getStatusColor = (status: HealthCheckResult["status"]) => {
     switch (status) {
-      case 'healthy': return 'text-green-600';
-      case 'error': return 'text-red-600';
-      case 'checking': return 'text-yellow-600';
-      default: return 'text-gray-400';
+      case "healthy":
+        return "text-green-600";
+      case "error":
+        return "text-red-600";
+      case "checking":
+        return "text-yellow-600";
+      default:
+        return "text-gray-400";
     }
   };
 
-  const getStatusIcon = (status: HealthCheckResult['status']) => {
+  const getStatusIcon = (status: HealthCheckResult["status"]) => {
     switch (status) {
-      case 'healthy': return '✅';
-      case 'error': return '❌';
-      case 'checking': return '⏳';
-      default: return '⭕';
+      case "healthy":
+        return "✅";
+      case "error":
+        return "❌";
+      case "checking":
+        return "⏳";
+      default:
+        return "⭕";
     }
   };
 
   // Check which API URL is actually being used
   const getActiveApiUrl = () => {
-    const configured = process.env.NEXT_PUBLIC_MATCH_SERVICE_API;
+    const configured = import.meta.env.VITE_MATCH_SERVICE_API;
     return configured || fallbacks.MATCH_SERVICE_API;
   };
 
@@ -143,24 +152,36 @@ export function AdminConsole() {
 
       {/* Environment Configuration */}
       <Card>
-        <h2 className="text-xl font-semibold mb-4">📋 Environment Configuration</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          📋 Environment Configuration
+        </h2>
         <div className="space-y-3">
           {Object.entries(endpoints).map(([key, value]) => (
             <div key={key} className="border-b pb-3 last:border-0">
               <div className="flex justify-between items-start">
                 <div>
                   <div className="font-mono text-sm font-medium">{key}</div>
-                  <div className={`text-sm mt-1 ${value === 'NOT SET' ? 'text-red-600' : 'text-green-600'}`}>
+                  <div
+                    className={`text-sm mt-1 ${
+                      value === "NOT SET" ? "text-red-600" : "text-green-600"
+                    }`}
+                  >
                     {value}
                   </div>
-                  {fallbacks[key as keyof typeof fallbacks] && value === 'NOT SET' && (
-                    <div className="text-xs text-amber-600 mt-1">
-                      ⚠️ Using fallback: {fallbacks[key as keyof typeof fallbacks]}
-                    </div>
-                  )}
+                  {fallbacks[key as keyof typeof fallbacks] &&
+                    value === "NOT SET" && (
+                      <div className="text-xs text-amber-600 mt-1">
+                        ⚠️ Using fallback:{" "}
+                        {fallbacks[key as keyof typeof fallbacks]}
+                      </div>
+                    )}
                 </div>
-                <div className={`text-sm ${value === 'NOT SET' ? 'text-red-600' : 'text-green-600'}`}>
-                  {value === 'NOT SET' ? '❌ Not Configured' : '✅ Configured'}
+                <div
+                  className={`text-sm ${
+                    value === "NOT SET" ? "text-red-600" : "text-green-600"
+                  }`}
+                >
+                  {value === "NOT SET" ? "❌ Not Configured" : "✅ Configured"}
                 </div>
               </div>
             </div>
@@ -174,10 +195,12 @@ export function AdminConsole() {
         <div className="bg-slate-100 p-4 rounded-lg">
           <div className="text-sm">
             <strong>API requests will go to:</strong>
-            <div className="font-mono mt-2 text-blue-600">{getActiveApiUrl()}</div>
-            {!process.env.NEXT_PUBLIC_MATCH_SERVICE_API && (
+            <div className="font-mono mt-2 text-blue-600">
+              {getActiveApiUrl()}
+            </div>
+            {!import.meta.env.VITE_MATCH_SERVICE_API && (
               <div className="text-amber-600 text-xs mt-2">
-                ⚠️ Using fallback URL because NEXT_PUBLIC_MATCH_SERVICE_API is not set
+                ⚠️ Using fallback URL because VITE_MATCH_SERVICE_API is not set
               </div>
             )}
           </div>
@@ -192,12 +215,12 @@ export function AdminConsole() {
             Check All Endpoints
           </Button>
         </div>
-        
+
         <div className="space-y-3">
           {apiEndpoints.map((endpoint) => {
             const health = healthChecks[endpoint.name];
-            const isConfigured = endpoint.url !== 'NOT SET';
-            
+            const isConfigured = endpoint.url !== "NOT SET";
+
             return (
               <div key={endpoint.name} className="border rounded-lg p-4">
                 <div className="flex justify-between items-start">
@@ -215,8 +238,13 @@ export function AdminConsole() {
                   <div className="text-right">
                     {isConfigured ? (
                       <>
-                        <div className={`font-medium ${getStatusColor(health?.status || 'not-checked')}`}>
-                          {getStatusIcon(health?.status || 'not-checked')} {health?.status || 'Not checked'}
+                        <div
+                          className={`font-medium ${getStatusColor(
+                            health?.status || "not-checked"
+                          )}`}
+                        >
+                          {getStatusIcon(health?.status || "not-checked")}{" "}
+                          {health?.status || "Not checked"}
                         </div>
                         {health?.responseTime !== undefined && (
                           <div className="text-xs text-slate-500 mt-1">
@@ -225,9 +253,7 @@ export function AdminConsole() {
                         )}
                       </>
                     ) : (
-                      <div className="text-red-600">
-                        ❌ Not configured
-                      </div>
+                      <div className="text-red-600">❌ Not configured</div>
                     )}
                   </div>
                 </div>
@@ -242,13 +268,16 @@ export function AdminConsole() {
         <h2 className="text-xl font-semibold mb-4">ℹ️ System Information</h2>
         <div className="space-y-2 text-sm">
           <div>
-            <span className="font-medium">Build Mode:</span> {process.env.NODE_ENV}
+            <span className="font-medium">Build Mode:</span>{" "}
+            {process.env.NODE_ENV}
           </div>
           <div>
-            <span className="font-medium">User Agent:</span> {typeof window !== 'undefined' ? navigator.userAgent : 'N/A'}
+            <span className="font-medium">User Agent:</span>{" "}
+            {typeof window !== "undefined" ? navigator.userAgent : "N/A"}
           </div>
           <div>
-            <span className="font-medium">Current URL:</span> {typeof window !== 'undefined' ? window.location.href : 'N/A'}
+            <span className="font-medium">Current URL:</span>{" "}
+            {typeof window !== "undefined" ? window.location.href : "N/A"}
           </div>
         </div>
       </Card>
@@ -259,22 +288,22 @@ export function AdminConsole() {
         <div className="space-y-3">
           <Button
             onClick={() => {
-              console.log('Environment Variables:', endpoints);
-              console.log('Active API URL:', getActiveApiUrl());
-              console.log('Health Check Results:', healthChecks);
-              alert('Check browser console for debug information');
+              console.log("Environment Variables:", endpoints);
+              console.log("Active API URL:", getActiveApiUrl());
+              console.log("Health Check Results:", healthChecks);
+              alert("Check browser console for debug information");
             }}
             variant="secondary"
             size="sm"
           >
             Log Debug Info to Console
           </Button>
-          
+
           <Button
             onClick={() => {
               localStorage.clear();
               sessionStorage.clear();
-              alert('Local storage cleared. Refresh the page.');
+              alert("Local storage cleared. Refresh the page.");
             }}
             variant="danger"
             size="sm"

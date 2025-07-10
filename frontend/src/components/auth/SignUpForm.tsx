@@ -1,18 +1,17 @@
-'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { cognitoService } from '../../services/cognito';
-import { SignUpFormData, AuthError } from '../../types/auth';
+import type { SignUpFormData, AuthError } from '../../types/auth';
 
 export default function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -29,7 +28,7 @@ export default function SignUpForm() {
 
     try {
       await cognitoService.signUp(data);
-      router.push(`/auth/verify?email=${encodeURIComponent(data.email)}`);
+      navigate(`/auth/verify?email=${encodeURIComponent(data.email)}`);
     } catch (err) {
       setError(err as AuthError);
     } finally {
@@ -159,7 +158,7 @@ export default function SignUpForm() {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => router.push('/auth/signin')}
+              onClick={() => navigate('/auth/signin')}
               className="text-primary-600 hover:text-primary-500 text-sm"
             >
               Already have an account? Sign in

@@ -1,5 +1,5 @@
-import { StateCreator } from 'zustand';
-import { SessionStore, Identity } from '../types';
+import type { StateCreator } from 'zustand';
+import type { SessionStore, Identity } from '../types';
 import { matchService } from '../api/matchService';
 
 export type GameActions = Pick<

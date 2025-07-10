@@ -1,5 +1,5 @@
-import { StateCreator } from 'zustand';
-import { SessionStore, SessionState, ConnectionStatus, Identity, Match, Message } from '../types';
+import type { StateCreator } from 'zustand';
+import type { SessionStore, ConnectionStatus, Identity, Match, Message } from '../types';
 
 export type StateActions = Pick<
   SessionStore,
@@ -26,7 +26,7 @@ export const createStateActions: StateCreator<
   [],
   [],
   StateActions
-> = (set, get) => ({
+> = (set) => ({
   // Individual State Setters
   setConnectionStatus: (status: ConnectionStatus) => set({ connectionStatus: status }),
   setLastError: (error: string | null) => set({ lastError: error }),

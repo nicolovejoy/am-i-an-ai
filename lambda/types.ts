@@ -38,6 +38,10 @@ export interface Round {
   startTime: number;
   /** When this round ended */
   endTime?: number;
+  /** Status of this round */
+  status?: 'waiting' | 'responding' | 'voting' | 'complete';
+  /** Randomized presentation order for voting phase (set once when transitioning to voting) */
+  presentationOrder?: Identity[];
 }
 
 export interface MatchSettings {

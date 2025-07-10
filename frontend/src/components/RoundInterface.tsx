@@ -1,9 +1,8 @@
-"use client";
 
 import { useSessionStore } from "@/store/sessionStore";
 import PromptDisplay from "./PromptDisplay";
 import PhraseComposer from "./ResponseInput";
-import MusicianRecognition from "./RoundVoting";
+import HumanOrRobot from "./HumanOrRobot";
 import { Card } from "./ui";
 
 export default function RoundInterface() {
@@ -22,13 +21,13 @@ export default function RoundInterface() {
 
   const currentRound = match.currentRound;
   const totalRounds = match.totalRounds;
-  const allPhrasesIn = Object.keys(roundResponses).length === 4;
+  const allResponsesIn = Object.keys(roundResponses).length === 4;
 
   // Determine current phase of the Round
 
   const isPromptPhase = currentPrompt && !hasSubmittedResponse;
-  const isRecognitionPhase = allPhrasesIn && !hasSubmittedVote;
-  const isWaitingForOthers = hasSubmittedResponse && !allPhrasesIn;
+  const isRecognitionPhase = allResponsesIn && !hasSubmittedVote;
+  const isWaitingForOthers = hasSubmittedResponse && !allResponsesIn;
 
   return (
     <div className="space-y-4">
@@ -41,9 +40,9 @@ export default function RoundInterface() {
             </h2>
             <div className="flex items-center gap-4 mt-1">
               <span className="text-sm text-slate-600">
-                {isPromptPhase && "🎵 Compose your phrase"}
-                {isWaitingForOthers && "⏳ Waiting for other musicians..."}
-                {isRecognitionPhase && "👂 Identify the humans"}
+                {isPromptPhase && "✍️ Write your response"}
+                {isWaitingForOthers && "⏳ Waiting for other participants..."}
+                {isRecognitionPhase && "🤖 Human or Robot?"}
               </span>
             </div>
           </div>
@@ -78,18 +77,23 @@ export default function RoundInterface() {
         <Card className="text-center">
           <div className="py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <h3 className="text-lg font-medium mb-2">Phrase submitted!</h3>
+            <h3 className="text-lg font-medium mb-2">Response submitted!</h3>
             <p className="text-slate-600">
-              Waiting for other musicians to contribute...
+              Waiting for other participants...
             </p>
             <div className="mt-4 text-sm text-slate-500">
-              {Object.keys(roundResponses).length}/4 phrases received
+              {Object.keys(roundResponses).length}/4 responses received
             </div>
           </div>
         </Card>
       )}
 
-      {isRecognitionPhase && <MusicianRecognition responses={roundResponses} />}
+      {isRecognitionPhase && (
+        <HumanOrRobot 
+          responses={roundResponses} 
+          presentationOrder={match.rounds?.[currentRound - 1]?.presentationOrder}
+        />
+      )}
     </div>
   );
 }

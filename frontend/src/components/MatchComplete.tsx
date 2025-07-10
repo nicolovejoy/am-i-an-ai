@@ -1,8 +1,7 @@
-'use client';
 
-import { useSessionStore, Identity, Match } from '@/store/sessionStore';
+import { useSessionStore, type Identity, type Match } from '@/store/sessionStore';
 import { Card, Button } from './ui';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 interface MatchCompleteProps {
   match: Match;
@@ -10,7 +9,7 @@ interface MatchCompleteProps {
 }
 
 export default function MatchComplete({ match, myIdentity }: MatchCompleteProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { resetSession } = useSessionStore();
   
   // Calculate final scores
@@ -60,11 +59,11 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
   
   const handlePlayAgain = () => {
     resetSession();
-    router.push('/dashboard');
+    navigate('/dashboard');
   };
   
   const handleViewHistory = () => {
-    router.push('/history');
+    navigate('/history');
   };
   
   return (

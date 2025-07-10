@@ -1,15 +1,20 @@
-import { render, screen, act } from "@testing-library/react";
-import { AuthProvider } from "@/contexts/AuthContext";
+import React from 'react';
+import { render, screen } from "@testing-library/react";
 import Home from "@/app/page";
 import HistoryPage from "@/app/history/page";
 import AboutPage from "@/app/about/page";
 
 // Mock dependencies
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-  }),
-  usePathname: () => "/",
+interface LinkProps {
+  children: React.ReactNode;
+  to: string;
+  className?: string;
+}
+
+jest.mock("react-router-dom", () => ({
+  useNavigate: () => jest.fn(),
+  useLocation: () => ({ pathname: "/" }),
+  Link: ({ children, to, className }: LinkProps) => <a href={to} className={className}>{children}</a>
 }));
 
 jest.mock("@/store/sessionStore", () => ({
@@ -25,11 +30,14 @@ jest.mock("@/store/sessionStore", () => ({
   }),
 }));
 
-// Mock AuthContext instead of using real AuthProvider
-jest.mock("@/contexts/AuthContext", () => ({
+// Mock AuthProvider separately
+jest.mock("@/contexts/AuthProvider", () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
+}));
+
+jest.mock("@/contexts/useAuth", () => ({
   useAuth: () => ({
     user: { email: "test@example.com" },
     signOut: jest.fn(),

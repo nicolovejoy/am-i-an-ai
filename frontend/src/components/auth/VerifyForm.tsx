@@ -1,10 +1,9 @@
-'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { cognitoService } from '../../services/cognito';
-import { AuthError } from '../../types/auth';
+import type { AuthError } from '../../types/auth';
 
 interface VerifyFormData {
   code: string;
@@ -14,8 +13,8 @@ export default function VerifyForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
   const [email, setEmail] = useState<string>('');
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const {
     register,
@@ -28,9 +27,9 @@ export default function VerifyForm() {
     if (emailParam) {
       setEmail(emailParam);
     } else {
-      router.push('/auth/signup');
+      navigate('/auth/signup');
     }
-  }, [searchParams, router]);
+  }, [searchParams, navigate]);
 
   const onSubmit = async (data: VerifyFormData) => {
     if (!email) return;
@@ -40,7 +39,7 @@ export default function VerifyForm() {
 
     try {
       await cognitoService.confirmSignUp(email, data.code);
-      router.push('/auth/signin?verified=true');
+      navigate('/auth/signin?verified=true');
     } catch (err) {
       setError(err as AuthError);
     } finally {
@@ -107,7 +106,7 @@ export default function VerifyForm() {
           <div className="text-center space-y-2">
             <button
               type="button"
-              onClick={() => router.push('/auth/signup')}
+              onClick={() => navigate('/auth/signup')}
               className="text-primary-600 hover:text-primary-500 text-sm"
             >
               Back to sign up

@@ -1,21 +1,13 @@
-'use client';
-
 import {
   CognitoUserPool,
   CognitoUserAttribute,
   CognitoUser,
   AuthenticationDetails,
-  ISignUpResult,
-  NodeCallback,
+  CognitoUserSession,
 } from 'amazon-cognito-identity-js';
-import { SignUpFormData, SignInFormData, AuthError, AuthUser } from '../types/auth';
+import type { ISignUpResult, NodeCallback } from 'amazon-cognito-identity-js';
+import type { SignUpFormData, SignInFormData, AuthError, AuthUser } from '../types/auth';
 
-declare const process: {
-  env: {
-    NEXT_PUBLIC_COGNITO_USER_POOL_ID: string;
-    NEXT_PUBLIC_COGNITO_CLIENT_ID: string;
-  };
-};
 
 interface CognitoError extends Error {
   code?: string;
@@ -23,8 +15,8 @@ interface CognitoError extends Error {
 
 // Use existing v1 Cognito pool - reuse same user pool
 const userPool = new CognitoUserPool({
-  UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || 'us-east-1_example', // Will be set via env
-  ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || 'example', // Will be set via env
+  UserPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID || 'us-east-1_example', // Will be set via env
+  ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID || 'example', // Will be set via env
 });
 
 export const cognitoService = {
@@ -110,20 +102,20 @@ export const cognitoService = {
         return;
       }
 
-      cognitoUser.getSession((err: Error | undefined, session: any) => {
+      cognitoUser.getSession((err: Error | undefined, session: CognitoUserSession | null) => {
         if (err || !session || !session.isValid()) {
           resolve(null);
           return;
         }
 
-        cognitoUser.getUserAttributes((err: Error | undefined, attributes: any) => {
+        cognitoUser.getUserAttributes((err: Error | undefined, attributes: CognitoUserAttribute[] | undefined) => {
           if (err || !attributes) {
             resolve(null);
             return;
           }
 
-          const email = attributes.find((attr: any) => attr.getName() === 'email')?.getValue();
-          const sub = attributes.find((attr: any) => attr.getName() === 'sub')?.getValue();
+          const email = attributes.find((attr) => attr.getName() === 'email')?.getValue();
+          const sub = attributes.find((attr) => attr.getName() === 'sub')?.getValue();
 
           if (!email || !sub) {
             resolve(null);
@@ -156,7 +148,7 @@ export const cognitoService = {
         return;
       }
 
-      cognitoUser.getSession((err: Error | undefined, session: any) => {
+      cognitoUser.getSession((err: Error | undefined, session: CognitoUserSession | null) => {
         if (err || !session || !session.isValid()) {
           resolve(null);
           return;

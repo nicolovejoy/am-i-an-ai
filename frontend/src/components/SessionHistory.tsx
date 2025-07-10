@@ -1,9 +1,8 @@
-'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Card, Button } from '@/components/ui';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 
 interface MatchHistoryRecord {
   matchId: string;
@@ -50,7 +49,7 @@ export function SessionHistory() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(process.env.NEXT_PUBLIC_MATCH_HISTORY_API!);
+        const response = await fetch(import.meta.env.VITE_MATCH_HISTORY_API!);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch match history: ${response.statusText}`);
@@ -108,7 +107,7 @@ export function SessionHistory() {
             <Button onClick={() => window.location.reload()} variant="primary">
               Try Again
             </Button>
-            <Link href="/dashboard">
+            <Link to="/dashboard">
               <Button variant="secondary">
                 ← Back to Dashboard
               </Button>
@@ -134,12 +133,12 @@ export function SessionHistory() {
             Start your first match to see your game history and statistics here.
           </p>
           <div className="space-x-4">
-            <Link href="/match">
+            <Link to="/match">
               <Button variant="primary">
                 Start Playing
               </Button>
             </Link>
-            <Link href="/dashboard">
+            <Link to="/dashboard">
               <Button variant="secondary">
                 ← Back to Dashboard
               </Button>
@@ -156,7 +155,7 @@ export function SessionHistory() {
         <h1 className="text-3xl font-bold text-slate-900">
           📊 Match History
         </h1>
-        <Link href="/dashboard">
+        <Link to="/dashboard">
           <Button variant="secondary">
             ← Back to Dashboard
           </Button>
@@ -264,7 +263,7 @@ export function SessionHistory() {
       </div>
 
       <div className="mt-8 text-center">
-        <Link href="/match">
+        <Link to="/match">
           <Button variant="primary" className="mr-4">
             Play New Match
           </Button>

@@ -1,4 +1,4 @@
-import { Identity, Match, Message } from './match.types';
+import type { Identity, Match, Message } from './match.types';
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
