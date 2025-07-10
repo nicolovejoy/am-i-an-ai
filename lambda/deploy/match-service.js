@@ -106,6 +106,18 @@ const handler = async (event) => {
         }
         // Route requests - handle both with and without stage prefix
         const pathWithoutStage = path.replace(/^\/prod/, '');
+        // Health check endpoint
+        if (method === 'GET' && (pathWithoutStage === '/health' || path === '/health')) {
+            return {
+                statusCode: 200,
+                headers: CORS_HEADERS,
+                body: JSON.stringify({
+                    status: 'healthy',
+                    service: 'match-service',
+                    timestamp: new Date().toISOString()
+                }),
+            };
+        }
         if (method === 'POST' && (pathWithoutStage === '/matches' || path === '/matches')) {
             return await createMatch(event);
         }

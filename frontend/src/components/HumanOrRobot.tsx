@@ -25,11 +25,10 @@ export default function HumanOrRobot({
         console.log("Using presentation order:", presentationOrder);
         console.log("Available responses:", Object.keys(responses));
 
-        // Use server-provided order
+        // Use server-provided order - show all participants in voting phase
         return presentationOrder
-          .filter((identity) => responses[identity] !== undefined) // Only include identities that have responses
           .map(
-            (identity) => [identity, responses[identity]!] as [Identity, string]
+            (identity) => [identity, responses[identity] || ''] as [Identity, string]
           );
       }
       // Fallback to alphabetical order if no presentation order provided
@@ -109,7 +108,9 @@ export default function HumanOrRobot({
                         </span>
                       )}
                     </div>
-                    <p className="text-slate-800 leading-relaxed">{response}</p>
+                    <p className="text-slate-800 leading-relaxed">
+                      {response || <span className="text-slate-400">...</span>}
+                    </p>
                   </div>
 
                   {!isMyResponse && (

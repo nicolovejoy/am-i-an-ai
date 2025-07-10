@@ -26,7 +26,14 @@ Don't archive old copies of files that are in git, silly.
 
 ### Deployment
 
-- **User handles ALL deployments** - Claude never runs deployment commands
+- **User handles ALL deployments** - Claude NEVER runs deployment commands, including:
+  - `terraform apply` (infrastructure)
+  - `./scripts/deploy-frontend.sh` (frontend)
+  - `./scripts/deploy-lambdas.sh` (backend)
+  - `git push` (code pushes)
+  - Any AWS CLI commands that modify infrastructure
+- **User handles ALL commits** - Claude NEVER runs `git commit` or `git push`
+- **Claude can run**: Build commands, tests, linting, local dev servers
 - **User happy to move and remove directories and such** - Claude should encourage users assistance whenever helpful
 - **Scripts**: reside in `/infrastructure/scripts` -- for details see readme in this directory.
 
@@ -54,13 +61,13 @@ Deployment (user handles, from `infrastructure/`):
 
 ```bash
 # For Lambda changes ONLY:
-./scripts/deploy-lambda.sh
+./scripts/deploy-lambdas.sh
 
 # For infrastructure changes:
 terraform plan && terraform apply
 ```
 
-**⚠️ IMPORTANT: Lambda deployment uses scripts, NOT terraform apply!**
+**⚠️ IMPORTANT: Lambda deployments use the deploy-lambdas.sh script, NOT terraform apply!**
 
 ### Pre-Commit Requirements
 
@@ -95,10 +102,17 @@ npm test        # All tests must pass
 - **Experimental phase** - infrastructure can be destroyed/recreated anytime
 - **Architecture Decision** - Using DynamoDB + SQS instead of Kafka for simplicity
 
-### Commands not permitted for Claude:
+### Commands NOT permitted for Claude:
 
-- sed
-- deploy scripts
+- `sed` - file editing
+- `terraform apply` - infrastructure changes
+- `./scripts/deploy-frontend.sh` - frontend deployment
+- `./scripts/deploy-lambdas.sh` - Lambda deployment  
+- `git commit` - committing code
+- `git push` - pushing code
+- `aws s3 sync` - S3 uploads
+- `aws cloudfront create-invalidation` - CDN updates
+- Any command that costs money or modifies production resources
 
 ### Command Permissions
 

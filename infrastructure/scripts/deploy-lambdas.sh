@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# Deploy Lambda Functions
-# Builds TypeScript and deploys all Lambda functions
+# Deploy Lambda Functions (plural!)
+# Builds TypeScript and deploys ALL Lambda functions in parallel
 
 echo "⚡ Deploying Lambda Functions..."
 
@@ -80,6 +80,10 @@ echo "📤 Uploading Lambda functions in parallel..."
     aws lambda update-function-code \
         --function-name robot-orchestra-robot-worker \
         --zip-file fileb://lambda-deployment.zip &
+    
+    aws lambda update-function-code \
+        --function-name robot-orchestra-ai-service \
+        --zip-file fileb://lambda-deployment.zip &
 } 
 
 # Wait for all uploads to complete
@@ -89,6 +93,7 @@ echo "⏳ Waiting for functions to update..."
 aws lambda wait function-updated --function-name robot-orchestra-match-service &
 aws lambda wait function-updated --function-name robot-orchestra-match-history &
 aws lambda wait function-updated --function-name robot-orchestra-robot-worker &
+aws lambda wait function-updated --function-name robot-orchestra-ai-service &
 wait
 
 echo "✅ Lambda deployment complete!"
@@ -99,6 +104,7 @@ echo "📊 Deployed Functions:"
 aws lambda get-function --function-name robot-orchestra-match-service --query 'Configuration.{Function: FunctionName, Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
 aws lambda get-function --function-name robot-orchestra-match-history --query 'Configuration.{Function: FunctionName, Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
 aws lambda get-function --function-name robot-orchestra-robot-worker --query 'Configuration.{Function: FunctionName, Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
+aws lambda get-function --function-name robot-orchestra-ai-service --query 'Configuration.{Function: FunctionName, Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
 
 # Validate deployments with test invocations
 echo ""
@@ -150,8 +156,25 @@ else
     echo "❌ Failed (invocation error)"
 fi
 
+# Test ai-service OPTIONS (CORS)
+echo -n "  Testing ai-service CORS handling... "
+if aws lambda invoke \
+    --function-name robot-orchestra-ai-service \
+    --payload '{"httpMethod":"OPTIONS","path":"/ai/generate"}' \
+    --cli-binary-format raw-in-base64-out \
+    /tmp/ai-service-response.json >/dev/null 2>&1; then
+    if grep -q '"statusCode":200' /tmp/ai-service-response.json; then
+        echo "✅ OK"
+    else
+        echo "❌ Failed (unexpected response)"
+        cat /tmp/ai-service-response.json
+    fi
+else
+    echo "❌ Failed (invocation error)"
+fi
+
 # Clean up temp files
-rm -f /tmp/match-service-response.json /tmp/match-history-response.json /tmp/robot-worker-response.json
+rm -f /tmp/match-service-response.json /tmp/match-history-response.json /tmp/robot-worker-response.json /tmp/ai-service-response.json
 
 echo ""
 echo "✅ Deployment complete and validated!"

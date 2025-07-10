@@ -201,7 +201,9 @@ export const matchService = {
         );
       }
 
-      return await response.json();
+      const data = await response.json();
+      // API returns {matches: [], count: n} but we need just the array
+      return data.matches || data;
     } catch (error) {
       if (error instanceof MatchServiceError) {
         throw error;
