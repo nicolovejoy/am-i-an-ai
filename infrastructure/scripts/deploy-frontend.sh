@@ -6,11 +6,18 @@ set -e
 
 echo "🚀 Deploying Frontend Application..."
 
-# Check environment variables
+# Get domain name from environment or use default
 if [ -z "$DOMAIN_NAME" ]; then
-    echo "❌ Error: DOMAIN_NAME environment variable is required"
-    echo "Usage: DOMAIN_NAME=robotorchestra.org ./deploy-frontend.sh"
-    exit 1
+    # Try to get from terraform output
+    DOMAIN_NAME=$(cd "$(dirname "$0")/.." && terraform output -raw domain_name 2>/dev/null || echo "")
+    
+    if [ -z "$DOMAIN_NAME" ]; then
+        # Use default if terraform output fails
+        DOMAIN_NAME="robotorchestra.org"
+        echo "ℹ️  Using default domain: $DOMAIN_NAME"
+    else
+        echo "ℹ️  Using domain from terraform: $DOMAIN_NAME"
+    fi
 fi
 
 # Navigate to frontend directory

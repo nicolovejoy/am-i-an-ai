@@ -4,445 +4,180 @@
 
 ### **✅ What's Working**
 
-- **Complete Match Flow** - Create → Respond → Vote → Progress through 5 rounds → Match completion with results
-- **End-of-Match Experience** - Full identity reveal, final scores, voting accuracy, and play again functionality
-- **Robot Personalities** - 3 distinct AI participants with unique response styles
-- **Real-time Updates** - 1-second polling keeps UI in sync (SSE planned for cleaner implementation)
-- **Production Ready** - Live at https://robotorchestra.org
-- **Admin Console** - Debug panel at /admin (restricted to nlovejoy@me.com)
-- **Match Persistence** - Matches survive page refreshes via sessionStorage
-- **Modular Store Architecture** - Zustand store refactored into clean modules
-- **Vite Migration Complete** - Frontend migrated from Next.js to Vite, fixing RSC errors
-- **Server-Side Response Ordering** - Voting responses now have stable positions determined by backend
-- **HumanOrRobot Terminology** - All musical references removed, clear human vs robot gameplay
-- **Match History Page** - Working history page shows all matches, progress, and scores
-- **Enhanced Lambda Deployment** - New script with parallel uploads, type checking, and validation
-- **AI Service Implemented** - Generic AI service with AWS Bedrock integration for dynamic prompts and contextual robot responses
+- **Match Flow** - 5 rounds of prompts, responses, voting, and progression
+- **End-of-Match** - Identity reveal, final scores, voting accuracy display
+- **Robot Personalities** - 3 AI participants (philosopher, scientist, comedian)
+- **AI Integration** - AWS Bedrock with Claude 3 models
+- **Response Labels** - [AI] or [Fallback] tags for debugging
+- **Prompt Display** - Shows original prompt on voting screen
+- **Match History** - Lists all matches with dates and progress
+- **Match Persistence** - Survives page refreshes via sessionStorage
+- **Admin Panel** - Clear match data functionality at /admin
 
-### **🐛 Known Issues**
+### **🐛 Known Issues (January 15, 2025)**
 
-- **~~Voting Interface Bug~~** - FIXED: Frontend now shows all 4 participants with "..." placeholder for loading responses
-- **Match History Error** - NEW ERROR: `Cannot read properties of undefined (reading 'filter')` at getMatchStats - likely due to incomplete match data structure
-- **~~Duplicate Prompts~~** - READY TO FIX: AI service can generate unique prompts per round
-- **~~Robot Responses Ignore Prompts~~** - READY TO FIX: AI service can generate contextual responses
-- **Polling Noise** - Console logs every second (will be fixed with SSE implementation)
-- **~~Missing Health Endpoint~~** - FIXED: Added /health endpoint to match-service
-- **~~AI Service Handler Import~~** - FIXED: Updated Lambda handler path in Terraform
+- **Critical: Voting Page Broken** - Only showing user's response, not robot responses
+  - Root cause: Status not transitioning from "responding" to "voting"
+  - Missing presentationOrder generation when all responses collected
+  - Human response (A) missing from DynamoDB data
+- **Keyboard Navigation Not Working** - Arrow keys and shortcuts not functioning
+- **Excessive API Polling** - Making too many calls to match endpoint
+  - Need to optimize polling strategy or implement SSE
+- **State Management** - Frontend state management needs review and optimization
+- **Prompts Not AI-Generated** - Currently using hardcoded prompt list (AI generation ready but not wired)
+- **Admin Service** - Not deployed yet (Delete All Matches unavailable)
 
 ### **🏗️ Architecture**
 
 ```
 Frontend (Vite/React) → API Gateway → Lambda Functions → DynamoDB
-                                            ↓
-                                      SQS Queue → Robot Worker → DynamoDB
+                                           ↓
+                                     SQS Queue → Robot Worker → AI Service
+                                                      ↓
+                                                 AWS Bedrock
 ```
 
 **Infrastructure:**
-
 - DynamoDB table with 30-day TTL
 - SQS queue for async robot responses
-- Lambda functions: match-service, robot-worker, match-history
+- Lambda functions: match-service, robot-worker, match-history, ai-service
 - CloudFront + S3 for frontend hosting
+- AWS Bedrock for AI responses (Claude models)
 
-## 🧪 **TDD Approaches for Current Issues**
+### **📝 Recent Changes (January 15, 2025)**
 
-### **Option 1: Fix-First Approach (Recommended for Match History)**
-Write tests that expect the current broken behavior, fix the code, then update tests:
+1. **AWS Bedrock Integration Fixed**
+   - Enabled model access for Claude 3 Haiku and Sonnet
+   - AI responses now working properly
+   - Added [AI] and [Fallback] labels to track response sources
 
-```typescript
-// 1. Test current broken state
-test('matchService.getMatchHistory returns object with matches array', async () => {
-  const result = await matchService.getMatchHistory();
-  expect(result).toHaveProperty('matches');
-  expect(result).toHaveProperty('count');
-});
+2. **Voting Interface Improvements**
+   - Added keyboard navigation (arrow keys, space to select, enter to vote)
+   - Fixed text overflow issues with proper CSS wrapping
+   - Added prompt display above responses for context
+   - Visual focus indicators for keyboard navigation
 
-// 2. Fix the service to extract matches array
-// 3. Update component test to expect array
+3. **Development Workflow Updates**
+   - Switched to production-only deployment (no local dev server)
+   - Updated documentation to reflect new workflow
+   - Improved deployment scripts with auto-detection of domain
+
+4. **UI/UX Enhancements**
+   - Better response text handling with break-words
+   - Keyboard shortcuts displayed on voting screen
+   - Improved focus states and accessibility
+
+5. **Bug Fixes**
+   - Fixed React hooks order in HumanOrRobot component
+   - Resolved ESLint errors for clean builds
+   - Fixed response display cutoff issues
+
+### **🔍 Debug Commands**
+
+```bash
+# Check robot-worker logs
+aws logs tail /aws/lambda/robot-orchestra-robot-worker --since 10m
+
+# Check AI service logs
+aws logs tail /aws/lambda/robot-orchestra-ai-service --since 10m
+
+# Get match from DynamoDB
+aws dynamodb get-item \
+  --table-name robot-orchestra-matches \
+  --key '{"matchId": {"S": "MATCH_ID"}, "timestamp": {"N": "0"}}' \
+  --output json
+
+# List recent matches
+aws dynamodb scan \
+  --table-name robot-orchestra-matches \
+  --limit 5 \
+  --query 'Items[*].matchId.S' \
+  --output json
+
+# Check SQS queue
+aws sqs get-queue-attributes \
+  --queue-url $(aws sqs get-queue-url --queue-name robot-orchestra-robot-queue --query QueueUrl --output text) \
+  --attribute-names All
 ```
 
-### **Option 2: Spec-First Approach (Recommended for Prompt System)**
-Write ideal behavior tests first, then implement to pass:
+### **🚀 Next Steps**
 
-```typescript
-// 1. Spec out ideal prompt behavior
-test('should not repeat prompts within a match', () => {
-  const match = createMatch();
-  const usedPrompts = new Set();
-  
-  for (let i = 0; i < 5; i++) {
-    const prompt = selectPromptForRound(match, i);
-    expect(usedPrompts.has(prompt)).toBe(false);
-    usedPrompts.add(prompt);
-  }
-});
+1. **Fix Critical Voting Issue**
+   - Check why human response (A) isn't saved to DynamoDB
+   - Fix robot-worker response counting logic
+   - Ensure status transitions when all 4 responses present
+   - Add frontend safeguard: if no presentationOrder, show all responses
 
-test('robot responses should relate to the prompt', () => {
-  const prompt = "What does silence mean to you?";
-  const response = generateRobotResponse('philosopher', prompt);
-  
-  // Response should contain keywords from prompt
-  expect(response.toLowerCase()).toMatch(/silence|quiet|sound|noise/);
-});
-```
+2. **Frontend State Management Optimization**
+   - Audit current Zustand store implementation
+   - Implement debouncing for API calls
+   - Consider optimistic updates
+   - Add proper error boundaries
+   - Reduce polling interval or implement smart polling
 
-### **Option 3: Integration-First Approach (Recommended for Response Loading)**
-Test the full flow to ensure no flickering:
+3. **Quick Wins**
+   - Add debug mode to admin panel showing raw match state
+   - Increase polling interval from 1s to 3-5s
+   - Add comprehensive error logging
 
-```typescript
-test('voting interface should show stable placeholders until all responses load', async () => {
-  const { rerender } = render(<RoundInterface />);
-  
-  // Initially shows placeholders
-  expect(screen.getAllByText('...')).toHaveLength(3); // 3 robots
-  
-  // Simulate responses loading one by one
-  mockStore.setState({ roundResponses: { A: 'Human response' } });
-  rerender(<RoundInterface />);
-  expect(screen.getAllByText('...')).toHaveLength(3); // Still 3 placeholders
-  
-  // All responses loaded
-  mockStore.setState({ roundResponses: allResponses });
-  rerender(<RoundInterface />);
-  expect(screen.queryByText('...')).not.toBeInTheDocument();
-});
-```
+4. **Deploy Admin Service**
+   - Add admin-service.ts to infrastructure
+   - Enable "Delete All Matches" functionality
 
-## 🤖 **AI Service Implementation - COMPLETED**
+5. **Implement SSE**
+   - Replace polling with Server-Sent Events
+   - Real-time updates via DynamoDB Streams
+   - Eliminate excessive API calls
 
-### **What's Implemented**
+6. **Architecture Refactor - match-service as Coordinator**
+   - Make match-service the single authority for state transitions
+   - Remove transition logic from robot-worker (just save responses)
+   - match-service checks completion after ANY response submission
+   - Eliminates race conditions and debugging complexity
+   - Consider: robot-worker notifies match-service after saving
 
-1. **Generic AI Service API** (`POST /ai/generate`)
-   - Supports multiple tasks: `generate_prompt`, `robot_response`, `analyze_match`, `summarize`, `custom`
-   - AWS Bedrock integration with Claude models (Opus, Sonnet, Haiku)
-   - Request validation with Zod
-   - Smart model selection based on task complexity
+7. **Review Queueing Architecture**
+   - Currently: SQS triggers robot-worker for async responses
+   - Missing: DynamoDB Streams for state change events
+   - Consider: SQS for match-service notifications from robot-worker
+   - Evaluate: Current queue usage vs event-driven patterns
+   - Could reduce polling with proper event flow
 
-2. **Dynamic Prompt Generation**
-   - Round 1: Uses curated starter prompts
-   - Rounds 2-5: AI analyzes previous responses and generates contextual follow-ups
-   - Ensures thematic coherence across the match
+### **💡 Ideas for Future**
 
-3. **Contextual Robot Responses**
-   - Robots now generate responses based on the actual prompt
-   - Each personality (philosopher, comedian, scientist) has unique response style
-   - Higher temperature for more personality variation
+- Multi-human matches (2+ humans)
+- Tournament mode
+- Custom AI personalities
+- Match replay functionality
+- Performance analytics
+- Mobile app
 
-4. **Frontend AI Service Client** (`aiService.ts`)
-   - Type-safe API client with convenience methods
-   - Error handling with user-friendly messages
-   - Support for all AI tasks
+### **📋 Known Good Configuration**
 
-### **Completed in This Session**
+- **Prompts**: Creative and varied (10 unique philosophical prompts)
+- **Robot Personalities**: 
+  - B: Philosopher (poetic, deep)
+  - C: Scientist (analytical, precise)
+  - D: Comedian (whimsical, playful)
+- **Match Flow**: 5 rounds, 4 participants, voting after each round
+- **Deployment**: Use ./scripts/deploy-lambdas.sh for Lambda updates
 
-1. **Implemented Generic AI Service**
-   - Created Lambda function with AWS Bedrock integration
-   - Supports prompt generation, robot responses, match analysis
-   - Frontend client with type-safe API calls
-   - Terraform infrastructure with proper IAM permissions
-
-2. **Fixed Voting Interface Bug**
-   - All 4 participants now show during voting phase
-   - "..." placeholder for loading responses
-
-3. **Updated Documentation**
-   - Clarified deployment restrictions in CLAUDE.md
-   - Renamed deploy-lambda.sh to deploy-lambdas.sh (plural)
-
-4. **Added Health Endpoint**
-   - match-service now responds to /health requests
-
-### **Next Steps (for fresh context)**
-
-1. **Fix Match History Error**
-   - Debug why match data is missing expected fields
-   - Ensure match history API returns complete match objects
-
-2. **Integrate AI Service with Match Flow**
-   - Replace static prompts with AI generation
-   - Replace pre-written robot responses with contextual AI responses
-   - Test end-to-end with dynamic content
-
-3. **Add Match Analysis Feature**
-   - Post-match AI analysis available to players
-   - Insights on themes, difficulty, and interesting moments
-
-## 🤖 **Smarter Prompt System - Design Options** (ARCHIVED - Now Implemented)
-
-### **Current Issues:**
-- Only 10 abstract prompts, high chance of repeats
-- Robots don't actually respond to prompts (pre-written responses)
-- No thematic variety or difficulty progression
-
-### **Option 1: Dynamic Prompt Generation with AI Context**
-```typescript
-interface SmartPrompt {
-  template: string;
-  category: 'philosophical' | 'creative' | 'analytical' | 'emotional';
-  difficulty: 1 | 2 | 3;
-  contextualizers: string[]; // Words/phrases to ensure robots reference
-}
-
-// Example implementation
-const generateSmartPrompt = (round: number, previousPrompts: string[]): string => {
-  // Increase difficulty as rounds progress
-  const difficulty = Math.ceil(round / 2);
-  
-  // Rotate categories to ensure variety
-  const category = CATEGORIES[round % CATEGORIES.length];
-  
-  // Generate unique prompt with context
-  return promptGenerator.create({
-    category,
-    difficulty,
-    avoid: previousPrompts, // Ensure uniqueness
-    mustInclude: getContextWords(category) // Ensure robot responses can reference
-  });
-};
-```
-
-### **Option 2: Curated Prompt Banks with Smart Selection**
-```typescript
-interface PromptBank {
-  beginner: Prompt[];    // 20+ prompts - rounds 1-2
-  intermediate: Prompt[]; // 20+ prompts - rounds 3-4  
-  advanced: Prompt[];    // 20+ prompts - round 5
-  themes: {
-    philosophical: Prompt[];
-    storytelling: Prompt[];
-    hypothetical: Prompt[];
-    observational: Prompt[];
-  };
-}
-
-// Ensure variety and progression
-const selectPrompt = (match: Match): Prompt => {
-  const round = match.currentRound;
-  const usedCategories = match.rounds.map(r => r.prompt.category);
-  
-  // Pick difficulty based on round
-  const pool = round <= 2 ? bank.beginner : 
-               round <= 4 ? bank.intermediate : 
-               bank.advanced;
-  
-  // Pick unused category
-  const category = pickUnusedCategory(usedCategories);
-  
-  // Select prompt not used in this match
-  return pickUnusedPrompt(pool, category, match.usedPromptIds);
-};
-```
-
-### **Option 3: Prompt + Response Framework**
-```typescript
-interface PromptResponseFramework {
-  prompt: {
-    text: string;
-    keywords: string[]; // Words robots should consider using
-    tone: 'serious' | 'playful' | 'thoughtful';
-    expectedLength: 'short' | 'medium' | 'long';
-  };
-  
-  robotGuidance: {
-    mustMention: string[]; // At least one of these
-    avoidCliches: string[]; // Don't use these obvious responses
-    personality: {
-      philosopher: { approach: string; vocabulary: string[] };
-      comedian: { approach: string; vocabulary: string[] };
-      scientist: { approach: string; vocabulary: string[] };
-    };
-  };
-}
-
-// Robots generate contextual responses
-const generateResponse = (framework: PromptResponseFramework, personality: string): string => {
-  const guidance = framework.robotGuidance.personality[personality];
-  
-  return responseGenerator.create({
-    prompt: framework.prompt.text,
-    approach: guidance.approach,
-    includeKeywords: pickRandom(framework.prompt.keywords, 2),
-    vocabulary: guidance.vocabulary,
-    tone: framework.prompt.tone,
-    length: framework.prompt.expectedLength
-  });
-};
-```
-
-## 📋 **Next Steps (Priority Order)**
-
-### 1. **Quick Fix - Match History API**
-- **Issue**: Frontend expects array but gets `{matches: [], count: n}`
-- **Fix**: Update `matchService.getMatchHistory()` to return `response.matches`
-- **Test First**: Write test expecting array, fix service, verify
-
-### 2. **Prompt System Overhaul**
-- **Fix Duplicate Prompts**: Track used prompts per match in DynamoDB
-- **Make Robots Contextual**: Pass prompt to robot response generator
-- **Expand Prompt Bank**: Add 50+ prompts with categories and difficulty
-- **Test First**: Write tests for non-repeating prompts and contextual responses
-
-### 3. **Other Quick Fixes**
-- **Add Health Endpoint**: Add /health endpoint to match-service Lambda
-- **Clean Console**: Remove or reduce polling logs
-- **Fix Lambda Tests**: Remove references to deleted modules
-
-### 4. **Server-Sent Events (SSE) Implementation**
-
-Replace noisy 1-second polling with clean real-time updates:
-
-- Add SSE endpoint to Lambda
-- Update frontend to use EventSource
-- Maintain polling as fallback
-- Cleaner console, better performance
-
-### 3. **Multi-Human Matches (2 humans + 2 robots)**
-
-Enable more social gameplay:
-
-- Update match creation logic
-- Add matchmaking/lobby system
-- Handle multiple human participants
-- Adjust voting/scoring logic
-
-## 🛠️ **Development Notes**
-
-- **Frontend Migration**: Successfully migrated from Next.js to Vite ✅
-- **Response Ordering**: Implemented server-side randomization for stable voting UI ✅
-- **Lambda Updates**: Added `presentationOrder` field to rounds when transitioning to voting ✅
-- **DynamoDB Fix**: Configured DocumentClient with `removeUndefinedValues: true` ✅
-- **Frontend Tests**: Need to be reconfigured for Vite/Vitest
-- **State Management**: Refactored to modular architecture with separate api, actions, and types ✅
-- **CI/CD**: Enhanced with proper cache headers and comprehensive CloudFront invalidation ✅
-- **Deployment**: Use `./scripts/deploy-lambdas.sh` for Lambda updates
-- **Store Architecture**: Reduced from 439 lines to 56 lines with better separation of concerns ✅
-- **Error Handling**: Consistent API error handling with custom MatchServiceError class ✅
-- **Build Timestamps**: Now show PST timezone explicitly ✅
-- **Terminology Cleanup**: All musical references replaced with human/robot terminology ✅
-
-## 💰 **Cost Status**
+### **💰 Cost Status**
 
 Current: ~$5-10/month (within budget)
-
 - Lambda invocations
 - DynamoDB storage/requests
 - CloudFront/S3 hosting
+- Minimal Bedrock usage (when working)
 
-## 🚀 **Future Enhancements**
+### **🔑 Key System Insights**
 
-- Email/SMS notifications (AWS SES + SNS)
-- Match history analytics
-- Tournament mode
-- Custom AI personalities
-- Mobile app
+- **Backend is working** - AI responses are being generated successfully
+- **Issue is state flow** - Problem is in transitions and data synchronization
+- **Too many moving parts** - Complex coordination between services
+- **Need better observability** - Hard to debug without comprehensive logging
+- **Human response missing** - Core issue is human response not saved to DynamoDB
 
-## 📊 **Data Flow Architecture**
+---
 
-### Current Flow (Polling-based)
-
-```mermaid
-sequenceDiagram
-    participant U as User Browser
-    participant CF as CloudFront/S3
-    participant AG as API Gateway
-    participant LS as Lambda Service
-    participant DB as DynamoDB
-    participant SQ as SQS Queue
-    participant LW as Lambda Worker
-
-    U->>CF: Load App
-    CF-->>U: Static Assets
-
-    rect rgb(200, 200, 200)
-        Note over U: Create Match Flow
-        U->>AG: POST /matches
-        AG->>LS: Invoke
-        LS->>DB: Create Match
-        LS->>SQ: Queue Robot Tasks
-        LS-->>U: Match Created
-
-        SQ->>LW: Process Robot Response
-        LW->>DB: Update Match
-    end
-
-    rect rgb(255, 200, 200)
-        Note over U: Current Polling (1s interval)
-        loop Every 1 second
-            U->>AG: GET /matches/{id}
-            AG->>LS: Invoke
-            LS->>DB: Read Match
-            LS-->>U: Match State
-        end
-    end
-
-    rect rgb(200, 200, 200)
-        Note over U: Submit Response/Vote
-        U->>AG: POST /matches/{id}/responses
-        AG->>LS: Invoke
-        LS->>DB: Update Match
-        LS-->>U: Success
-    end
-```
-
-### Proposed SSE Flow (Real-time updates)
-
-```mermaid
-sequenceDiagram
-    participant U as User Browser
-    participant CF as CloudFront/S3
-    participant AG as API Gateway
-    participant LS as Lambda Service
-    participant DB as DynamoDB
-    participant DS as DynamoDB Streams
-    participant LH as Lambda Handler (SSE)
-    participant SQ as SQS Queue
-    participant LW as Lambda Worker
-
-    U->>CF: Load App
-    CF-->>U: Static Assets
-
-    rect rgb(200, 200, 200)
-        Note over U: Create Match Flow (unchanged)
-        U->>AG: POST /matches
-        AG->>LS: Invoke
-        LS->>DB: Create Match
-        LS->>SQ: Queue Robot Tasks
-        LS-->>U: Match Created
-    end
-
-    rect rgb(200, 255, 200)
-        Note over U: New SSE Connection
-        U->>AG: GET /matches/{id}/events (SSE)
-        AG->>LH: Open Connection
-        Note over LH,U: Keep connection alive
-
-        par DynamoDB Streams Integration
-            DB-->>DS: Change Events
-            DS->>LH: Match Updates
-            LH-->>U: SSE: data: {match state}
-        and Robot Updates
-            SQ->>LW: Process Robot Response
-            LW->>DB: Update Match
-            DB-->>DS: Change Event
-            DS->>LH: Update Notification
-            LH-->>U: SSE: data: {new response}
-        end
-    end
-
-    rect rgb(200, 200, 200)
-        Note over U: Submit Response/Vote (unchanged)
-        U->>AG: POST /matches/{id}/responses
-        AG->>LS: Invoke
-        LS->>DB: Update Match
-        LS-->>U: Success
-        Note over DB,U: Update flows through SSE automatically
-    end
-```
-
-### Key Benefits of SSE Implementation
-
-1. **Real-time Updates** - No more 1-second polling
-2. **Reduced Lambda Invocations** - Cost savings
-3. **Better UX** - Instant feedback when others respond
-4. **Cleaner Console** - No polling noise
-5. **Scalable** - DynamoDB Streams handle the pub/sub pattern
+*Last updated: January 15, 2025 - AI integration working, voting page has critical display bug, excessive API polling identified*

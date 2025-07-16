@@ -910,6 +910,32 @@ resource "aws_iam_role_policy_attachment" "robot_worker_lambda_sqs" {
   policy_arn = aws_iam_policy.sqs_receive.arn
 }
 
+# Policy for robot worker to invoke AI service
+resource "aws_iam_policy" "robot_worker_invoke_ai_service" {
+  name = "${local.project_name}-robot-worker-invoke-ai-service"
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction"
+        ]
+        Resource = aws_lambda_function.ai_service.arn
+      }
+    ]
+  })
+  
+  tags = local.tags
+}
+
+# Attach AI service invoke policy to robot worker Lambda
+resource "aws_iam_role_policy_attachment" "robot_worker_lambda_invoke_ai" {
+  role       = aws_iam_role.robot_worker_lambda.name
+  policy_arn = aws_iam_policy.robot_worker_invoke_ai_service.arn
+}
+
 # CloudWatch Log Group for Robot Worker Lambda
 resource "aws_cloudwatch_log_group" "robot_worker_logs" {
   name              = "/aws/lambda/${local.project_name}-robot-worker"
@@ -934,6 +960,7 @@ resource "aws_lambda_function" "robot_worker" {
     variables = {
       NODE_ENV = "production"
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.matches.name
+      AI_SERVICE_FUNCTION_NAME = aws_lambda_function.ai_service.function_name
     }
   }
 
@@ -941,7 +968,8 @@ resource "aws_lambda_function" "robot_worker" {
     aws_cloudwatch_log_group.robot_worker_logs,
     aws_iam_role_policy_attachment.robot_worker_lambda_basic,
     aws_iam_role_policy_attachment.robot_worker_lambda_dynamodb,
-    aws_iam_role_policy_attachment.robot_worker_lambda_sqs
+    aws_iam_role_policy_attachment.robot_worker_lambda_sqs,
+    aws_iam_role_policy_attachment.robot_worker_lambda_invoke_ai
   ]
 
   tags = local.tags

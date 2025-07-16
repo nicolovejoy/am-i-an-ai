@@ -27,9 +27,20 @@ export function MatchHistory() {
     fetchMatchHistory();
   }, []);
 
-  const formatDate = (matchId: string) => {
-    // Extract timestamp from matchId if it contains one
-    const timestamp = matchId.split('-')[0];
+  const formatDate = (dateString: string) => {
+    // Handle ISO date string from createdAt
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    
+    // Fallback: try to extract timestamp from matchId if it contains one
+    const timestamp = dateString.split('-')[0];
     if (timestamp && !isNaN(Number(timestamp))) {
       return new Date(Number(timestamp)).toLocaleDateString('en-US', {
         month: 'short',
@@ -152,7 +163,7 @@ export function MatchHistory() {
                     Match #{match.matchId.slice(-6).toUpperCase()}
                   </h3>
                   <div className="flex items-center space-x-4 text-sm text-slate-600">
-                    <span>{formatDate(match.matchId)}</span>
+                    <span>{formatDate(match.createdAt || match.matchId)}</span>
                     <span>Player: {stats.humanName}</span>
                   </div>
                 </div>

@@ -6,6 +6,7 @@
 
 User prefers no positive feedback, just discuss accurately and clearly. Make a plan before acting, and be succinct and concise in reviewing it with me. thank you.
 Don't archive old copies of files that are in git, silly.
+User enjoys doing tasks in AWS Console - this helps them learn. Ask them to do console tasks when necessary or helpful (but not always).
 
 **Where humans and AI collaborate in anonymous matches.** Players join matches with 4 participants (MVP: 1 human + 3 robots), playing 5 rounds where each participant contributes once per round, ending with voting and identity reveal.
 
@@ -41,13 +42,15 @@ Don't archive old copies of files that are in git, silly.
 
 **IMPORTANT**: Never prefix commands for the user to execute with "cd". Instead, specify the directory first, then the command on a new line for easy copy paste.
 
+**Development Strategy**: Use local dev server for debugging and development, then deploy to production.
+
 Frontend development (run from `frontend/`):
 
 ```bash
-npm run dev  # http://localhost:3001
+npm run dev  # http://localhost:3001 - better console output and hot reload
 ```
 
-Pre-commit checks (run from respective directories):
+Pre-deployment checks (run from respective directories):
 
 ```bash
 # From frontend/
@@ -60,7 +63,10 @@ npm test
 Deployment (user handles, from `infrastructure/`):
 
 ```bash
-# For Lambda changes ONLY:
+# For Frontend changes:
+./scripts/deploy-frontend.sh
+
+# For Lambda changes:
 ./scripts/deploy-lambdas.sh
 
 # For infrastructure changes:

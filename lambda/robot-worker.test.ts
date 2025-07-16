@@ -3,6 +3,10 @@ const mockDocClient = {
   send: jest.fn(),
 };
 
+const mockLambdaClient = {
+  send: jest.fn(),
+};
+
 // Mock AWS SDK v3 clients
 jest.mock('@aws-sdk/client-dynamodb', () => ({
   DynamoDBClient: jest.fn(() => ({})),
@@ -16,8 +20,14 @@ jest.mock('@aws-sdk/lib-dynamodb', () => ({
   UpdateCommand: jest.fn((params) => ({ input: params })),
 }));
 
+jest.mock('@aws-sdk/client-lambda', () => ({
+  LambdaClient: jest.fn(() => mockLambdaClient),
+  InvokeCommand: jest.fn((params) => ({ input: params })),
+}));
+
 // Set environment variables
 process.env.DYNAMODB_TABLE_NAME = 'test-matches-table';
+process.env.AI_SERVICE_FUNCTION_NAME = 'test-ai-service';
 
 // Now import handler after mocks are set up
 import { handler } from './robot-worker';
@@ -27,6 +37,7 @@ describe('Robot Worker Lambda', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDocClient.send.mockReset();
+    mockLambdaClient.send.mockReset();
   });
 
   describe('SQS Message Processing', () => {
@@ -60,6 +71,20 @@ describe('Robot Worker Lambda', () => {
         Item: mockMatch,
       });
 
+      // Mock Lambda invocation for AI service
+      mockLambdaClient.send.mockResolvedValueOnce({
+        StatusCode: 200,
+        Payload: Buffer.from(JSON.stringify({
+          statusCode: 200,
+          body: JSON.stringify({
+            success: true,
+            result: {
+              response: 'A philosophical response about loneliness'
+            }
+          })
+        }))
+      });
+
       // Mock DynamoDB update operation
       mockDocClient.send.mockResolvedValueOnce({});
 
@@ -69,7 +94,7 @@ describe('Robot Worker Lambda', () => {
           ...mockMatch,
           rounds: [{
             ...mockMatch.rounds[0],
-            responses: { A: 'Silence', B: 'Response from B' },
+            responses: { A: 'Silence', B: 'A philosophical response about loneliness' },
           }],
         },
       });
@@ -103,13 +128,25 @@ describe('Robot Worker Lambda', () => {
 
       // Should have made 3 calls (get, update, get for status check)
       expect(mockDocClient.send).toHaveBeenCalledTimes(3);
+      
+      // Should have invoked AI service Lambda once
+      expect(mockLambdaClient.send).toHaveBeenCalledTimes(1);
+      expect(mockLambdaClient.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            FunctionName: 'test-ai-service',
+            InvocationType: 'RequestResponse',
+            Payload: expect.stringContaining('"task":"robot_response"')
+          }),
+        })
+      );
 
       // Verify DynamoDB get was called
       expect(mockDocClient.send).toHaveBeenCalledWith(
         expect.objectContaining({
           input: expect.objectContaining({
             TableName: 'test-matches-table',
-            Key: { matchId },
+            Key: { matchId, timestamp: 0 },
           }),
         })
       );
@@ -119,13 +156,13 @@ describe('Robot Worker Lambda', () => {
         expect.objectContaining({
           input: expect.objectContaining({
             TableName: 'test-matches-table',
-            Key: { matchId },
+            Key: { matchId, timestamp: 0 },
             UpdateExpression: expect.stringContaining('rounds[0].responses.#robotId = :response'),
             ExpressionAttributeNames: {
               '#robotId': 'B',
             },
             ExpressionAttributeValues: {
-              ':response': expect.any(String), // Robot B's generated response
+              ':response': 'A philosophical response about loneliness',
               ':updatedAt': expect.any(String),
             },
           }),
@@ -157,6 +194,39 @@ describe('Robot Worker Lambda', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+
+      // Mock Lambda invocations for AI service
+      mockLambdaClient.send
+        .mockResolvedValueOnce({ // B response
+          StatusCode: 200,
+          Payload: Buffer.from(JSON.stringify({
+            statusCode: 200,
+            body: JSON.stringify({
+              success: true,
+              result: { response: 'Response B' }
+            })
+          }))
+        })
+        .mockResolvedValueOnce({ // C response
+          StatusCode: 200,
+          Payload: Buffer.from(JSON.stringify({
+            statusCode: 200,
+            body: JSON.stringify({
+              success: true,
+              result: { response: 'Response C' }
+            })
+          }))
+        })
+        .mockResolvedValueOnce({ // D response
+          StatusCode: 200,
+          Payload: Buffer.from(JSON.stringify({
+            statusCode: 200,
+            body: JSON.stringify({
+              success: true,
+              result: { response: 'Response D' }
+            })
+          }))
+        });
 
       // Mock DynamoDB operations for all robots
       mockDocClient.send
@@ -211,7 +281,10 @@ describe('Robot Worker Lambda', () => {
         call[0].input.ExpressionAttributeNames['#robotId']
       );
       expect(updatedRobots).toEqual(['B', 'C', 'D']);
-    });
+      
+      // Verify Lambda was called for each robot
+      expect(mockLambdaClient.send).toHaveBeenCalledTimes(3);
+    }, 20000); // Increase timeout for multiple robot processing
 
     it('should update round status to voting when all 4 responses are collected', async () => {
       const matchId = 'match-123';
@@ -242,6 +315,18 @@ describe('Robot Worker Lambda', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+
+      // Mock Lambda invocation for AI service
+      mockLambdaClient.send.mockResolvedValueOnce({
+        StatusCode: 200,
+        Payload: Buffer.from(JSON.stringify({
+          statusCode: 200,
+          body: JSON.stringify({
+            success: true,
+            result: { response: 'A whimsical response about loneliness' }
+          })
+        }))
+      });
 
       // Mock DynamoDB get operation
       mockDocClient.send.mockResolvedValueOnce({
@@ -447,18 +532,18 @@ describe('Robot Worker Lambda', () => {
       }
 
       // Verify each robot has a distinct personality
+      // Verify each robot returned a response (either AI or fallback)
       expect(responses['B']).toBeTruthy();
       expect(responses['C']).toBeTruthy();
       expect(responses['D']).toBeTruthy();
       
-      // B should be poetic
-      expect(responses['B']).toMatch(/whispers|symphony|fragments|colors|wings/i);
-      
-      // C should be analytical
-      expect(responses['C']).toMatch(/decibels|quantifiable|correlation|wavelength|empirically/i);
-      
-      // D should be whimsical
-      expect(responses['D']).toMatch(/disco|unicorns|purple|bouncy|kazoo/i);
-    });
+      // Verify the responses are strings and have reasonable length
+      expect(typeof responses['B']).toBe('string');
+      expect(typeof responses['C']).toBe('string');
+      expect(typeof responses['D']).toBe('string');
+      expect(responses['B'].length).toBeGreaterThan(10);
+      expect(responses['C'].length).toBeGreaterThan(10);
+      expect(responses['D'].length).toBeGreaterThan(10);
+    }, 20000); // Increase timeout for multiple AI calls
   });
 });

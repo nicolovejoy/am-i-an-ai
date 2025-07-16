@@ -38,9 +38,7 @@ export const handler = async (
     const result = await docClient.send(new ScanCommand({
       TableName: TABLE_NAME,
       FilterExpression: '#ts = :zero',
-      ProjectionExpression: 'matchId, #status, createdAt, updatedAt, currentRound, totalRounds, participants',
       ExpressionAttributeNames: {
-        '#status': 'status',
         '#ts': 'timestamp',
       },
       ExpressionAttributeValues: {
@@ -48,17 +46,10 @@ export const handler = async (
       },
     }));
 
+    // Return full match data, just remove the timestamp field
     const matches = (result.Items || []).map(item => {
       const { timestamp, ...match } = item;
-      return {
-        matchId: match.matchId,
-        status: match.status,
-        createdAt: match.createdAt,
-        updatedAt: match.updatedAt,
-        currentRound: match.currentRound,
-        totalRounds: match.totalRounds,
-        humanPlayer: match.participants?.find((p: any) => !p.isAI)?.playerName || 'Unknown',
-      };
+      return match;
     });
 
     // Sort by creation date (newest first)

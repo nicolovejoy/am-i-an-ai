@@ -1,6 +1,7 @@
 import { SQSEvent, SQSRecord } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { Identity } from './types';
 
 // Initialize AWS clients
@@ -10,9 +11,11 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient, {
     removeUndefinedValues: true,
   },
 });
+const lambdaClient = new LambdaClient({});
 
 // Get environment variables
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'robot-orchestra-matches';
+const AI_SERVICE_FUNCTION_NAME = process.env.AI_SERVICE_FUNCTION_NAME || 'robot-orchestra-ai-service';
 
 // Seeded random number generator for consistent shuffling
 function seededRandom(seed: string) {
@@ -76,15 +79,87 @@ const robotPersonalities = {
   },
 };
 
-function generateRobotResponse(_prompt: string, robotId: string): string {
+// Map robot IDs to AI personalities
+const robotToPersonality: Record<string, string> = {
+  'B': 'philosopher',  // poetic → philosopher
+  'C': 'scientist',    // analytical → scientist
+  'D': 'comedian'      // whimsical → comedian
+};
+
+async function generateRobotResponse(prompt: string, robotId: string, roundNumber?: number): Promise<string> {
+  const personality = robotToPersonality[robotId];
+  
+  if (!personality) {
+    console.warn(`Unknown robot ID: ${robotId}, using fallback`);
+    return generateFallbackResponse(prompt, robotId);
+  }
+
+  try {
+    // Invoke AI service Lambda
+    const requestBody = {
+      task: 'robot_response',
+      model: 'claude-3-haiku', // Fast model for real-time responses
+      inputs: {
+        personality,
+        prompt,
+        context: roundNumber ? { round: roundNumber } : undefined
+      },
+      options: {
+        temperature: 0.85,
+        maxTokens: 150
+      }
+    };
+
+    // Format as API Gateway event since AI service expects that format
+    const payload = {
+      httpMethod: 'POST',
+      body: JSON.stringify(requestBody)
+    };
+
+    console.log(`Invoking AI service for robot ${robotId} with personality ${personality}`);
+    
+    const response = await lambdaClient.send(new InvokeCommand({
+      FunctionName: AI_SERVICE_FUNCTION_NAME,
+      InvocationType: 'RequestResponse',
+      Payload: JSON.stringify(payload)
+    }));
+
+    if (response.StatusCode !== 200) {
+      throw new Error(`AI service returned status ${response.StatusCode}`);
+    }
+
+    const result = JSON.parse(new TextDecoder().decode(response.Payload!));
+    console.log(`AI service raw response:`, JSON.stringify(result));
+    
+    if (result.errorMessage) {
+      throw new Error(result.errorMessage);
+    }
+
+    const parsedBody = JSON.parse(result.body);
+    console.log(`AI service parsed body:`, JSON.stringify(parsedBody));
+    
+    if (!parsedBody.success || !parsedBody.result?.response) {
+      console.error(`AI service response missing expected fields. Body:`, parsedBody);
+      throw new Error('Invalid response from AI service');
+    }
+
+    return parsedBody.result.response + ' [AI]';
+  } catch (error) {
+    console.error(`Failed to generate AI response for robot ${robotId}:`, error);
+    // Fall back to hardcoded responses
+    return generateFallbackResponse(prompt, robotId);
+  }
+}
+
+function generateFallbackResponse(_prompt: string, robotId: string): string {
   const personality = robotPersonalities[robotId as keyof typeof robotPersonalities];
   if (!personality) {
     return 'A mysterious essence beyond description';
   }
 
-  // For MVP, just return a random response from the robot's style
+  // Use existing hardcoded responses as fallback
   const responses = personality.responses;
-  return responses[Math.floor(Math.random() * responses.length)];
+  return responses[Math.floor(Math.random() * responses.length)] + ' [Fallback]';
 }
 
 interface RobotMessage {
@@ -143,32 +218,38 @@ async function processRobotResponse(record: SQSRecord): Promise<void> {
   }
 
   // Generate robot response with simulated delay
-  const response = generateRobotResponse(prompt, robotId);
+  const response = await generateRobotResponse(prompt, robotId, roundNumber);
   
-  // Add artificial delay to make async behavior visible (remove in production)
-  console.log(`Simulating ${robotId} thinking for 2-5 seconds...`);
-  await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+  // Remove artificial delay in production
+  // await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
   
   // Update the match with the robot's response
   const updateExpression = `SET rounds[${roundIndex}].responses.#robotId = :response, updatedAt = :updatedAt`;
   
-  await docClient.send(new UpdateCommand({
-    TableName: TABLE_NAME,
-    Key: {
-      matchId,
-      timestamp: 0,
-    },
-    UpdateExpression: updateExpression,
-    ExpressionAttributeNames: {
-      '#robotId': robotId,
-    },
-    ExpressionAttributeValues: {
-      ':response': response,
-      ':updatedAt': new Date().toISOString(),
-    },
-  }));
-
-  console.log(`Robot ${robotId} response stored for match ${matchId}`);
+  console.log(`Updating robot ${robotId} response for match ${matchId}, round ${roundNumber}`);
+  console.log(`Update expression: ${updateExpression}`);
+  
+  try {
+    await docClient.send(new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        matchId,
+        timestamp: 0,
+      },
+      UpdateExpression: updateExpression,
+      ExpressionAttributeNames: {
+        '#robotId': robotId,
+      },
+      ExpressionAttributeValues: {
+        ':response': response,
+        ':updatedAt': new Date().toISOString(),
+      },
+    }));
+    console.log(`Robot ${robotId} response successfully stored for match ${matchId}`);
+  } catch (error) {
+    console.error(`Failed to store robot ${robotId} response:`, error);
+    throw error;
+  }
 
   // Check if we need to update status after storing the response
   // Get the updated match to check all responses
@@ -184,6 +265,9 @@ async function processRobotResponse(record: SQSRecord): Promise<void> {
     const updatedMatch = updatedResult.Item;
     const round = updatedMatch.rounds[roundIndex];
     const responseCount = Object.keys(round.responses || {}).length;
+    
+    console.log(`Response count for match ${matchId} round ${roundNumber}: ${responseCount}/4`);
+    console.log(`Current responses:`, Object.keys(round.responses || {}));
     
     // If all 4 responses are in and status is still 'responding', update to 'voting'
     if (responseCount === 4 && round.status === 'responding') {

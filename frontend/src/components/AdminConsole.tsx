@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, Button } from "@/components/ui";
+// import { useAuth } from "@/contexts/useAuth";
 
 interface HealthCheckResult {
   endpoint: string;
@@ -12,6 +13,9 @@ export function AdminConsole() {
   const [healthChecks, setHealthChecks] = useState<
     Record<string, HealthCheckResult>
   >({});
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteResult, setDeleteResult] = useState<string | null>(null);
+  // const { user } = useAuth(); // TODO: Use for authentication when admin service is deployed
 
   // Get all configured endpoints
   const endpoints = {
@@ -278,6 +282,79 @@ export function AdminConsole() {
           <div>
             <span className="font-medium">Current URL:</span>{" "}
             {typeof window !== "undefined" ? window.location.href : "N/A"}
+          </div>
+        </div>
+      </Card>
+
+      {/* Admin Actions */}
+      <Card>
+        <h2 className="text-xl font-semibold mb-4">🛠️ Admin Actions</h2>
+        <div className="space-y-4">
+          <div className="border rounded-lg p-4 bg-red-50">
+            <h3 className="font-medium text-red-900 mb-2">Danger Zone</h3>
+            <p className="text-sm text-red-700 mb-4">
+              These actions cannot be undone. Please be careful.
+            </p>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="danger"
+                onClick={async () => {
+                  if (!confirm('Are you sure you want to delete ALL matches? This cannot be undone!')) {
+                    return;
+                  }
+                  
+                  setIsDeleting(true);
+                  setDeleteResult(null);
+                  
+                  try {
+                    // For now, skip authentication - admin service not deployed yet
+                    setDeleteResult('❌ Admin service not yet deployed. Use AWS CLI to delete matches.');
+                    
+                    // Clear sessionStorage anyway
+                    sessionStorage.clear();
+                  } catch (error) {
+                    setDeleteResult(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete All Matches'}
+              </Button>
+              
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  // Only clear match-related data, not auth
+                  sessionStorage.removeItem('currentMatchId');
+                  sessionStorage.removeItem('matchState');
+                  
+                  // Clear any match-related items from localStorage
+                  const keysToRemove = [];
+                  for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && (key.includes('match') || key.includes('Match'))) {
+                      keysToRemove.push(key);
+                    }
+                  }
+                  keysToRemove.forEach(key => localStorage.removeItem(key));
+                  
+                  setDeleteResult('✅ Match data cleared - redirecting...');
+                  setTimeout(() => {
+                    window.location.href = '/dashboard';
+                  }, 1000);
+                }}
+              >
+                Clear Match Data
+              </Button>
+            </div>
+            
+            {deleteResult && (
+              <div className="mt-4 p-3 rounded bg-slate-100">
+                <p className="text-sm font-mono">{deleteResult}</p>
+              </div>
+            )}
           </div>
         </div>
       </Card>

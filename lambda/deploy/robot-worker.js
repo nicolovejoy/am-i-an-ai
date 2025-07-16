@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.handler = void 0;
 const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
+const client_lambda_1 = require("@aws-sdk/client-lambda");
 // Initialize AWS clients
 const dynamoClient = new client_dynamodb_1.DynamoDBClient({});
 const docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(dynamoClient, {
@@ -10,8 +11,10 @@ const docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(dynamoClient, {
         removeUndefinedValues: true,
     },
 });
+const lambdaClient = new client_lambda_1.LambdaClient({});
 // Get environment variables
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'robot-orchestra-matches';
+const AI_SERVICE_FUNCTION_NAME = process.env.AI_SERVICE_FUNCTION_NAME || 'robot-orchestra-ai-service';
 // Seeded random number generator for consistent shuffling
 function seededRandom(seed) {
     let hash = 0;
@@ -68,14 +71,74 @@ const robotPersonalities = {
         ],
     },
 };
-function generateRobotResponse(_prompt, robotId) {
+// Map robot IDs to AI personalities
+const robotToPersonality = {
+    'B': 'philosopher', // poetic → philosopher
+    'C': 'scientist', // analytical → scientist
+    'D': 'comedian' // whimsical → comedian
+};
+async function generateRobotResponse(prompt, robotId, roundNumber) {
+    const personality = robotToPersonality[robotId];
+    if (!personality) {
+        console.warn(`Unknown robot ID: ${robotId}, using fallback`);
+        return generateFallbackResponse(prompt, robotId);
+    }
+    try {
+        // Invoke AI service Lambda
+        const requestBody = {
+            task: 'robot_response',
+            model: 'claude-3-haiku', // Fast model for real-time responses
+            inputs: {
+                personality,
+                prompt,
+                context: roundNumber ? { round: roundNumber } : undefined
+            },
+            options: {
+                temperature: 0.85,
+                maxTokens: 150
+            }
+        };
+        // Format as API Gateway event since AI service expects that format
+        const payload = {
+            httpMethod: 'POST',
+            body: JSON.stringify(requestBody)
+        };
+        console.log(`Invoking AI service for robot ${robotId} with personality ${personality}`);
+        const response = await lambdaClient.send(new client_lambda_1.InvokeCommand({
+            FunctionName: AI_SERVICE_FUNCTION_NAME,
+            InvocationType: 'RequestResponse',
+            Payload: JSON.stringify(payload)
+        }));
+        if (response.StatusCode !== 200) {
+            throw new Error(`AI service returned status ${response.StatusCode}`);
+        }
+        const result = JSON.parse(new TextDecoder().decode(response.Payload));
+        console.log(`AI service raw response:`, JSON.stringify(result));
+        if (result.errorMessage) {
+            throw new Error(result.errorMessage);
+        }
+        const parsedBody = JSON.parse(result.body);
+        console.log(`AI service parsed body:`, JSON.stringify(parsedBody));
+        if (!parsedBody.success || !parsedBody.result?.response) {
+            console.error(`AI service response missing expected fields. Body:`, parsedBody);
+            throw new Error('Invalid response from AI service');
+        }
+        return parsedBody.result.response + ' [AI]';
+    }
+    catch (error) {
+        console.error(`Failed to generate AI response for robot ${robotId}:`, error);
+        // Fall back to hardcoded responses
+        return generateFallbackResponse(prompt, robotId);
+    }
+}
+function generateFallbackResponse(_prompt, robotId) {
     const personality = robotPersonalities[robotId];
     if (!personality) {
         return 'A mysterious essence beyond description';
     }
-    // For MVP, just return a random response from the robot's style
+    // Use existing hardcoded responses as fallback
     const responses = personality.responses;
-    return responses[Math.floor(Math.random() * responses.length)];
+    return responses[Math.floor(Math.random() * responses.length)] + ' [Fallback]';
 }
 const handler = async (event) => {
     console.log('Robot Worker received event:', JSON.stringify(event, null, 2));
@@ -118,28 +181,35 @@ async function processRobotResponse(record) {
             throw new Error(`Round ${roundNumber} not found in match ${matchId}`);
         }
         // Generate robot response with simulated delay
-        const response = generateRobotResponse(prompt, robotId);
-        // Add artificial delay to make async behavior visible (remove in production)
-        console.log(`Simulating ${robotId} thinking for 2-5 seconds...`);
-        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+        const response = await generateRobotResponse(prompt, robotId, roundNumber);
+        // Remove artificial delay in production
+        // await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
         // Update the match with the robot's response
         const updateExpression = `SET rounds[${roundIndex}].responses.#robotId = :response, updatedAt = :updatedAt`;
-        await docClient.send(new lib_dynamodb_1.UpdateCommand({
-            TableName: TABLE_NAME,
-            Key: {
-                matchId,
-                timestamp: 0,
-            },
-            UpdateExpression: updateExpression,
-            ExpressionAttributeNames: {
-                '#robotId': robotId,
-            },
-            ExpressionAttributeValues: {
-                ':response': response,
-                ':updatedAt': new Date().toISOString(),
-            },
-        }));
-        console.log(`Robot ${robotId} response stored for match ${matchId}`);
+        console.log(`Updating robot ${robotId} response for match ${matchId}, round ${roundNumber}`);
+        console.log(`Update expression: ${updateExpression}`);
+        try {
+            await docClient.send(new lib_dynamodb_1.UpdateCommand({
+                TableName: TABLE_NAME,
+                Key: {
+                    matchId,
+                    timestamp: 0,
+                },
+                UpdateExpression: updateExpression,
+                ExpressionAttributeNames: {
+                    '#robotId': robotId,
+                },
+                ExpressionAttributeValues: {
+                    ':response': response,
+                    ':updatedAt': new Date().toISOString(),
+                },
+            }));
+            console.log(`Robot ${robotId} response successfully stored for match ${matchId}`);
+        }
+        catch (error) {
+            console.error(`Failed to store robot ${robotId} response:`, error);
+            throw error;
+        }
         // Check if we need to update status after storing the response
         // Get the updated match to check all responses
         const updatedResult = await docClient.send(new lib_dynamodb_1.GetCommand({
@@ -153,6 +223,8 @@ async function processRobotResponse(record) {
             const updatedMatch = updatedResult.Item;
             const round = updatedMatch.rounds[roundIndex];
             const responseCount = Object.keys(round.responses || {}).length;
+            console.log(`Response count for match ${matchId} round ${roundNumber}: ${responseCount}/4`);
+            console.log(`Current responses:`, Object.keys(round.responses || {}));
             // If all 4 responses are in and status is still 'responding', update to 'voting'
             if (responseCount === 4 && round.status === 'responding') {
                 console.log(`All responses collected for match ${matchId} round ${roundNumber}, updating status to voting`);

@@ -56,6 +56,9 @@ credentials
 
 # Lambda deployment packages
 *.zip
+lambda/deploy/
+lambda/*.js
+!lambda/jest.config.js
 
 # Certificates and keys
 *.pem

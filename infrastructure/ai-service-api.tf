@@ -2,7 +2,7 @@
 resource "aws_lambda_function" "ai_service" {
   function_name = "${var.project_name}-ai-service"
   role          = aws_iam_role.ai_service_lambda_role.arn
-  handler       = "handlers/ai-service.handler"
+  handler       = "src/handlers/ai-service.handler"
   runtime       = "nodejs20.x"
   timeout       = 30  # AI requests can take longer
   memory_size   = 512 # More memory for AI processing

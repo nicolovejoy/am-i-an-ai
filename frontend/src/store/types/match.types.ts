@@ -24,6 +24,8 @@ export interface Match {
   totalRounds: number;
   participants: Participant[];
   rounds: Round[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Participant {
