@@ -2,7 +2,7 @@ import { SQSEvent, SQSRecord } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
-import { Identity } from './types';
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 
 // Initialize AWS clients
 const dynamoClient = new DynamoDBClient({});
@@ -12,38 +12,13 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient, {
   },
 });
 const lambdaClient = new LambdaClient({});
+const sqsClient = new SQSClient({});
 
 // Get environment variables
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'robot-orchestra-matches';
 const AI_SERVICE_FUNCTION_NAME = process.env.AI_SERVICE_FUNCTION_NAME || 'robot-orchestra-ai-service';
+const STATE_UPDATE_QUEUE_URL = process.env.STATE_UPDATE_QUEUE_URL || '';
 
-// Seeded random number generator for consistent shuffling
-function seededRandom(seed: string) {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    const char = seed.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  
-  return function() {
-    hash = (hash * 9301 + 49297) % 233280;
-    return hash / 233280;
-  };
-}
-
-// Shuffle array using a seed for consistency
-function shuffleArray<T>(array: T[], seed: string): T[] {
-  const random = seededRandom(seed);
-  const shuffled = [...array];
-  
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  
-  return shuffled;
-}
 
 // Robot personalities for response generation
 const robotPersonalities = {
@@ -79,11 +54,18 @@ const robotPersonalities = {
   },
 };
 
-// Map robot IDs to AI personalities
+// Map robot IDs to AI personalities and dwarf names
 const robotToPersonality: Record<string, string> = {
   'B': 'philosopher',  // poetic → philosopher
   'C': 'scientist',    // analytical → scientist
   'D': 'comedian'      // whimsical → comedian
+};
+
+// Map robot IDs to dwarf names for consistent identity
+const robotToDwarfName: Record<string, string> = {
+  'B': 'Doc',      // The wise philosopher (Doc seems fitting)
+  'C': 'Happy',    // The analytical scientist (ironic but memorable)
+  'D': 'Dopey'     // The whimsical comedian (perfect match)
 };
 
 async function generateRobotResponse(prompt: string, robotId: string, roundNumber?: number): Promise<string> {
@@ -143,7 +125,8 @@ async function generateRobotResponse(prompt: string, robotId: string, roundNumbe
       throw new Error('Invalid response from AI service');
     }
 
-    return parsedBody.result.response + ' [AI]';
+    const dwarfName = robotToDwarfName[robotId] || robotId;
+    return parsedBody.result.response + ` [AI: ${dwarfName}]`;
   } catch (error) {
     console.error(`Failed to generate AI response for robot ${robotId}:`, error);
     // Fall back to hardcoded responses
@@ -159,7 +142,36 @@ function generateFallbackResponse(_prompt: string, robotId: string): string {
 
   // Use existing hardcoded responses as fallback
   const responses = personality.responses;
-  return responses[Math.floor(Math.random() * responses.length)] + ' [Fallback]';
+  const dwarfName = robotToDwarfName[robotId] || robotId;
+  return responses[Math.floor(Math.random() * responses.length)] + ` [Fallback: ${dwarfName}]`;
+}
+
+// Notify match-service of robot response completion
+async function notifyStateUpdate(matchId: string, roundNumber: number, robotId: string): Promise<void> {
+  if (!STATE_UPDATE_QUEUE_URL) {
+    console.error('STATE_UPDATE_QUEUE_URL is not set!');
+    return;
+  }
+  
+  const message = {
+    type: 'ROBOT_RESPONSE_COMPLETE',
+    matchId,
+    roundNumber,
+    robotId,
+    timestamp: new Date().toISOString()
+  };
+  
+  try {
+    await sqsClient.send(new SendMessageCommand({
+      QueueUrl: STATE_UPDATE_QUEUE_URL,
+      MessageBody: JSON.stringify(message)
+    }));
+    
+    console.log(`Notified match-service of ${robotId} completion for match ${matchId} round ${roundNumber}`);
+  } catch (error) {
+    console.error(`Failed to send state update notification:`, error);
+    throw error;
+  }
 }
 
 interface RobotMessage {
@@ -251,53 +263,8 @@ async function processRobotResponse(record: SQSRecord): Promise<void> {
     throw error;
   }
 
-  // Check if we need to update status after storing the response
-  // Get the updated match to check all responses
-  const updatedResult = await docClient.send(new GetCommand({
-    TableName: TABLE_NAME,
-    Key: {
-      matchId,
-      timestamp: 0,
-    },
-  }));
-
-  if (updatedResult.Item) {
-    const updatedMatch = updatedResult.Item;
-    const round = updatedMatch.rounds[roundIndex];
-    const responseCount = Object.keys(round.responses || {}).length;
-    
-    console.log(`Response count for match ${matchId} round ${roundNumber}: ${responseCount}/4`);
-    console.log(`Current responses:`, Object.keys(round.responses || {}));
-    
-    // If all 4 responses are in and status is still 'responding', update to 'voting'
-    if (responseCount === 4 && round.status === 'responding') {
-      console.log(`All responses collected for match ${matchId} round ${roundNumber}, updating status to voting`);
-      
-      // Generate randomized presentation order for voting phase
-      const identities: Identity[] = ['A', 'B', 'C', 'D'];
-      const seed = `${matchId}-round-${roundNumber}`;
-      const presentationOrder = shuffleArray(identities, seed);
-      
-      console.log(`Presentation order for voting: ${presentationOrder.join(', ')}`);
-      
-      await docClient.send(new UpdateCommand({
-        TableName: TABLE_NAME,
-        Key: {
-          matchId,
-          timestamp: 0,
-        },
-        UpdateExpression: `SET rounds[${roundIndex}].#status = :votingStatus, rounds[${roundIndex}].presentationOrder = :presentationOrder, updatedAt = :updatedAt`,
-        ExpressionAttributeNames: {
-          '#status': 'status',
-        },
-        ExpressionAttributeValues: {
-          ':votingStatus': 'voting',
-          ':presentationOrder': presentationOrder,
-          ':updatedAt': new Date().toISOString(),
-        },
-      }));
-    }
-  }
+  // Notify match-service that this robot has completed its response
+  await notifyStateUpdate(matchId, roundNumber, robotId);
 
   console.log(`Robot ${robotId} response added to match ${matchId}, round ${roundNumber}`);
   } catch (error) {

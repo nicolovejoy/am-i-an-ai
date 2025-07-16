@@ -4,6 +4,7 @@ exports.handler = void 0;
 const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 const client_lambda_1 = require("@aws-sdk/client-lambda");
+const client_sqs_1 = require("@aws-sdk/client-sqs");
 // Initialize AWS clients
 const dynamoClient = new client_dynamodb_1.DynamoDBClient({});
 const docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(dynamoClient, {
@@ -12,32 +13,11 @@ const docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(dynamoClient, {
     },
 });
 const lambdaClient = new client_lambda_1.LambdaClient({});
+const sqsClient = new client_sqs_1.SQSClient({});
 // Get environment variables
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'robot-orchestra-matches';
 const AI_SERVICE_FUNCTION_NAME = process.env.AI_SERVICE_FUNCTION_NAME || 'robot-orchestra-ai-service';
-// Seeded random number generator for consistent shuffling
-function seededRandom(seed) {
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-        const char = seed.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
-    }
-    return function () {
-        hash = (hash * 9301 + 49297) % 233280;
-        return hash / 233280;
-    };
-}
-// Shuffle array using a seed for consistency
-function shuffleArray(array, seed) {
-    const random = seededRandom(seed);
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-}
+const STATE_UPDATE_QUEUE_URL = process.env.STATE_UPDATE_QUEUE_URL || '';
 // Robot personalities for response generation
 const robotPersonalities = {
     'B': {
@@ -71,11 +51,17 @@ const robotPersonalities = {
         ],
     },
 };
-// Map robot IDs to AI personalities
+// Map robot IDs to AI personalities and dwarf names
 const robotToPersonality = {
     'B': 'philosopher', // poetic → philosopher
     'C': 'scientist', // analytical → scientist
     'D': 'comedian' // whimsical → comedian
+};
+// Map robot IDs to dwarf names for consistent identity
+const robotToDwarfName = {
+    'B': 'Doc', // The wise philosopher (Doc seems fitting)
+    'C': 'Happy', // The analytical scientist (ironic but memorable)
+    'D': 'Dopey' // The whimsical comedian (perfect match)
 };
 async function generateRobotResponse(prompt, robotId, roundNumber) {
     const personality = robotToPersonality[robotId];
@@ -123,7 +109,8 @@ async function generateRobotResponse(prompt, robotId, roundNumber) {
             console.error(`AI service response missing expected fields. Body:`, parsedBody);
             throw new Error('Invalid response from AI service');
         }
-        return parsedBody.result.response + ' [AI]';
+        const dwarfName = robotToDwarfName[robotId] || robotId;
+        return parsedBody.result.response + ` [AI: ${dwarfName}]`;
     }
     catch (error) {
         console.error(`Failed to generate AI response for robot ${robotId}:`, error);
@@ -138,7 +125,33 @@ function generateFallbackResponse(_prompt, robotId) {
     }
     // Use existing hardcoded responses as fallback
     const responses = personality.responses;
-    return responses[Math.floor(Math.random() * responses.length)] + ' [Fallback]';
+    const dwarfName = robotToDwarfName[robotId] || robotId;
+    return responses[Math.floor(Math.random() * responses.length)] + ` [Fallback: ${dwarfName}]`;
+}
+// Notify match-service of robot response completion
+async function notifyStateUpdate(matchId, roundNumber, robotId) {
+    if (!STATE_UPDATE_QUEUE_URL) {
+        console.error('STATE_UPDATE_QUEUE_URL is not set!');
+        return;
+    }
+    const message = {
+        type: 'ROBOT_RESPONSE_COMPLETE',
+        matchId,
+        roundNumber,
+        robotId,
+        timestamp: new Date().toISOString()
+    };
+    try {
+        await sqsClient.send(new client_sqs_1.SendMessageCommand({
+            QueueUrl: STATE_UPDATE_QUEUE_URL,
+            MessageBody: JSON.stringify(message)
+        }));
+        console.log(`Notified match-service of ${robotId} completion for match ${matchId} round ${roundNumber}`);
+    }
+    catch (error) {
+        console.error(`Failed to send state update notification:`, error);
+        throw error;
+    }
 }
 const handler = async (event) => {
     console.log('Robot Worker received event:', JSON.stringify(event, null, 2));
@@ -210,47 +223,8 @@ async function processRobotResponse(record) {
             console.error(`Failed to store robot ${robotId} response:`, error);
             throw error;
         }
-        // Check if we need to update status after storing the response
-        // Get the updated match to check all responses
-        const updatedResult = await docClient.send(new lib_dynamodb_1.GetCommand({
-            TableName: TABLE_NAME,
-            Key: {
-                matchId,
-                timestamp: 0,
-            },
-        }));
-        if (updatedResult.Item) {
-            const updatedMatch = updatedResult.Item;
-            const round = updatedMatch.rounds[roundIndex];
-            const responseCount = Object.keys(round.responses || {}).length;
-            console.log(`Response count for match ${matchId} round ${roundNumber}: ${responseCount}/4`);
-            console.log(`Current responses:`, Object.keys(round.responses || {}));
-            // If all 4 responses are in and status is still 'responding', update to 'voting'
-            if (responseCount === 4 && round.status === 'responding') {
-                console.log(`All responses collected for match ${matchId} round ${roundNumber}, updating status to voting`);
-                // Generate randomized presentation order for voting phase
-                const identities = ['A', 'B', 'C', 'D'];
-                const seed = `${matchId}-round-${roundNumber}`;
-                const presentationOrder = shuffleArray(identities, seed);
-                console.log(`Presentation order for voting: ${presentationOrder.join(', ')}`);
-                await docClient.send(new lib_dynamodb_1.UpdateCommand({
-                    TableName: TABLE_NAME,
-                    Key: {
-                        matchId,
-                        timestamp: 0,
-                    },
-                    UpdateExpression: `SET rounds[${roundIndex}].#status = :votingStatus, rounds[${roundIndex}].presentationOrder = :presentationOrder, updatedAt = :updatedAt`,
-                    ExpressionAttributeNames: {
-                        '#status': 'status',
-                    },
-                    ExpressionAttributeValues: {
-                        ':votingStatus': 'voting',
-                        ':presentationOrder': presentationOrder,
-                        ':updatedAt': new Date().toISOString(),
-                    },
-                }));
-            }
-        }
+        // Notify match-service that this robot has completed its response
+        await notifyStateUpdate(matchId, roundNumber, robotId);
         console.log(`Robot ${robotId} response added to match ${matchId}, round ${roundNumber}`);
     }
     catch (error) {

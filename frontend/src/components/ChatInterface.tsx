@@ -54,7 +54,7 @@ export default function ChatInterface() {
 
     const pollInterval = setInterval(() => {
       useSessionStore.getState().pollMatchUpdates(match.matchId);
-    }, 1000);
+    }, 3000); // Poll every 3 seconds instead of 1
 
     return () => clearInterval(pollInterval);
   }, [match]);
@@ -182,7 +182,7 @@ export default function ChatInterface() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] max-w-4xl mx-auto p-2 sm:p-4 gap-2">
+    <div className="flex flex-col min-h-[calc(100vh-80px)] max-w-4xl mx-auto p-2 sm:p-4 gap-2">
       {/* Header */}
       <Card className="text-center" padding="sm">
         <div className="flex items-center justify-between">
@@ -235,7 +235,7 @@ export default function ChatInterface() {
       <ParticipantBar />
 
       {/* Main Content - Round Interface or Legacy Chat */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col">
         {match && currentPrompt ? (
           <RoundInterface />
         ) : (

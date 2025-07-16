@@ -1,6 +1,6 @@
+// Temporary stub file - will be removed after migration
 import type { StateCreator } from 'zustand';
 import type { SessionStore, Identity } from '../types';
-import { matchService } from '../api/matchService';
 
 export type GameActions = Pick<
   SessionStore,
@@ -30,12 +30,24 @@ export const createGameActions: StateCreator<
     // Submit async
     const submitAsync = async () => {
       try {
-        const result = await matchService.submitResponse(
-          state.match!.matchId,
-          state.myIdentity!,
-          response,
-          state.match!.currentRound || 1
-        );
+        const res = await fetch(`${import.meta.env.VITE_MATCH_SERVICE_API}/matches/${state.match!.matchId}/responses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('authToken') || ''}`,
+          },
+          body: JSON.stringify({
+            identity: state.myIdentity,
+            response: response,
+            round: state.match!.currentRound || 1
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to submit response');
+        }
+
+        const result = await res.json();
         
         // Update match state if response includes updated data
         if (result.match) {
@@ -43,7 +55,7 @@ export const createGameActions: StateCreator<
           
           // Update current prompt if we moved to a new round
           const currentRound = result.match.rounds?.find(
-            r => r.roundNumber === result.match!.currentRound
+            (r: any) => r.roundNumber === result.match!.currentRound
           );
           
           if (currentRound?.prompt) {
@@ -86,12 +98,24 @@ export const createGameActions: StateCreator<
     // Submit async
     const submitAsync = async () => {
       try {
-        const result = await matchService.submitVote(
-          state.match!.matchId,
-          state.myIdentity!,
-          humanIdentity,
-          state.match!.currentRound || 1
-        );
+        const res = await fetch(`${import.meta.env.VITE_MATCH_SERVICE_API}/matches/${state.match!.matchId}/votes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('authToken') || ''}`,
+          },
+          body: JSON.stringify({
+            voter: state.myIdentity,
+            votedFor: humanIdentity,
+            round: state.match!.currentRound || 1
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to submit vote');
+        }
+
+        const result = await res.json();
         
         // Update match state if response includes updated data
         if (result.match) {
@@ -99,7 +123,7 @@ export const createGameActions: StateCreator<
           
           // Check if we moved to a new round
           const currentRound = result.match.rounds?.find(
-            r => r.roundNumber === result.match!.currentRound
+            (r: any) => r.roundNumber === result.match!.currentRound
           );
           
           if (currentRound?.prompt && currentRound.prompt !== state.currentPrompt) {

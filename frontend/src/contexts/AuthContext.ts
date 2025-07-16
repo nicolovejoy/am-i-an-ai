@@ -1,12 +1,14 @@
 import { createContext } from 'react';
-import type { AuthUser } from '../types/auth';
+import type { User } from '@aws-amplify/auth';
 
 export interface AuthContextType {
-  isAuthenticated: boolean;
+  user: User | null;
   isLoading: boolean;
-  user: AuthUser | null;
-  checkAuth: () => Promise<void>;
-  signOut: () => void;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
+  confirmSignUp: (email: string, code: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  resendCode: (email: string) => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | null>(null);

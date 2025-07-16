@@ -210,7 +210,7 @@ describe('Match Service Lambda', () => {
         expect.objectContaining({
           input: expect.objectContaining({
             TableName: 'test-matches-table',
-            Key: { matchId },
+            Key: { matchId, timestamp: 0 },
           }),
         })
       );

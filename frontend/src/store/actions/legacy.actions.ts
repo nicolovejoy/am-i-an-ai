@@ -1,9 +1,10 @@
+// Temporary stub file - will be removed after migration
 import type { StateCreator } from 'zustand';
 import type { SessionStore } from '../types';
 
 export type LegacyActions = Pick<
   SessionStore,
-  'connect' | 'disconnect' | 'sendMessage' | 'reset'
+  'connect' | 'disconnect' | 'sendMessage' | 'setTestingMode' | 'reset'
 >;
 
 export const createLegacyActions: StateCreator<
@@ -11,27 +12,38 @@ export const createLegacyActions: StateCreator<
   [],
   [],
   LegacyActions
-> = (_, get) => ({
-  // Legacy connect method - redirects to dashboard
+> = (set, get) => ({
   connect: () => {
+    console.log('Legacy connect called - redirecting to dashboard');
     window.location.href = '/dashboard';
   },
 
-  // Legacy disconnect method
   disconnect: () => {
-    const { resetSession } = get();
-    resetSession();
+    set({
+      connectionStatus: "disconnected",
+      match: null,
+      myIdentity: null,
+      messages: [],
+      currentPrompt: null,
+      myResponse: null,
+      hasSubmittedResponse: false,
+      roundResponses: {},
+      hasSubmittedVote: false,
+      isSessionActive: false,
+    });
   },
 
-  // Legacy sendMessage - delegate to submitResponse
   sendMessage: (content: string) => {
-    const { submitResponse } = get();
-    submitResponse(content);
+    console.log('Legacy sendMessage called:', content);
+    // No-op for now
   },
 
-  // Legacy reset method (alias to resetSession)
+  setTestingMode: (enabled: boolean) => {
+    console.log('Legacy setTestingMode called:', enabled);
+    // No-op for now
+  },
+
   reset: () => {
-    const { resetSession } = get();
-    resetSession();
+    get().disconnect();
   },
 });

@@ -64,6 +64,28 @@ async function triggerRobotResponses(matchId, roundNumber, prompt) {
         console.error('SQS_QUEUE_URL is not set!');
         return;
     }
+    // Verify human response is in DynamoDB before triggering robots
+    try {
+        const verifyResult = await docClient.send(new lib_dynamodb_1.GetCommand({
+            TableName: TABLE_NAME,
+            Key: {
+                matchId,
+                timestamp: 0,
+            },
+        }));
+        if (verifyResult.Item) {
+            const verifyMatch = verifyResult.Item;
+            const verifyRound = verifyMatch.rounds.find(r => r.roundNumber === roundNumber);
+            const responsesInDb = Object.keys(verifyRound?.responses || {});
+            console.log(`[VERIFY] Before triggering robots - responses in DynamoDB:`, responsesInDb);
+            if (!responsesInDb.includes('A')) {
+                console.error('[ERROR] Human response A not found in DynamoDB! This will cause voting display issues.');
+            }
+        }
+    }
+    catch (error) {
+        console.error('[ERROR] Failed to verify human response in DynamoDB:', error);
+    }
     const robots = ['B', 'C', 'D'];
     for (const robotId of robots) {
         const message = {
@@ -91,11 +113,86 @@ const CORS_HEADERS = {
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
 };
 // Kafka removed for now - focusing on core match functionality
+// Handle state update messages from robot-worker
+async function handleStateUpdate(event) {
+    const results = [];
+    for (const record of event.Records) {
+        try {
+            const message = JSON.parse(record.body);
+            console.log('Processing state update message:', message);
+            if (message.type === 'ROBOT_RESPONSE_COMPLETE') {
+                await checkAndTransitionRound(message.matchId, message.roundNumber);
+            }
+        }
+        catch (error) {
+            console.error('Failed to process state update:', error);
+            results.push({ itemIdentifier: record.messageId });
+        }
+    }
+    return { batchItemFailures: results };
+}
+// Check if all responses are collected and transition to voting
+async function checkAndTransitionRound(matchId, roundNumber) {
+    console.log(`Checking round status for match ${matchId}, round ${roundNumber}`);
+    // Get current match state
+    const result = await docClient.send(new lib_dynamodb_1.GetCommand({
+        TableName: TABLE_NAME,
+        Key: {
+            matchId,
+            timestamp: 0,
+        },
+    }));
+    if (!result.Item) {
+        console.error(`Match ${matchId} not found`);
+        return;
+    }
+    const match = result.Item;
+    const round = match.rounds.find(r => r.roundNumber === roundNumber);
+    if (!round || round.status !== 'responding') {
+        console.log(`Round ${roundNumber} not in responding state or not found, current status: ${round?.status}`);
+        return; // Already transitioned or not found
+    }
+    const responseCount = Object.keys(round.responses || {}).length;
+    console.log(`Match ${matchId} round ${roundNumber}: ${responseCount}/4 responses`);
+    console.log(`Current responses:`, Object.keys(round.responses || {}));
+    if (responseCount === 4) {
+        // Generate presentation order
+        const identities = ['A', 'B', 'C', 'D'];
+        const seed = `${matchId}-round-${roundNumber}`;
+        const presentationOrder = shuffleArray(identities, seed);
+        console.log(`All responses collected, transitioning to voting with order: ${presentationOrder.join(', ')}`);
+        // Update status to voting
+        const roundIndex = match.rounds.findIndex(r => r.roundNumber === roundNumber);
+        await docClient.send(new lib_dynamodb_1.UpdateCommand({
+            TableName: TABLE_NAME,
+            Key: {
+                matchId,
+                timestamp: 0,
+            },
+            UpdateExpression: `SET rounds[${roundIndex}].#status = :votingStatus, rounds[${roundIndex}].presentationOrder = :presentationOrder, updatedAt = :updatedAt`,
+            ExpressionAttributeNames: {
+                '#status': 'status',
+            },
+            ExpressionAttributeValues: {
+                ':votingStatus': 'voting',
+                ':presentationOrder': presentationOrder,
+                ':updatedAt': new Date().toISOString(),
+            },
+        }));
+        console.log(`Successfully transitioned match ${matchId} round ${roundNumber} to voting`);
+    }
+}
 const handler = async (event) => {
     console.log('Match Service received event:', JSON.stringify(event, null, 2));
+    // Check if this is an SQS event
+    if ('Records' in event && event.Records[0]?.eventSource === 'aws:sqs') {
+        return handleStateUpdate(event);
+    }
+    // Otherwise handle as API Gateway event
+    const apiEvent = event;
     try {
-        const path = event.path;
-        const method = event.httpMethod;
+        const path = apiEvent.path;
+        const method = apiEvent.httpMethod;
         // Handle CORS preflight
         if (method === 'OPTIONS') {
             return {
@@ -119,16 +216,16 @@ const handler = async (event) => {
             };
         }
         if (method === 'POST' && (pathWithoutStage === '/matches' || path === '/matches')) {
-            return await createMatch(event);
+            return await createMatch(apiEvent);
         }
         else if (method === 'GET' && pathWithoutStage.match(/^\/matches\/[^\/]+$/)) {
-            return await getMatch(event);
+            return await getMatch(apiEvent);
         }
         else if (method === 'POST' && pathWithoutStage.match(/^\/matches\/[^\/]+\/responses$/)) {
-            return await submitResponse(event);
+            return await submitResponse(apiEvent);
         }
         else if (method === 'POST' && pathWithoutStage.match(/^\/matches\/[^\/]+\/votes$/)) {
-            return await submitVote(event);
+            return await submitVote(apiEvent);
         }
         return {
             statusCode: 404,
@@ -172,19 +269,19 @@ async function createMatch(event) {
             {
                 identity: 'B',
                 isAI: true,
-                playerName: 'Robot B',
+                playerName: 'Doc (Robot B)',
                 isConnected: true,
             },
             {
                 identity: 'C',
                 isAI: true,
-                playerName: 'Robot C',
+                playerName: 'Happy (Robot C)',
                 isConnected: true,
             },
             {
                 identity: 'D',
                 isAI: true,
-                playerName: 'Robot D',
+                playerName: 'Dopey (Robot D)',
                 isConnected: true,
             },
         ],
@@ -323,30 +420,13 @@ async function submitResponse(event) {
     // Store the response
     round.responses[body.identity] = body.response;
     match.updatedAt = new Date().toISOString();
-    // Generate robot responses if this is from the human
-    if (body.identity === 'A') {
-        // Trigger robot responses asynchronously via SQS
-        await triggerRobotResponses(matchId, body.round, round.prompt);
-        // Note: Robot responses will be added asynchronously by robot-worker
-        // The frontend will poll for updates
-    }
-    // Check if all 4 responses are now collected
+    // Check if all 4 responses are now collected (this is just for human submission)
     const responseCount = Object.keys(round.responses).length;
     console.log(`Response count after update: ${responseCount}, round status: ${round.status}`);
     console.log(`Current responses:`, Object.keys(round.responses));
-    if (responseCount === 4 && round.status === 'responding') {
-        // Update round status to voting
-        round.status = 'voting';
-        // Generate randomized presentation order for voting phase
-        // Use matchId and round number as seed for consistent ordering
-        const identities = ['A', 'B', 'C', 'D'];
-        const seed = `${matchId}-round-${body.round}`;
-        round.presentationOrder = shuffleArray(identities, seed);
-        console.log(`All responses collected for match ${matchId} round ${body.round}, transitioning to voting`);
-        console.log(`Presentation order for voting: ${round.presentationOrder.join(', ')}`);
-        console.log(`Shuffled array result:`, round.presentationOrder);
-    }
-    // Update match in DynamoDB
+    // For human submissions, we won't transition to voting yet since robot responses aren't in
+    // Robot-worker will handle the transition when it adds the 4th response
+    // CRITICAL: Save the human response to DynamoDB BEFORE triggering robot responses
     try {
         await docClient.send(new lib_dynamodb_1.UpdateCommand({
             TableName: TABLE_NAME,
@@ -364,24 +444,31 @@ async function submitResponse(event) {
                 ':status': match.status,
             },
         }));
-        console.log('Response submitted:', matchId, 'Round:', body.round, 'Identity:', body.identity);
-        return {
-            statusCode: 200,
-            headers: CORS_HEADERS,
-            body: JSON.stringify({
-                success: true,
-                match: match,
-            }),
-        };
+        console.log('Response saved to DynamoDB:', matchId, 'Round:', body.round, 'Identity:', body.identity);
     }
     catch (error) {
         console.error('Failed to update match in DynamoDB:', error);
         return {
             statusCode: 500,
             headers: CORS_HEADERS,
-            body: JSON.stringify({ error: 'Failed to update match' }),
+            body: JSON.stringify({ error: 'Failed to save response' }),
         };
     }
+    // NOW trigger robot responses after human response is safely stored
+    if (body.identity === 'A') {
+        console.log('Human response saved, now triggering robot responses...');
+        await triggerRobotResponses(matchId, body.round, round.prompt);
+        // Note: Robot responses will be added asynchronously by robot-worker
+        // The robot-worker will check for all 4 responses and transition to voting
+    }
+    return {
+        statusCode: 200,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({
+            success: true,
+            match: match,
+        }),
+    };
 }
 async function submitVote(event) {
     // Extract matchId from path

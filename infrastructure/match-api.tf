@@ -785,6 +785,12 @@ resource "aws_iam_role_policy_attachment" "match_service_lambda_sqs" {
   policy_arn = aws_iam_policy.sqs_send.arn
 }
 
+# Attach state update receive policy to match service
+resource "aws_iam_role_policy_attachment" "match_service_state_update_receive" {
+  role       = aws_iam_role.match_service_lambda.name
+  policy_arn = aws_iam_policy.state_update_receive.arn
+}
+
 # CloudWatch Log Group for Match Service Lambda
 resource "aws_cloudwatch_log_group" "match_service_logs" {
   name              = "/aws/lambda/${local.project_name}-match-service"
@@ -830,7 +836,8 @@ resource "aws_lambda_function" "match_service" {
     # aws_iam_role_policy_attachment.match_service_lambda_vpc,
     # aws_iam_role_policy_attachment.match_service_lambda_kafka
     aws_iam_role_policy_attachment.match_service_lambda_dynamodb,
-    aws_iam_role_policy_attachment.match_service_lambda_sqs
+    aws_iam_role_policy_attachment.match_service_lambda_sqs,
+    aws_iam_role_policy_attachment.match_service_state_update_receive
   ]
 
   tags = local.tags
@@ -936,6 +943,12 @@ resource "aws_iam_role_policy_attachment" "robot_worker_lambda_invoke_ai" {
   policy_arn = aws_iam_policy.robot_worker_invoke_ai_service.arn
 }
 
+# Attach state update send policy to robot worker
+resource "aws_iam_role_policy_attachment" "robot_worker_state_update_send" {
+  role       = aws_iam_role.robot_worker_lambda.name
+  policy_arn = aws_iam_policy.state_update_send.arn
+}
+
 # CloudWatch Log Group for Robot Worker Lambda
 resource "aws_cloudwatch_log_group" "robot_worker_logs" {
   name              = "/aws/lambda/${local.project_name}-robot-worker"
@@ -961,6 +974,7 @@ resource "aws_lambda_function" "robot_worker" {
       NODE_ENV = "production"
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.matches.name
       AI_SERVICE_FUNCTION_NAME = aws_lambda_function.ai_service.function_name
+      STATE_UPDATE_QUEUE_URL = aws_sqs_queue.state_updates.url
     }
   }
 
@@ -969,7 +983,8 @@ resource "aws_lambda_function" "robot_worker" {
     aws_iam_role_policy_attachment.robot_worker_lambda_basic,
     aws_iam_role_policy_attachment.robot_worker_lambda_dynamodb,
     aws_iam_role_policy_attachment.robot_worker_lambda_sqs,
-    aws_iam_role_policy_attachment.robot_worker_lambda_invoke_ai
+    aws_iam_role_policy_attachment.robot_worker_lambda_invoke_ai,
+    aws_iam_role_policy_attachment.robot_worker_state_update_send
   ]
 
   tags = local.tags
@@ -991,6 +1006,22 @@ resource "aws_lambda_event_source_mapping" "robot_worker_sqs" {
   event_source_arn = aws_sqs_queue.robot_responses.arn
   function_name    = aws_lambda_function.robot_worker.function_name
   batch_size       = 1  # Process one message at a time for better error handling
+}
+
+# Event source mapping for match-service to receive state updates
+resource "aws_lambda_event_source_mapping" "match_service_state_updates" {
+  event_source_arn = aws_sqs_queue.state_updates.arn
+  function_name    = aws_lambda_function.match_service.function_name
+  batch_size       = 10  # Process multiple state updates together
+}
+
+# Lambda permission for SQS to invoke match-service
+resource "aws_lambda_permission" "match_service_sqs" {
+  statement_id  = "AllowExecutionFromSQS"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.match_service.function_name
+  principal     = "sqs.amazonaws.com"
+  source_arn    = aws_sqs_queue.state_updates.arn
 }
 
 ############################

@@ -43,7 +43,7 @@ function MatchContent() {
 
 export default function MatchPage() {
   return (
-    <div className="min-h-screen bg-slate-50" data-page="match">
+    <div className="min-h-screen bg-slate-50 overflow-y-auto" data-page="match">
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

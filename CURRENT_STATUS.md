@@ -1,5 +1,10 @@
 # Current Status - January 2025
 
+## 📋 Active Planning Documents
+
+- **[Phase 3: Centralize State Logic](./PHASE3_CENTRALIZE_STATE_PLAN.md)** - Comprehensive plan to migrate all state transitions to match-service (7-9 hours estimated)
+- **[Frontend State Migration](./frontend/TEST_PLAN.md)** - New React Query + Zod architecture to fix round 5 bug and improve state management
+
 ## 🎮 **RobotOrchestra Production MVP**
 
 ### **✅ What's Working**
@@ -14,17 +19,20 @@
 - **Match Persistence** - Survives page refreshes via sessionStorage
 - **Admin Panel** - Clear match data functionality at /admin
 
-### **🐛 Known Issues (January 15, 2025)**
+### **🐛 Known Issues (January 16, 2025)**
 
-- **Critical: Voting Page Broken** - Only showing user's response, not robot responses
-  - Root cause: Status not transitioning from "responding" to "voting"
-  - Missing presentationOrder generation when all responses collected
-  - Human response (A) missing from DynamoDB data
+- **Critical: Round 5 Hanging** - Cannot submit response in final round
+  - Root cause: Frontend state not resetting properly after round 4 vote
+  - `hasSubmittedVote` stays true, blocking round 5 input
+  - Temporary workaround: Refresh page when reaching round 5
+- **Voting Page Issues** - Sometimes only showing user's response
+  - Related to status transition timing issues
+  - Phase 3 backend refactor will address this
 - **Keyboard Navigation Not Working** - Arrow keys and shortcuts not functioning
 - **Excessive API Polling** - Making too many calls to match endpoint
   - Need to optimize polling strategy or implement SSE
-- **State Management** - Frontend state management needs review and optimization
-- **Prompts Not AI-Generated** - Currently using hardcoded prompt list (AI generation ready but not wired)
+- **State Management** - Frontend state management needs major refactor (in progress)
+- **Prompts Not AI-Generated** - Currently using hardcoded prompt list
 - **Admin Service** - Not deployed yet (Delete All Matches unavailable)
 
 ### **🏗️ Architecture**
@@ -96,7 +104,7 @@ aws dynamodb scan \
 
 # Check SQS queue
 aws sqs get-queue-attributes \
-  --queue-url $(aws sqs get-queue-url --queue-name robot-orchestra-robot-queue --query QueueUrl --output text) \
+  --queue-url $(aws sqs get-queue-url --queue-name robot-orchestra-robot-responses --query QueueUrl --output text) \
   --attribute-names All
 ```
 
@@ -115,7 +123,16 @@ aws sqs get-queue-attributes \
    - Add proper error boundaries
    - Reduce polling interval or implement smart polling
 
-3. **Quick Wins**
+3. **Clean Up Temporary Files After Migration**
+   - Remove all files containing comment "Temporary stub file"
+   - Files to delete after migration complete:
+     - `/frontend/src/store/actions/match.actions.ts`
+     - `/frontend/src/store/actions/game.actions.ts`
+     - `/frontend/src/store/actions/legacy.actions.ts`
+     - `/frontend/src/store/api/matchService.ts`
+     - `/frontend/src/contexts/AuthContext.ts` (if still marked as temporary)
+
+4. **Quick Wins**
    - Add debug mode to admin panel showing raw match state
    - Increase polling interval from 1s to 3-5s
    - Add comprehensive error logging
@@ -129,19 +146,19 @@ aws sqs get-queue-attributes \
    - Real-time updates via DynamoDB Streams
    - Eliminate excessive API calls
 
-6. **Architecture Refactor - match-service as Coordinator**
-   - Make match-service the single authority for state transitions
-   - Remove transition logic from robot-worker (just save responses)
-   - match-service checks completion after ANY response submission
-   - Eliminates race conditions and debugging complexity
-   - Consider: robot-worker notifies match-service after saving
+6. **Phase 3: Architecture Refactor** ⭐ **[PLANNED - See detailed plan](./PHASE3_CENTRALIZE_STATE_PLAN.md)**
+   - Centralize ALL state transitions in match-service
+   - Add state-updates SQS queue for robot→match-service notifications
+   - Remove state logic from robot-worker completely
+   - Implement proper event-driven coordination
+   - Eliminates race conditions and simplifies debugging
+   - Foundation for removing frontend polling
 
-7. **Review Queueing Architecture**
-   - Currently: SQS triggers robot-worker for async responses
-   - Missing: DynamoDB Streams for state change events
-   - Consider: SQS for match-service notifications from robot-worker
-   - Evaluate: Current queue usage vs event-driven patterns
-   - Could reduce polling with proper event flow
+7. **Review Queueing Architecture** (Addressed in Phase 3)
+   - Phase 3 adds proper SQS-based coordination
+   - robot-worker notifies match-service of updates
+   - Event-driven state transitions
+   - Sets foundation for future SSE/WebSocket implementation
 
 ### **💡 Ideas for Future**
 
@@ -178,6 +195,47 @@ Current: ~$5-10/month (within budget)
 - **Need better observability** - Hard to debug without comprehensive logging
 - **Human response missing** - Core issue is human response not saved to DynamoDB
 
+### **📊 Architecture Analysis Summary**
+
+**Current State Management Issues:**
+1. **Distributed State Logic** - Both match-service and robot-worker manage state transitions
+2. **Race Conditions** - Multiple services updating match state simultaneously  
+3. **No Coordination** - robot-worker updates aren't communicated back to match-service
+4. **Complex Debugging** - Hard to trace state changes across services
+
+**Phase 3 Solution:**
+- Centralizes ALL state management in match-service
+- Adds proper event-driven coordination via new SQS queue
+- Makes system more maintainable and debuggable
+- See [PHASE3_CENTRALIZE_STATE_PLAN.md](./PHASE3_CENTRALIZE_STATE_PLAN.md) for full implementation details
+
 ---
 
-*Last updated: January 15, 2025 - AI integration working, voting page has critical display bug, excessive API polling identified*
+### **🚀 Tonight's Progress (January 16, 2025)**
+
+1. **Identified Round 5 Bug Root Cause**
+   - Frontend doesn't reset `hasSubmittedVote` when transitioning from round 4 to 5
+   - State comparison uses stale closure causing reset logic to fail
+
+2. **Designed New Frontend Architecture**
+   - React Query for server state (automatic caching, polling, optimistic updates)
+   - Minimal Zustand for UI-only state
+   - Shared Zod schemas between frontend and backend
+   - Created comprehensive migration plan
+
+3. **Implementation Progress**
+   - ✅ Created shared schema definitions in `/shared/schemas/`
+   - ✅ Set up React Query infrastructure
+   - ✅ Created v2 components demonstrating new patterns
+   - ✅ Added temporary stub files to keep app running
+   - ✅ Fixed environment variable issues
+
+4. **Ready for Testing**
+   - App now runs with current (buggy) architecture
+   - Can test round 5 bug to confirm issue
+   - Migration plan ready in `frontend/TEST_PLAN.md`
+   - Next: Gradually migrate components following test plan
+
+---
+
+*Last updated: January 16, 2025 - Implemented new frontend architecture, ready for migration testing*

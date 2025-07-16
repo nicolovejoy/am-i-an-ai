@@ -43,6 +43,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail" {
   rule {
     id     = "delete_old_logs"
     status = "Enabled"
+    
+    filter {
+      # Apply to all objects in the bucket
+    }
 
     expiration {
       days = 90  # Keep logs for 90 days

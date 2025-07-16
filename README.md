@@ -4,13 +4,13 @@
 
 One human joins three AI participants responding to creative prompts. Players vote to identify who's human. Built as an experimental platform to explore human-AI interaction.
 
-## 🎯 Current Status (January 15, 2025)
+## 🎯 Current Status (January 16, 2025)
 
 - ✅ **AI Integration** - AWS Bedrock with Claude 3 models working
-- ✅ **Core Gameplay** - Full match flow with 5 rounds
-- ✅ **Keyboard Navigation** - Full keyboard support for voting
-- ⚠️ **Known Issue** - Voting page display bug (see ACTION_PLAN.md)
-- 🔜 **Next** - State management optimization, reduce API polling
+- ✅ **Core Gameplay** - Full match flow with 5 rounds  
+- ⚠️ **Round 5 Bug** - Cannot submit response in final round (fix in progress)
+- 🚧 **Frontend Refactor** - Migrating to React Query + Zod schemas
+- 🔜 **Next** - Complete migration, deploy fix, implement Phase 3 backend refactor
 
 ## 🚀 Live Site
 
