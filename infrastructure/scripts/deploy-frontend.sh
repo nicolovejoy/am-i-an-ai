@@ -36,8 +36,22 @@ npm run lint || {
     exit 1
 }
 
-# Build the frontend
+# Get Cognito configuration from terraform
+echo "🔐 Getting Cognito configuration..."
+cd ../infrastructure
+COGNITO_USER_POOL_ID=$(terraform output -raw cognito_user_pool_id 2>/dev/null || echo "")
+COGNITO_CLIENT_ID=$(terraform output -raw cognito_client_id 2>/dev/null || echo "")
+cd ../frontend
+
+if [ -z "$COGNITO_USER_POOL_ID" ] || [ -z "$COGNITO_CLIENT_ID" ]; then
+    echo "⚠️  Warning: Cognito configuration not found in terraform outputs"
+    echo "   Authentication may not work correctly"
+fi
+
+# Build the frontend with environment variables
 echo "🔨 Building frontend..."
+VITE_COGNITO_USER_POOL_ID="$COGNITO_USER_POOL_ID" \
+VITE_COGNITO_CLIENT_ID="$COGNITO_CLIENT_ID" \
 npm run build || {
     echo "❌ Build failed!"
     exit 1
@@ -104,3 +118,5 @@ echo "📊 Deployment summary:"
 echo "   - Built with timestamp: $(TZ='America/Los_Angeles' date +'%Y-%m-%d %H:%M PST')"
 echo "   - Files uploaded to S3: $(find dist -type f | wc -l)"
 echo "   - CloudFront invalidation: ${CLOUDFRONT_ID:-Not configured}"
+echo "   - Cognito User Pool: ${COGNITO_USER_POOL_ID:-Not configured}"
+echo "   - Cognito Client ID: ${COGNITO_CLIENT_ID:-Not configured}"

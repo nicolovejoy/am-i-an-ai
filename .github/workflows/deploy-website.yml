@@ -68,14 +68,14 @@ jobs:
           echo "website_url=$WEBSITE_URL" >> $GITHUB_OUTPUT
           echo "cloudfront_id=$CLOUDFRONT_ID" >> $GITHUB_OUTPUT
 
-      - name: Build Next.js site
+      - name: Build Vite site
         working-directory: frontend
         env:
-          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ steps.get-terraform.outputs.user_pool_id }}
-          NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ steps.get-terraform.outputs.client_id }}
-          NEXT_PUBLIC_MATCH_HISTORY_API: ${{ steps.get-terraform.outputs.match_history_api }}
-          NEXT_PUBLIC_MATCH_SERVICE_API: ${{ steps.get-terraform.outputs.match_service_api }}
-          NEXT_PUBLIC_DOMAIN_NAME: ${{ steps.get-terraform.outputs.website_url }}
+          VITE_COGNITO_USER_POOL_ID: ${{ steps.get-terraform.outputs.user_pool_id }}
+          VITE_COGNITO_CLIENT_ID: ${{ steps.get-terraform.outputs.client_id }}
+          VITE_MATCH_HISTORY_API: ${{ steps.get-terraform.outputs.match_history_api }}
+          VITE_MATCH_SERVICE_API: ${{ steps.get-terraform.outputs.match_service_api }}
+          VITE_DOMAIN_NAME: ${{ steps.get-terraform.outputs.website_url }}
         run: npm run build
 
       - name: Deploy to S3
