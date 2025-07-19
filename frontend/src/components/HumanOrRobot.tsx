@@ -98,11 +98,24 @@ export default function HumanOrRobot({
         e.preventDefault();
         setFocusedIndex(Math.min(selectableResponses.length - 1, focusedIndex + 1));
         break;
-      case ' ':
-      case 'Enter': {
+      case ' ': {
         e.preventDefault();
         const [identity] = selectableResponses[focusedIndex];
         setSelectedResponse(identity);
+        break;
+      }
+      case 'Enter': {
+        e.preventDefault();
+        if (e.metaKey || e.ctrlKey) {
+          // Cmd+Enter or Ctrl+Enter submits the vote if one is selected
+          if (selectedResponse) {
+            handleVote();
+          }
+        } else {
+          // Plain Enter selects the focused response
+          const [identity] = selectableResponses[focusedIndex];
+          setSelectedResponse(identity);
+        }
         break;
       }
       case 'v':
@@ -239,8 +252,9 @@ export default function HumanOrRobot({
 
         {isKeyboardNavEnabled && (
           <div className="text-xs text-slate-500 text-center">
-            Press <kbd className="px-1 py-0.5 bg-slate-100 rounded">Space</kbd> to select,{" "}
-            <kbd className="px-1 py-0.5 bg-slate-100 rounded">V</kbd> to vote
+            Press <kbd className="px-1 py-0.5 bg-slate-100 rounded">Space</kbd> or{" "}
+            <kbd className="px-1 py-0.5 bg-slate-100 rounded">Enter</kbd> to select,{" "}
+            <kbd className="px-1 py-0.5 bg-slate-100 rounded">⌘+Enter</kbd> to vote
           </div>
         )}
       </div>
