@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, Button } from "@/components/ui";
+import { useMatch } from "@/store/server-state/match.queries";
 // import { useAuth } from "@/contexts/useAuth";
 
 interface HealthCheckResult {
@@ -15,7 +16,12 @@ export function AdminConsole() {
   >({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteResult, setDeleteResult] = useState<string | null>(null);
+  const [showDebugState, setShowDebugState] = useState(false);
   // const { user } = useAuth(); // TODO: Use for authentication when admin service is deployed
+  
+  // Get current match state for debug view
+  const currentMatchId = sessionStorage.getItem('currentMatchId');
+  const { data: matchState } = useMatch(currentMatchId);
 
   // Get all configured endpoints
   const endpoints = {
@@ -401,6 +407,76 @@ export function AdminConsole() {
           >
             Clear Local Storage
           </Button>
+        </div>
+      </Card>
+
+      {/* Match State Debug View */}
+      <Card>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">🔍 Match State Debug View</h2>
+          <Button
+            onClick={() => setShowDebugState(!showDebugState)}
+            variant="secondary"
+            size="sm"
+          >
+            {showDebugState ? 'Hide' : 'Show'} Raw State
+          </Button>
+        </div>
+        
+        {currentMatchId ? (
+          <>
+            <div className="text-sm text-slate-600 mb-2">
+              Current Match ID: <span className="font-mono">{currentMatchId}</span>
+            </div>
+            
+            {showDebugState && matchState && (
+              <div className="bg-slate-100 rounded-lg p-4 overflow-auto max-h-96">
+                <pre className="text-xs font-mono">
+                  {JSON.stringify(matchState, null, 2)}
+                </pre>
+              </div>
+            )}
+            
+            {showDebugState && !matchState && (
+              <div className="text-sm text-slate-500">
+                Loading match state...
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-sm text-slate-500">
+            No active match. Start a match to see debug information.
+          </div>
+        )}
+      </Card>
+
+      {/* AWS Cost Monitoring */}
+      <Card>
+        <h2 className="text-xl font-semibold mb-4">💰 AWS Cost Monitoring</h2>
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-medium text-blue-900 mb-2">Bedrock Usage & Quotas</h3>
+            <p className="text-sm text-blue-800 mb-3">
+              Monitor your AWS Bedrock usage to avoid rate limiting issues:
+            </p>
+            <ol className="text-sm text-blue-800 space-y-2 ml-4">
+              <li>1. Open AWS Console → Bedrock → Model access</li>
+              <li>2. Check your enabled models (Claude 3 Haiku/Sonnet)</li>
+              <li>3. Go to Service Quotas → AWS Bedrock</li>
+              <li>4. Monitor "Tokens per minute" limits</li>
+            </ol>
+          </div>
+          
+          <div className="bg-slate-50 rounded-lg p-4">
+            <h3 className="font-medium mb-2">Estimated Monthly Costs</h3>
+            <div className="text-sm space-y-1">
+              <div>• Lambda: ~$5-10 (invocations + compute)</div>
+              <div>• DynamoDB: ~$1-2 (storage + requests)</div>
+              <div>• S3/CloudFront: ~$1 (hosting)</div>
+              <div>• Bedrock: ~$1-5 (AI responses)</div>
+              <div className="font-medium mt-2">Total: ~$8-18/month</div>
+            </div>
+          </div>
         </div>
       </Card>
     </div>
