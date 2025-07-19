@@ -15,7 +15,7 @@ Successfully centralized all state management in match-service to eliminate race
 - robot-worker sends notifications after saving responses
 - match-service receives notifications and manages state
 - Old state transition logic removed from robot-worker
-- See [PHASE3_IMPLEMENTATION_PLAN.md](./PHASE3_IMPLEMENTATION_PLAN.md) for details
+- See [PHASE3_STATE_CENTRALIZATION.md](./PHASE3_STATE_CENTRALIZATION.md) for details
 
 ## 🎮 **RobotOrchestra Production MVP**
 
