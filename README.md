@@ -10,7 +10,7 @@ One human joins three AI participants responding to creative prompts. Players vo
 - ✅ **AI Integration** - AWS Bedrock with Claude 3 models  
 - ✅ **State Management** - Centralized architecture eliminates race conditions
 - ✅ **React Query** - Modern frontend with proper caching and state sync
-- 🔜 **Next** - Admin service deployment, SSE/WebSockets, improved UX
+- 🔜 **Next** - Use AI for prompts, admin service deployment, SSE/WebSockets, improved UX
 
 ## 🚀 Live Site
 
@@ -24,8 +24,6 @@ Frontend (Vite/React) → CloudFront → S3
    API Gateway → Match Service → DynamoDB
                        ↓
                  Robot Queue → Robot Worker → AI Service
-                       ↓              ↓
-                State Updates → Match Service
-                                     ↓
-                               AWS Bedrock (Claude 3)
+                       ↓              ↓           ↓
+                State Updates → Match Service   AWS Bedrock
 ```
