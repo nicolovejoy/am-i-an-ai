@@ -1,11 +1,23 @@
 # Current Status - January 2025
 
-## 📋 Active Planning Documents
+## ✅ Phase 3 State Centralization: COMPLETE
 
-- **[Phase 3: Centralize State Logic](./PHASE3_CENTRALIZE_STATE_PLAN.md)** - Comprehensive plan to migrate all state transitions to match-service (7-9 hours estimated)
-- **[Frontend State Migration](./frontend/TEST_PLAN.md)** - New React Query + Zod architecture to fix round 5 bug and improve state management
+### What Was Fixed
+Successfully centralized all state management in match-service to eliminate race conditions.
 
-## 🎮 **RobotOrchestra Production MVP** (Updated: January 18, 2025)
+**Changes Deployed:**
+- State updates now flow: robot-worker → SQS → match-service
+- match-service handles ALL state transitions
+- Presentation order generated correctly with 4 items
+- No more distributed state logic
+
+**Architecture:**
+- robot-worker sends notifications after saving responses
+- match-service receives notifications and manages state
+- Old state transition logic removed from robot-worker
+- See [PHASE3_IMPLEMENTATION_PLAN.md](./PHASE3_IMPLEMENTATION_PLAN.md) for details
+
+## 🎮 **RobotOrchestra Production MVP**
 
 ### **✅ What's Working**
 
@@ -19,11 +31,10 @@
 - **Match Persistence** - Survives page refreshes via sessionStorage
 - **Admin Panel** - Clear match data functionality at /admin
 
-### **🐛 Known Issues (January 18, 2025)**
+### **🐛 Known Issues**
 
 - **Admin Service** - Not deployed yet (Delete All Matches unavailable)
-- on the voting page, the keyboard mostly works (you can use arrow keys to move and select and answer) but you can't submit your vote with a keystroke. maybe command enter, like the prior page, only once an answer is selected would be nice.
-- need to focus on new user experience and email and text integration.
+- Need to focus on new user experience and email/SMS integration
 
 ### **🏗️ Architecture**
 
@@ -45,61 +56,21 @@ Frontend (Vite/React) → API Gateway → Lambda Functions → DynamoDB
 
 ### **📝 Recent Changes (January 19, 2025)**
 
-1. **Fixed Bedrock Rate Limiting**
+1. **Keyboard Voting** ✅
+   - Added Cmd+Enter (Mac) / Ctrl+Enter (Windows) to submit votes
+   - Matches response input pattern for consistency
 
-   - Implemented staggered delays for robot responses (0s, 2s, 4s)
-   - Added exponential backoff with jitter for retry logic
-   - Better error handling and logging for throttling issues
+2. **Admin Panel Debug Mode** ✅
+   - Added Match State Debug View showing raw JSON
+   - Toggle show/hide for debugging state issues
+   - Displays current match ID
 
-2. **Enhanced User Experience**
+3. **Phase 3 State Centralization** ✅ COMPLETE
+   - Fixed race conditions in state management
+   - Presentation order now correctly shows 4 items
+   - State transitions centralized in match-service
+   - robot-worker → state-updates queue → match-service flow
 
-   - Added RobotResponseStatus component showing AI processing progress
-   - Real-time status updates while waiting for robot responses
-   - Shows robot names, personalities, and thinking states
-
-3. **Admin Panel Improvements**
-
-   - Added AWS Cost Monitoring section with quota guidance
-   - Clear instructions for checking Bedrock usage and limits
-   - Estimated costs for various AWS services
-
-4. **Code Quality**
-
-   - Fixed missing types import in match-service.ts
-   - Improved seeded random function for better shuffling
-   - Added detailed documentation (BEDROCK_QUOTAS_GUIDE.md)
-
-### **📝 Previous Changes (January 15, 2025)**
-
-1. **AWS Bedrock Integration Fixed**
-
-   - Enabled model access for Claude 3 Haiku and Sonnet
-   - AI responses now working properly
-   - Added [AI] and [Fallback] labels to track response sources
-
-2. **Voting Interface Improvements**
-
-   - Added keyboard navigation (arrow keys, space to select, enter to vote)
-   - Fixed text overflow issues with proper CSS wrapping
-   - Added prompt display above responses for context
-   - Visual focus indicators for keyboard navigation
-
-3. **Development Workflow Updates**
-
-   - Switched to production-only deployment (no local dev server)
-   - Updated documentation to reflect new workflow
-   - Improved deployment scripts with auto-detection of domain
-
-4. **UI/UX Enhancements**
-
-   - Better response text handling with break-words
-   - Keyboard shortcuts displayed on voting screen
-   - Improved focus states and accessibility
-
-5. **Bug Fixes**
-   - Fixed React hooks order in HumanOrRobot component
-   - Resolved ESLint errors for clean builds
-   - Fixed response display cutoff issues
 
 ### **🔍 Debug Commands**
 
@@ -131,50 +102,22 @@ aws sqs get-queue-attributes \
 
 ### **🚀 Next Steps**
 
-1. **✅ COMPLETED: Bedrock Rate Limiting Fixed** (January 19, 2025)
-
-   - Implemented staggered delays: Robot B: 0ms, Robot C: 2000ms, Robot D: 4000ms
-   - Added exponential backoff with jitter for retry logic
-   - Enhanced error handling for rate limit detection
-   - Admin panel now includes AWS cost monitoring guidance
-
-2. **✅ COMPLETED: Response Order Randomization** (January 19, 2025)
-
-   - Each round now has properly randomized presentation order
-   - Improved seeded random function for better distribution
-   - Verified working correctly in production
-
-3. **Quick Wins**
-
-   - Add debug mode to admin panel showing raw match state
-   - Increase polling interval from 1s to 3-5s
-   - Add comprehensive error logging
-
-4. **Deploy Admin Service**
-
-   - Add admin-service.ts to infrastructure
+1. **Deploy Admin Service**
+   - Infrastructure setup needed
    - Enable "Delete All Matches" functionality
 
-5. **Implement SSE**
+2. **Implement SSE/WebSockets**
+   - Replace polling with real-time updates
+   - Now possible with centralized state management
 
-   - Replace polling with Server-Sent Events
-   - Real-time updates via DynamoDB Streams
-   - Eliminate excessive API calls
+3. **Increase Polling Interval**
+   - Quick win to reduce API calls
+   - Change from 1s to 3-5s
 
-6. **Phase 3: Architecture Refactor** ⭐ **[PLANNED - See detailed plan](./PHASE3_CENTRALIZE_STATE_PLAN.md)**
-
-   - Centralize ALL state transitions in match-service
-   - Add state-updates SQS queue for robot→match-service notifications
-   - Remove state logic from robot-worker completely
-   - Implement proper event-driven coordination
-   - Eliminates race conditions and simplifies debugging
-   - Foundation for removing frontend polling
-
-7. **Review Queueing Architecture** (Addressed in Phase 3)
-   - Phase 3 adds proper SQS-based coordination
-   - robot-worker notifies match-service of updates
-   - Event-driven state transitions
-   - Sets foundation for future SSE/WebSocket implementation
+4. **New User Experience**
+   - Onboarding flow
+   - Tutorial/demo mode
+   - Better error handling
 
 ### **💡 Ideas for Future**
 
@@ -191,15 +134,11 @@ aws sqs get-queue-attributes \
   - Match invitations via email/SMS
   - Configurable notification preferences
 
-### **📋 Known Good Configuration**
+### **📋 Configuration**
 
-- **Prompts**: Creative and varied (10 unique philosophical prompts)
-- **Robot Personalities**:
-  - B: Philosopher (poetic, deep)
-  - C: Scientist (analytical, precise)
-  - D: Comedian (whimsical, playful)
-- **Match Flow**: 5 rounds, 4 participants, voting after each round
-- **Deployment**: Use ./scripts/deploy-lambdas.sh for Lambda updates
+- **Match Flow**: 5 rounds, 4 participants (1 human + 3 robots)
+- **Robot Personalities**: Philosopher, Scientist, Comedian
+- **Deployment**: Lambda updates via ./scripts/deploy-lambdas.sh
 
 ### **💰 Cost Status**
 
@@ -210,93 +149,11 @@ Current: ~$5-10/month (within budget)
 - CloudFront/S3 hosting
 - Minimal Bedrock usage (when working)
 
-### **🔑 Key System Insights**
+### **🔑 Architecture Improvements Completed**
 
-- **Backend is working** - AI responses are being generated successfully
-- **Issue is state flow** - Problem is in transitions and data synchronization
-- **Too many moving parts** - Complex coordination between services
-- **Need better observability** - Hard to debug without comprehensive logging
-- **Human response missing** - Core issue is human response not saved to DynamoDB
+**Phase 3 State Centralization:**
+- ✅ Eliminated race conditions
+- ✅ Fixed presentation order (now shows all 4 items)
+- ✅ Single source of truth for state management
+- ✅ Better debugging and observability
 
-### **📊 Architecture Analysis Summary**
-
-**Current State Management Issues:**
-
-1. **Distributed State Logic** - Both match-service and robot-worker manage state transitions
-2. **Race Conditions** - Multiple services updating match state simultaneously
-3. **No Coordination** - robot-worker updates aren't communicated back to match-service
-4. **Complex Debugging** - Hard to trace state changes across services
-
-**Phase 3 Solution:**
-
-- Centralizes ALL state management in match-service
-- Adds proper event-driven coordination via new SQS queue
-- Makes system more maintainable and debuggable
-- See [PHASE3_CENTRALIZE_STATE_PLAN.md](./PHASE3_CENTRALIZE_STATE_PLAN.md) for full implementation details
-
-### **🎉 Major Migration Complete (January 18, 2025)**
-
-1. **Successfully Migrated Frontend to React Query + Zod**
-
-   - Replaced Redux-style state management with React Query
-   - Added shared Zod schemas for type safety
-   - Fixed the critical Round 5 bug
-   - Resolved infinite loop issues with Zustand selectors
-
-2. **Production Deployment Successful**
-
-   - All 5 rounds working properly
-   - Match history functioning
-   - Can resume incomplete matches
-   - State persistence working correctly
-
-3. **Code Cleanup Complete**
-   - Removed old Redux action files
-   - Cleaned up v2 component suffixes
-   - Deleted unused VotingInterface components
-   - Repository is now clean and organized
-
----
-
-### **🚀 Previous Progress (January 16, 2025)**
-
-1. **Identified Round 5 Bug Root Cause**
-
-   - Frontend doesn't reset `hasSubmittedVote` when transitioning from round 4 to 5
-   - State comparison uses stale closure causing reset logic to fail
-
-2. **Designed New Frontend Architecture**
-
-   - React Query for server state (automatic caching, polling, optimistic updates)
-   - Minimal Zustand for UI-only state
-   - Shared Zod schemas between frontend and backend
-   - Created comprehensive migration plan
-
-3. **Completed Migration**
-
-   - ✅ Created shared schema definitions in `/shared/schemas/`
-   - ✅ Set up React Query infrastructure
-   - ✅ Created v2 components demonstrating new patterns
-   - ✅ Migrated all components to use v2 versions
-   - ✅ Fixed TypeScript errors and dependency issues
-   - ✅ Installed missing packages (react-hot-toast, @aws-amplify/auth)
-   - ✅ Updated all imports to use new architecture
-
-4. **Current State**
-
-   - Frontend architecture migration complete
-   - App runs with new React Query architecture
-   - Some backend issues remain (presentation order, schema validation)
-   - Sync engine temporarily disabled
-   - Ready for production deployment after backend fixes
-
-5. **Remaining Issues**
-   - Backend returns incomplete presentation order (workaround implemented)
-   - Schema validation temporarily bypassed due to API response format
-   - Some TypeScript errors in old component files (not used)
-   - Sync engine needs fixing for real-time updates
-   - ✅ **FIXED: Scroll issue in voting interface** - All 4 responses now visible
-
----
-
-_Last updated: January 16, 2025 - Completed React Query migration, ready for production testing_
