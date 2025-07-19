@@ -1,4 +1,12 @@
-import type { Identity, Match, Message } from './match.types';
+import type { Identity, Match } from '@shared/schemas';
+
+// Legacy Message type for backward compatibility
+export interface Message {
+  id: string;
+  participantId: Identity;
+  content: string;
+  timestamp: string;
+}
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 

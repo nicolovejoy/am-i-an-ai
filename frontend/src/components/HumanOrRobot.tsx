@@ -1,9 +1,14 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { useSessionStore, type Identity } from "@/store/sessionStore";
+import { useCallback, useEffect, useMemo } from "react";
+import { FiCheckCircle } from "react-icons/fi";
 import { Card, Button } from "./ui";
+import type { Identity } from "@shared/schemas";
+import { useMyIdentity, useCurrentRound } from "@/store/server-state/match.queries";
+import { useSubmitVote } from "@/store/server-state/match.mutations";
+import { useUIStore } from "@/store/ui-state/ui.store";
+import toast from "react-hot-toast";
 
 interface HumanOrRobotProps {
-  responses: Partial<Record<Identity, string>>;
+  responses: Record<string, string>;
   presentationOrder?: Identity[];
 }
 
@@ -11,147 +16,154 @@ export default function HumanOrRobot({
   responses,
   presentationOrder,
 }: HumanOrRobotProps) {
-  const [selectedIdentity, setSelectedIdentity] = useState<Identity | null>(
-    null
-  );
-  const [focusedIndex, setFocusedIndex] = useState<number>(0);
-  const { submitVote, myIdentity, currentPrompt } = useSessionStore();
+  // Server state
+  const myIdentity = useMyIdentity();
+  const currentRound = useCurrentRound();
+  const submitVote = useSubmitVote();
+  
+  // UI state - use individual selectors to avoid re-render issues
+  const selectedResponse = useUIStore(state => state.selectedResponse);
+  const setSelectedResponse = useUIStore(state => state.setSelectedResponse);
+  const focusedIndex = useUIStore(state => state.focusedIndex);
+  const setFocusedIndex = useUIStore(state => state.setFocusedIndex);
+  const isKeyboardNavEnabled = useUIStore(state => state.isKeyboardNavEnabled);
+  const soundEnabled = useUIStore(state => state.soundEnabled);
 
-  const responseEntries = Object.entries(responses) as [Identity, string][];
+  const matchId = sessionStorage.getItem('currentMatchId');
 
-  // Use server-provided presentation order if available, otherwise fall back to original order
+  // Use server-provided presentation order if available
   const orderedResponses = useMemo(() => {
-    try {
-      if (presentationOrder && presentationOrder.length > 0) {
-        console.log("Using presentation order:", presentationOrder);
-        console.log("Available responses:", Object.keys(responses));
-
-        // Use server-provided order - only include identities that have responses
-        return presentationOrder
-          .filter(identity => responses[identity])
-          .map(
-            (identity) => [identity, responses[identity]] as [Identity, string]
-          );
-      }
-      // Fallback to alphabetical order if no presentation order provided
-      return responseEntries.sort(([a], [b]) => a.localeCompare(b));
-    } catch (error) {
-      console.error("Error ordering responses:", error);
-      // Return original entries if there's an error
-      return responseEntries;
+    const responseEntries = Object.entries(responses) as [Identity, string][];
+    console.log('Presentation order from server:', presentationOrder);
+    console.log('Available responses:', Object.keys(responses));
+    console.log('Response count:', responseEntries.length);
+    
+    // If presentation order is incomplete or missing, use all responses in random order
+    if (!presentationOrder || presentationOrder.length !== responseEntries.length) {
+      console.warn(`Invalid presentation order (${presentationOrder?.length || 0} vs ${responseEntries.length} responses), using all responses`);
+      // Use a stable sort based on identity to ensure consistent order
+      const sorted = [...responseEntries].sort(([a], [b]) => a.localeCompare(b));
+      console.log('Using sorted responses:', sorted.map(([id]) => id));
+      return sorted;
     }
-  }, [responseEntries, presentationOrder, responses]);
-
-  const handleVote = useCallback(() => {
-    if (selectedIdentity) {
-      submitVote(selectedIdentity);
-    }
-  }, [selectedIdentity, submitVote]);
+    
+    return presentationOrder.map(identity => {
+      const entry = responseEntries.find(([id]) => id === identity);
+      return entry || [identity, ''] as [Identity, string];
+    });
+  }, [responses, presentationOrder]);
 
   // Filter out my own response for keyboard navigation
   const selectableResponses = orderedResponses.filter(([identity]) => identity !== myIdentity);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (selectableResponses.length === 0) return;
+  const handleVote = useCallback(() => {
+    if (!selectedResponse || !matchId || !myIdentity || !currentRound) return;
 
-    switch(e.key) {
-      case 'ArrowLeft':
+    submitVote.mutate(
+      {
+        matchId,
+        voter: myIdentity,
+        votedFor: selectedResponse,
+        round: currentRound.roundNumber,
+      },
+      {
+        onSuccess: () => {
+          if (soundEnabled) {
+            // Play success sound
+            console.log('Playing vote success sound');
+          }
+          toast.success('Vote submitted!');
+          setSelectedResponse(null);
+        },
+        onError: (error) => {
+          toast.error('Failed to submit vote');
+          console.error('Vote submission failed:', error);
+        },
+      }
+    );
+  }, [selectedResponse, matchId, myIdentity, currentRound, submitVote, soundEnabled, setSelectedResponse]);
+
+  // Keyboard navigation
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (!isKeyboardNavEnabled || selectableResponses.length === 0) return;
+
+    switch (e.key) {
       case 'ArrowUp':
+      case 'k':
         e.preventDefault();
-        setFocusedIndex(prev => 
-          prev > 0 ? prev - 1 : selectableResponses.length - 1
-        );
+        setFocusedIndex(Math.max(0, focusedIndex - 1));
         break;
-      case 'ArrowRight':
       case 'ArrowDown':
+      case 'j':
         e.preventDefault();
-        setFocusedIndex(prev => 
-          prev < selectableResponses.length - 1 ? prev + 1 : 0
-        );
+        setFocusedIndex(Math.min(selectableResponses.length - 1, focusedIndex + 1));
         break;
       case ' ':
       case 'Enter': {
         e.preventDefault();
-        const focusedIdentity = selectableResponses[focusedIndex]?.[0];
-        if (focusedIdentity) {
-          if (e.key === ' ') {
-            setSelectedIdentity(focusedIdentity);
-          } else if (e.key === 'Enter' && selectedIdentity) {
-            handleVote();
-          }
+        const [identity] = selectableResponses[focusedIndex];
+        setSelectedResponse(identity);
+        break;
+      }
+      case 'v':
+        if (selectedResponse) {
+          e.preventDefault();
+          handleVote();
         }
         break;
-      }
-      case 'Tab': {
-        // Let Tab work naturally but update our focused index
-        const newIndex = e.shiftKey 
-          ? (focusedIndex > 0 ? focusedIndex - 1 : selectableResponses.length - 1)
-          : (focusedIndex < selectableResponses.length - 1 ? focusedIndex + 1 : 0);
-        setFocusedIndex(newIndex);
-        break;
-      }
     }
-  }, [selectableResponses, focusedIndex, selectedIdentity, handleVote]);
+  }, [isKeyboardNavEnabled, selectableResponses, focusedIndex, selectedResponse, handleVote, setFocusedIndex, setSelectedResponse]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Guard against invalid responses
-  if (!responses || Object.keys(responses).length === 0) {
-    return (
-      <Card>
-        <div className="text-center p-6">
-          <p className="text-slate-600">Waiting for responses...</p>
-        </div>
-      </Card>
-    );
-  }
+  // Auto-focus first selectable response
+  useEffect(() => {
+    if (selectableResponses.length > 0 && focusedIndex >= selectableResponses.length) {
+      setFocusedIndex(0);
+    }
+  }, [selectableResponses.length, focusedIndex, setFocusedIndex]);
 
   return (
     <Card>
-      <div className="space-y-6">
-        <div className="text-center">
-          <h3 className="text-xl font-semibold mb-2">🤖 Human or Robot?</h3>
-          <p className="text-slate-600">
-            Which response was written by a human? Can you spot the human among the robots?
-          </p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">
+            Which response was written by a human?
+          </h3>
+          {isKeyboardNavEnabled && (
+            <span className="text-xs text-slate-500">
+              Use ↑↓ or j/k to navigate
+            </span>
+          )}
         </div>
 
-        {currentPrompt && (
-          <div className="bg-slate-100 p-4 rounded-lg">
-            <p className="text-sm font-medium text-slate-700 mb-1">The prompt was:</p>
-            <p className="text-slate-900 italic">"{currentPrompt}"</p>
-          </div>
-        )}
-
-        <div className="space-y-4">
+        <div className="space-y-3">
           {orderedResponses.map(([identity, response], index) => {
             const isMyResponse = identity === myIdentity;
-            const isSelected = selectedIdentity === identity;
-            const selectableIndex = selectableResponses.findIndex(([id]) => id === identity);
-            const isFocused = !isMyResponse && selectableIndex === focusedIndex;
+            const isSelected = selectedResponse === identity;
+            const isFocused = !isMyResponse && 
+              selectableResponses.findIndex(([id]) => id === identity) === focusedIndex;
 
             return (
               <div
                 key={identity}
-                tabIndex={isMyResponse ? -1 : 0}
                 className={`
-                  relative p-4 border-2 rounded-lg cursor-pointer transition-all duration-200
-                  ${
-                    isMyResponse
-                      ? "border-blue-200 bg-blue-50 cursor-not-allowed opacity-60"
-                      : isSelected
-                      ? "border-green-500 bg-green-50 shadow-md"
-                      : isFocused
-                      ? "border-blue-400 bg-blue-50 shadow-sm ring-2 ring-blue-400 ring-offset-2"
-                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                  p-4 rounded-lg border-2 transition-all duration-200
+                  ${isMyResponse 
+                    ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
+                    : isSelected
+                    ? "bg-green-50 border-green-500 cursor-pointer"
+                    : isFocused && isKeyboardNavEnabled
+                    ? "bg-blue-50 border-blue-400 cursor-pointer"
+                    : "bg-white border-slate-200 hover:border-slate-300 cursor-pointer"
                   }
                 `}
                 onClick={() => {
                   if (!isMyResponse) {
-                    setSelectedIdentity(identity);
+                    setSelectedResponse(identity);
                     const newIndex = selectableResponses.findIndex(([id]) => id === identity);
                     if (newIndex !== -1) setFocusedIndex(newIndex);
                   }
@@ -201,32 +213,36 @@ export default function HumanOrRobot({
           })}
         </div>
 
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex items-center justify-between pt-4 border-t">
+          <div className="text-sm text-slate-600">
+            {selectedResponse ? (
+              <span>
+                You think{" "}
+                <span className="font-semibold">
+                  Response {String.fromCharCode(65 + orderedResponses.findIndex(([id]) => id === selectedResponse))}
+                </span>{" "}
+                was written by a human
+              </span>
+            ) : (
+              <span>Select the response you think was written by a human</span>
+            )}
+          </div>
           <Button
             onClick={handleVote}
-            disabled={!selectedIdentity}
-            size="lg"
-            className="w-full sm:w-auto"
+            disabled={!selectedResponse || submitVote.isPending}
+            className="flex items-center gap-2"
           >
-            {selectedIdentity
-              ? `Vote: Response ${String.fromCharCode(
-                  65 +
-                    orderedResponses.findIndex(
-                      ([id]) => id === selectedIdentity
-                    )
-                )} is Human`
-              : "Select a response to vote"}
+            <FiCheckCircle size={16} />
+            {submitVote.isPending ? 'Submitting...' : 'Submit Vote'}
           </Button>
-
-          {!selectedIdentity && (
-            <p className="text-sm text-slate-500 text-center">
-              Find the response written by the real human player
-            </p>
-          )}
-          <p className="text-xs text-slate-400 text-center">
-            Use ← → arrows to navigate • Space to select • Enter to vote
-          </p>
         </div>
+
+        {isKeyboardNavEnabled && (
+          <div className="text-xs text-slate-500 text-center">
+            Press <kbd className="px-1 py-0.5 bg-slate-100 rounded">Space</kbd> to select,{" "}
+            <kbd className="px-1 py-0.5 bg-slate-100 rounded">V</kbd> to vote
+          </div>
+        )}
       </div>
     </Card>
   );

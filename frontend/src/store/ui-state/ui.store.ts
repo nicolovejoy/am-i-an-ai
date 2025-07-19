@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { Identity } from '@shared/schemas';
+import type { Identity } from '@shared/schemas';
 
 // UI-only state that doesn't need server sync
 interface UIState {
@@ -132,6 +132,17 @@ export const useUIStore = create<UIState>()(
     }
   )
 );
+
+// Selector hooks for better performance
+export const useSelectedResponse = () => useUIStore(state => state.selectedResponse);
+export const useSetSelectedResponse = () => useUIStore(state => state.setSelectedResponse);
+export const useFocusedIndex = () => useUIStore(state => state.focusedIndex);
+export const useSetFocusedIndex = () => useUIStore(state => state.setFocusedIndex);
+export const useIsKeyboardNavEnabled = () => useUIStore(state => state.isKeyboardNavEnabled);
+export const useSoundEnabled = () => useUIStore(state => state.soundEnabled);
+export const useAnimationsEnabled = () => useUIStore(state => state.animationsEnabled);
+export const useSetLocalTyping = () => useUIStore(state => state.setLocalTyping);
+export const useResetUI = () => useUIStore(state => state.resetUI);
 
 // Initialize from localStorage on load
 if (typeof window !== 'undefined') {

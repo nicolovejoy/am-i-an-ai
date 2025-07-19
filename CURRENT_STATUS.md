@@ -5,7 +5,7 @@
 - **[Phase 3: Centralize State Logic](./PHASE3_CENTRALIZE_STATE_PLAN.md)** - Comprehensive plan to migrate all state transitions to match-service (7-9 hours estimated)
 - **[Frontend State Migration](./frontend/TEST_PLAN.md)** - New React Query + Zod architecture to fix round 5 bug and improve state management
 
-## 🎮 **RobotOrchestra Production MVP**
+## 🎮 **RobotOrchestra Production MVP** (Updated: January 18, 2025)
 
 ### **✅ What's Working**
 
@@ -19,21 +19,18 @@
 - **Match Persistence** - Survives page refreshes via sessionStorage
 - **Admin Panel** - Clear match data functionality at /admin
 
-### **🐛 Known Issues (January 16, 2025)**
+### **🐛 Known Issues (January 18, 2025)**
 
-- **Critical: Round 5 Hanging** - Cannot submit response in final round
-  - Root cause: Frontend state not resetting properly after round 4 vote
-  - `hasSubmittedVote` stays true, blocking round 5 input
-  - Temporary workaround: Refresh page when reaching round 5
+- **✅ FIXED: Round 5 Bug** - Migrated to React Query architecture, all rounds now working
+- **✅ FIXED: Infinite Loop** - Resolved Zustand selector issues causing re-renders
 - **Voting Page Issues** - Sometimes only showing user's response
   - Related to status transition timing issues
   - Phase 3 backend refactor will address this
-- **Keyboard Navigation Not Working** - Arrow keys and shortcuts not functioning
 - **Excessive API Polling** - Making too many calls to match endpoint
   - Need to optimize polling strategy or implement SSE
-- **State Management** - Frontend state management needs major refactor (in progress)
 - **Prompts Not AI-Generated** - Currently using hardcoded prompt list
 - **Admin Service** - Not deployed yet (Delete All Matches unavailable)
+- **Match History Link** - Link from match complete page needs fixing
 
 ### **🏗️ Architecture**
 
@@ -46,6 +43,7 @@ Frontend (Vite/React) → API Gateway → Lambda Functions → DynamoDB
 ```
 
 **Infrastructure:**
+
 - DynamoDB table with 30-day TTL
 - SQS queue for async robot responses
 - Lambda functions: match-service, robot-worker, match-history, ai-service
@@ -55,22 +53,26 @@ Frontend (Vite/React) → API Gateway → Lambda Functions → DynamoDB
 ### **📝 Recent Changes (January 15, 2025)**
 
 1. **AWS Bedrock Integration Fixed**
+
    - Enabled model access for Claude 3 Haiku and Sonnet
    - AI responses now working properly
    - Added [AI] and [Fallback] labels to track response sources
 
 2. **Voting Interface Improvements**
+
    - Added keyboard navigation (arrow keys, space to select, enter to vote)
    - Fixed text overflow issues with proper CSS wrapping
    - Added prompt display above responses for context
    - Visual focus indicators for keyboard navigation
 
 3. **Development Workflow Updates**
+
    - Switched to production-only deployment (no local dev server)
    - Updated documentation to reflect new workflow
    - Improved deployment scripts with auto-detection of domain
 
 4. **UI/UX Enhancements**
+
    - Better response text handling with break-words
    - Keyboard shortcuts displayed on voting screen
    - Improved focus states and accessibility
@@ -110,43 +112,31 @@ aws sqs get-queue-attributes \
 
 ### **🚀 Next Steps**
 
-1. **Fix Critical Voting Issue**
-   - Check why human response (A) isn't saved to DynamoDB
-   - Fix robot-worker response counting logic
-   - Ensure status transitions when all 4 responses present
-   - Add frontend safeguard: if no presentationOrder, show all responses
+1. **Fix Voting Interface Scroll Issue**
 
-2. **Frontend State Management Optimization**
-   - Audit current Zustand store implementation
-   - Implement debouncing for API calls
-   - Consider optimistic updates
-   - Add proper error boundaries
-   - Reduce polling interval or implement smart polling
+   - Add max-height and overflow-y-auto to responses container
+   - Ensure all 4 responses are fully visible and scrollable
+   - Test on different screen sizes
 
-3. **Clean Up Temporary Files After Migration**
-   - Remove all files containing comment "Temporary stub file"
-   - Files to delete after migration complete:
-     - `/frontend/src/store/actions/match.actions.ts`
-     - `/frontend/src/store/actions/game.actions.ts`
-     - `/frontend/src/store/actions/legacy.actions.ts`
-     - `/frontend/src/store/api/matchService.ts`
-     - `/frontend/src/contexts/AuthContext.ts` (if still marked as temporary)
+2. **Quick Wins**
 
-4. **Quick Wins**
    - Add debug mode to admin panel showing raw match state
    - Increase polling interval from 1s to 3-5s
    - Add comprehensive error logging
 
-4. **Deploy Admin Service**
+3. **Deploy Admin Service**
+
    - Add admin-service.ts to infrastructure
    - Enable "Delete All Matches" functionality
 
-5. **Implement SSE**
+4. **Implement SSE**
+
    - Replace polling with Server-Sent Events
    - Real-time updates via DynamoDB Streams
    - Eliminate excessive API calls
 
-6. **Phase 3: Architecture Refactor** ⭐ **[PLANNED - See detailed plan](./PHASE3_CENTRALIZE_STATE_PLAN.md)**
+5. **Phase 3: Architecture Refactor** ⭐ **[PLANNED - See detailed plan](./PHASE3_CENTRALIZE_STATE_PLAN.md)**
+
    - Centralize ALL state transitions in match-service
    - Add state-updates SQS queue for robot→match-service notifications
    - Remove state logic from robot-worker completely
@@ -154,7 +144,7 @@ aws sqs get-queue-attributes \
    - Eliminates race conditions and simplifies debugging
    - Foundation for removing frontend polling
 
-7. **Review Queueing Architecture** (Addressed in Phase 3)
+6. **Review Queueing Architecture** (Addressed in Phase 3)
    - Phase 3 adds proper SQS-based coordination
    - robot-worker notifies match-service of updates
    - Event-driven state transitions
@@ -168,11 +158,17 @@ aws sqs get-queue-attributes \
 - Match replay functionality
 - Performance analytics
 - Mobile app
+- **Async Play via Email/SMS**
+  - SNS integration for notifications
+  - Email notifications for turn alerts
+  - SMS-based gameplay (respond via text)
+  - Match invitations via email/SMS
+  - Configurable notification preferences
 
 ### **📋 Known Good Configuration**
 
 - **Prompts**: Creative and varied (10 unique philosophical prompts)
-- **Robot Personalities**: 
+- **Robot Personalities**:
   - B: Philosopher (poetic, deep)
   - C: Scientist (analytical, precise)
   - D: Comedian (whimsical, playful)
@@ -182,6 +178,7 @@ aws sqs get-queue-attributes \
 ### **💰 Cost Status**
 
 Current: ~$5-10/month (within budget)
+
 - Lambda invocations
 - DynamoDB storage/requests
 - CloudFront/S3 hosting
@@ -198,44 +195,83 @@ Current: ~$5-10/month (within budget)
 ### **📊 Architecture Analysis Summary**
 
 **Current State Management Issues:**
+
 1. **Distributed State Logic** - Both match-service and robot-worker manage state transitions
-2. **Race Conditions** - Multiple services updating match state simultaneously  
+2. **Race Conditions** - Multiple services updating match state simultaneously
 3. **No Coordination** - robot-worker updates aren't communicated back to match-service
 4. **Complex Debugging** - Hard to trace state changes across services
 
 **Phase 3 Solution:**
+
 - Centralizes ALL state management in match-service
 - Adds proper event-driven coordination via new SQS queue
 - Makes system more maintainable and debuggable
 - See [PHASE3_CENTRALIZE_STATE_PLAN.md](./PHASE3_CENTRALIZE_STATE_PLAN.md) for full implementation details
 
+### **🎉 Major Migration Complete (January 18, 2025)**
+
+1. **Successfully Migrated Frontend to React Query + Zod**
+
+   - Replaced Redux-style state management with React Query
+   - Added shared Zod schemas for type safety
+   - Fixed the critical Round 5 bug
+   - Resolved infinite loop issues with Zustand selectors
+
+2. **Production Deployment Successful**
+
+   - All 5 rounds working properly
+   - Match history functioning
+   - Can resume incomplete matches
+   - State persistence working correctly
+
+3. **Code Cleanup Complete**
+   - Removed old Redux action files
+   - Cleaned up v2 component suffixes
+   - Deleted unused VotingInterface components
+   - Repository is now clean and organized
+
 ---
 
-### **🚀 Tonight's Progress (January 16, 2025)**
+### **🚀 Previous Progress (January 16, 2025)**
 
 1. **Identified Round 5 Bug Root Cause**
+
    - Frontend doesn't reset `hasSubmittedVote` when transitioning from round 4 to 5
    - State comparison uses stale closure causing reset logic to fail
 
 2. **Designed New Frontend Architecture**
+
    - React Query for server state (automatic caching, polling, optimistic updates)
    - Minimal Zustand for UI-only state
    - Shared Zod schemas between frontend and backend
    - Created comprehensive migration plan
 
-3. **Implementation Progress**
+3. **Completed Migration**
+
    - ✅ Created shared schema definitions in `/shared/schemas/`
    - ✅ Set up React Query infrastructure
    - ✅ Created v2 components demonstrating new patterns
-   - ✅ Added temporary stub files to keep app running
-   - ✅ Fixed environment variable issues
+   - ✅ Migrated all components to use v2 versions
+   - ✅ Fixed TypeScript errors and dependency issues
+   - ✅ Installed missing packages (react-hot-toast, @aws-amplify/auth)
+   - ✅ Updated all imports to use new architecture
 
-4. **Ready for Testing**
-   - App now runs with current (buggy) architecture
-   - Can test round 5 bug to confirm issue
-   - Migration plan ready in `frontend/TEST_PLAN.md`
-   - Next: Gradually migrate components following test plan
+4. **Current State**
+
+   - Frontend architecture migration complete
+   - App runs with new React Query architecture
+   - Some backend issues remain (presentation order, schema validation)
+   - Sync engine temporarily disabled
+   - Ready for production deployment after backend fixes
+
+5. **Remaining Issues**
+   - Backend returns incomplete presentation order (workaround implemented)
+   - Schema validation temporarily bypassed due to API response format
+   - Some TypeScript errors in old component files (not used)
+   - Sync engine needs fixing for real-time updates
+   - **Scroll issue in voting interface** - Can't scroll down far enough to see all 4 responses
+     - Need to add proper max-height and overflow-y-auto to responses container
 
 ---
 
-*Last updated: January 16, 2025 - Implemented new frontend architecture, ready for migration testing*
+_Last updated: January 16, 2025 - Completed React Query migration, ready for production testing_

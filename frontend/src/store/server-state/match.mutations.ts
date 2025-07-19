@@ -1,17 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  Match,
-  Identity,
-  CreateMatchRequest,
-  CreateMatchResponse,
-  SubmitResponseRequest,
-  SubmitResponseResponse,
-  SubmitVoteRequest,
-  SubmitVoteResponse,
   validateRequest,
   CreateMatchRequestSchema,
   SubmitResponseRequestSchema,
   SubmitVoteRequestSchema,
+} from '@shared/schemas';
+import type {
+  Match,
+  Identity,
+  Round,
+  SubmitResponseResponse,
+  SubmitVoteResponse,
 } from '@shared/schemas';
 import { matchKeys } from './match.queries';
 
@@ -22,7 +21,7 @@ export function useCreateMatch() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (playerName: string): Promise<CreateMatchResponse> => {
+    mutationFn: async (playerName: string): Promise<Match> => {
       const requestData = validateRequest(CreateMatchRequestSchema, { playerName });
       
       const response = await fetch(`${API_URL}/matches`, {
@@ -37,20 +36,22 @@ export function useCreateMatch() {
         throw new Error(`Failed to create match: ${response.statusText}`);
       }
 
-      return response.json();
+      const data = await response.json();
+      // The API returns the match directly, not wrapped in a response object
+      return data as Match;
     },
-    onSuccess: (data) => {
-      if (data.data?.match) {
+    onSuccess: (match) => {
+      if (match?.matchId) {
         // Store match ID in session
-        sessionStorage.setItem('currentMatchId', data.data.match.matchId);
+        sessionStorage.setItem('currentMatchId', match.matchId);
         
         // Invalidate and refetch match queries
         queryClient.invalidateQueries({ queryKey: matchKeys.all });
         
         // Set the match data in cache
         queryClient.setQueryData(
-          matchKeys.detail(data.data.match.matchId),
-          data.data.match
+          matchKeys.detail(match.matchId),
+          match
         );
       }
     },
@@ -100,7 +101,7 @@ export function useSubmitResponse() {
       if (previousMatch) {
         const updatedMatch = {
           ...previousMatch,
-          rounds: previousMatch.rounds.map(r => 
+          rounds: previousMatch.rounds.map((r: Round) => 
             r.roundNumber === round
               ? {
                   ...r,
@@ -118,13 +119,13 @@ export function useSubmitResponse() {
 
       return { previousMatch };
     },
-    onError: (err, { matchId }, context) => {
+    onError: (_err, { matchId }, context) => {
       // Rollback on error
       if (context?.previousMatch) {
         queryClient.setQueryData(matchKeys.detail(matchId), context.previousMatch);
       }
     },
-    onSettled: (data, error, { matchId }) => {
+    onSettled: (_data, _error, { matchId }) => {
       // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: matchKeys.detail(matchId) });
     },
@@ -172,7 +173,7 @@ export function useSubmitVote() {
       if (previousMatch) {
         const updatedMatch = {
           ...previousMatch,
-          rounds: previousMatch.rounds.map(r => 
+          rounds: previousMatch.rounds.map((r: Round) => 
             r.roundNumber === round
               ? {
                   ...r,
@@ -190,7 +191,7 @@ export function useSubmitVote() {
 
       return { previousMatch };
     },
-    onError: (err, { matchId }, context) => {
+    onError: (_err, { matchId }, context) => {
       if (context?.previousMatch) {
         queryClient.setQueryData(matchKeys.detail(matchId), context.previousMatch);
       }
@@ -201,7 +202,7 @@ export function useSubmitVote() {
         queryClient.setQueryData(matchKeys.detail(matchId), data.data.match);
       }
     },
-    onSettled: (data, error, { matchId }) => {
+    onSettled: (_data, _error, { matchId }) => {
       queryClient.invalidateQueries({ queryKey: matchKeys.detail(matchId) });
     },
   });
@@ -212,7 +213,7 @@ export function useLeaveMatch() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (matchId: string) => {
+    mutationFn: async () => {
       // In the future, this might notify the server
       // For now, just clear local state
       sessionStorage.removeItem('currentMatchId');

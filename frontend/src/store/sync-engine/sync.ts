@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { Match, Round, RealtimeEvent, validateRealtimeEvent } from '@shared/schemas';
+import type { Match } from '@shared/schemas';
 import { matchKeys } from '../server-state/match.queries';
 import { useUIStore } from '../ui-state/ui.store';
 
@@ -8,9 +8,10 @@ export class MatchSyncEngine {
   private matchId: string;
   private eventSource: EventSource | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000;
+  // Reconnect configuration - to be implemented
+  // private reconnectAttempts = 0;
+  // private maxReconnectAttempts = 5;
+  // private reconnectDelay = 1000;
 
   constructor(queryClient: QueryClient, matchId: string) {
     this.queryClient = queryClient;
@@ -45,6 +46,8 @@ export class MatchSyncEngine {
   }
 
   // Handle real-time events
+  // TODO: Implement when SSE/WebSocket is ready
+  /*
   private handleRealtimeEvent(event: RealtimeEvent) {
     switch (event.type) {
       case 'match_state_sync':
@@ -56,7 +59,7 @@ export class MatchSyncEngine {
         break;
         
       case 'round_transition':
-        this.handleRoundTransition(event.fromRound, event.toRound, event.newPrompt);
+        this.handleRoundTransition(event.fromRound, event.toRound);
         break;
         
       case 'reveal_identities':
@@ -67,6 +70,7 @@ export class MatchSyncEngine {
         console.log('Unhandled event type:', event);
     }
   }
+  */
 
   // Process match updates
   processMatchUpdate(newMatch: Match) {
@@ -107,45 +111,45 @@ export class MatchSyncEngine {
     }
   }
 
-  // Handle participant submission
-  private handleParticipantSubmitted(identity: string, roundNumber: number) {
-    // Update local cache optimistically
-    const match = this.queryClient.getQueryData<Match>(
-      matchKeys.detail(this.matchId)
-    );
-    
-    if (match) {
-      const updatedMatch = {
-        ...match,
-        rounds: match.rounds.map(r => 
-          r.roundNumber === roundNumber
-            ? { ...r, responses: { ...r.responses, [identity]: '...' } }
-            : r
-        ),
-      };
-      
-      this.queryClient.setQueryData(matchKeys.detail(this.matchId), updatedMatch);
-    }
-  }
+  // Handle participant submission - to be implemented
+  // private handleParticipantSubmitted(_identity: string, _roundNumber: number) {
+  //   // Update local cache optimistically
+  //   const match = this.queryClient.getQueryData<Match>(
+  //     matchKeys.detail(this.matchId)
+  //   );
+  //   
+  //   if (match) {
+  //     const updatedMatch = {
+  //       ...match,
+  //       rounds: match.rounds.map((r: Round) => 
+  //         r.roundNumber === _roundNumber
+  //           ? { ...r, responses: { ...r.responses, [_identity]: '...' } }
+  //           : r
+  //       ),
+  //     };
+  //     
+  //     this.queryClient.setQueryData(matchKeys.detail(this.matchId), updatedMatch);
+  //   }
+  // }
 
-  // Handle round transition
-  private handleRoundTransition(fromRound: number, toRound: number, newPrompt: string) {
-    console.log(`Transitioning from round ${fromRound} to ${toRound}`);
-    
-    // The full match update will follow, but we can prepare UI
-    const uiStore = useUIStore.getState();
-    uiStore.resetUI();
-  }
+  // Handle round transition - to be implemented
+  // private handleRoundTransition(_fromRound: number, _toRound: number) {
+  //   console.log(`Transitioning from round ${_fromRound} to ${_toRound}`);
+  //   
+  //   // The full match update will follow, but we can prepare UI
+  //   const uiStore = useUIStore.getState();
+  //   uiStore.resetUI();
+  // }
 
-  // Handle identity reveal
-  private handleIdentityReveal(identities: Record<string, any>) {
-    console.log('Identities revealed:', identities);
-    
-    // This would trigger the match completion UI
-    if (useUIStore.getState().soundEnabled) {
-      this.playSound('match-complete');
-    }
-  }
+  // Handle identity reveal - to be implemented
+  // private handleIdentityReveal(_identities: Record<string, unknown>) {
+  //   console.log('Identities revealed:', _identities);
+  //   
+  //   // This would trigger the match completion UI
+  //   if (useUIStore.getState().soundEnabled) {
+  //     this.playSound('match-complete');
+  //   }
+  // }
 
   // Handle match completion
   private onMatchComplete() {
@@ -173,6 +177,8 @@ export class MatchSyncEngine {
   }
 
   // Handle connection errors
+  // TODO: Implement when SSE/WebSocket is ready
+  /*
   private handleConnectionError() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
@@ -186,6 +192,7 @@ export class MatchSyncEngine {
       // Could show error UI
     }
   }
+  */
 
   // Disconnect and cleanup
   disconnect() {
@@ -199,7 +206,7 @@ export class MatchSyncEngine {
       this.reconnectTimeout = null;
     }
     
-    this.reconnectAttempts = 0;
+    // this.reconnectAttempts = 0;
     console.log(`Sync engine disconnected for match ${this.matchId}`);
   }
 }

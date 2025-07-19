@@ -1,3 +1,4 @@
+// @ts-ignore - Zod will be resolved by the bundler
 import { z } from 'zod';
 
 // Define the schema once

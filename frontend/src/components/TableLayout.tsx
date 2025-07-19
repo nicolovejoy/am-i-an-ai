@@ -1,7 +1,7 @@
 
 import { Card } from './ui';
 import { PLAYER_CONFIG } from '../config/playerConfig';
-import type { Identity } from '../store/sessionStore';
+import type { Identity } from '@shared/schemas';
 
 interface Message {
   id: string;

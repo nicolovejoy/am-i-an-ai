@@ -1,5 +1,6 @@
+// @ts-ignore - Zod will be resolved by the bundler
 import { z } from 'zod';
-import { IdentitySchema, MatchSchema, RoundSchema } from './match.schema';
+import { IdentitySchema, MatchSchema } from './match.schema';
 
 // SQS Message types for robot-worker queue
 export const RobotTaskTypeSchema = z.enum([

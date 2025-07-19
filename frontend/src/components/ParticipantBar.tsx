@@ -1,12 +1,12 @@
-
-import { useSessionStore, type Identity } from '@/store/sessionStore';
+import type { Identity } from '@shared/schemas';
+import { useParticipants, useMyIdentity } from '@/store/server-state/match.queries';
 
 export default function ParticipantBar() {
-  const { match, myIdentity } = useSessionStore();
-  const participants = match?.participants || [];
+  const participants = useParticipants();
+  const myIdentity = useMyIdentity();
 
   const getIdentityColor = (identity: Identity) => {
-    const colors = {
+    const colors: Record<Identity, string> = {
       A: 'bg-blue-500',
       B: 'bg-green-500', 
       C: 'bg-purple-500',

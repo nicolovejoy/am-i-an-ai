@@ -1,33 +1,40 @@
-
-import { useSessionStore } from "@/store/sessionStore";
+import { 
+  useMatch, 
+  useCurrentRound, 
+  useMyIdentity,
+  useIsMyTurn,
+  useIsVotingPhase,
+  useRoundResponses,
+  useHasParticipantResponded,
+} from "@/store/server-state/match.queries";
+import { hasAllResponses } from "@shared/schemas";
 import PromptDisplay from "./PromptDisplay";
 import PhraseComposer from "./ResponseInput";
 import HumanOrRobot from "./HumanOrRobot";
 import { Card } from "./ui";
 
 export default function RoundInterface() {
-  const {
-    match,
-    currentPrompt,
-    hasSubmittedResponse,
-    hasSubmittedVote,
-    roundResponses,
-    isSessionActive,
-  } = useSessionStore();
-
-  if (!match || !isSessionActive) {
+  // Server state
+  const { data: match } = useMatch(sessionStorage.getItem('currentMatchId'));
+  const currentRound = useCurrentRound();
+  const myIdentity = useMyIdentity();
+  const isMyTurn = useIsMyTurn();
+  const isVotingPhase = useIsVotingPhase();
+  const roundResponses = useRoundResponses();
+  const hasSubmittedResponse = useHasParticipantResponded(myIdentity || 'A');
+  
+  if (!match || !currentRound || !myIdentity) {
     return null;
   }
 
-  const currentRound = match.currentRound;
+  const currentRoundNumber = match.currentRound;
   const totalRounds = match.totalRounds;
-  const allResponsesIn = Object.keys(roundResponses).length === 4;
+  const allResponsesIn = hasAllResponses(currentRound);
 
-  // Determine current phase of the Round
-
-  const isPromptPhase = currentPrompt && !hasSubmittedResponse;
-  const isRecognitionPhase = allResponsesIn && !hasSubmittedVote;
+  // Determine current phase
+  const isPromptPhase = currentRound.prompt && isMyTurn;
   const isWaitingForOthers = hasSubmittedResponse && !allResponsesIn;
+  const isRecognitionPhase = allResponsesIn && isVotingPhase;
 
   return (
     <div className="space-y-4">
@@ -36,7 +43,7 @@ export default function RoundInterface() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">
-              Round {currentRound} of {totalRounds}
+              Round {currentRoundNumber} of {totalRounds}
             </h2>
             <div className="flex items-center gap-4 mt-1">
               <span className="text-sm text-slate-600">
@@ -53,9 +60,9 @@ export default function RoundInterface() {
               <div
                 key={i}
                 className={`w-3 h-3 rounded-full ${
-                  i < currentRound - 1
+                  i < currentRoundNumber - 1
                     ? "bg-green-500"
-                    : i === currentRound - 1
+                    : i === currentRoundNumber - 1
                     ? "bg-blue-500"
                     : "bg-slate-200"
                 }`}
@@ -68,7 +75,7 @@ export default function RoundInterface() {
       {/* Current Phase Content */}
       {isPromptPhase && (
         <>
-          <PromptDisplay prompt={currentPrompt} />
+          <PromptDisplay prompt={currentRound.prompt} />
           <PhraseComposer />
         </>
       )}
@@ -91,7 +98,7 @@ export default function RoundInterface() {
       {isRecognitionPhase && (
         <HumanOrRobot 
           responses={roundResponses} 
-          presentationOrder={match.rounds?.[currentRound - 1]?.presentationOrder}
+          presentationOrder={currentRound.presentationOrder}
         />
       )}
     </div>

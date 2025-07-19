@@ -1,5 +1,5 @@
 
-import { useSessionStore, type Identity, type Match } from '@/store/sessionStore';
+import type { Identity, Match, Participant, Round } from '@shared/schemas';
 import { Card, Button } from './ui';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,7 +10,6 @@ interface MatchCompleteProps {
 
 export default function MatchComplete({ match, myIdentity }: MatchCompleteProps) {
   const navigate = useNavigate();
-  const { resetSession } = useSessionStore();
   
   // Calculate final scores
   const finalScores: Record<Identity, number> = { A: 0, B: 0, C: 0, D: 0 };
@@ -22,11 +21,11 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
   };
   
   // Calculate scores from all rounds
-  match.rounds.forEach(round => {
+  match.rounds.forEach((round: Round) => {
     // Add up scores from each round
     Object.entries(round.scores || {}).forEach(([identity, score]) => {
       if (identity === 'A' || identity === 'B' || identity === 'C' || identity === 'D') {
-        finalScores[identity] += score || 0;
+        finalScores[identity] += (typeof score === 'number' ? score : 0);
       }
     });
     
@@ -36,7 +35,7 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
         votingAccuracy[voter].total += 1;
         
         // Check if the vote was correct (voted for a human)
-        const votedParticipant = match.participants.find(p => p.identity === votedFor);
+        const votedParticipant = match.participants.find((p: Participant) => p.identity === votedFor);
         if (votedParticipant && !votedParticipant.isAI) {
           votingAccuracy[voter].correct += 1;
         }
@@ -46,7 +45,7 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
   
   // Get participant info
   const getParticipantInfo = (identity: Identity) => {
-    const participant = match.participants.find(p => p.identity === identity);
+    const participant = match.participants.find((p: Participant) => p.identity === identity);
     return {
       isAI: participant?.isAI || false,
       isMe: identity === myIdentity,
@@ -58,7 +57,8 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
     .sort((a, b) => finalScores[b] - finalScores[a]);
   
   const handlePlayAgain = () => {
-    resetSession();
+    // Clear session and navigate
+    sessionStorage.removeItem('currentMatchId');
     navigate('/dashboard');
   };
   

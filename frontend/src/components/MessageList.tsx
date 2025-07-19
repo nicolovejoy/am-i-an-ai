@@ -1,11 +1,33 @@
-
-import { useEffect, useRef } from "react";
-import { useSessionStore } from "@/store/sessionStore";
+import { useEffect, useRef, useMemo } from "react";
+import { useMatch, useMyIdentity } from "@/store/server-state/match.queries";
 import MessageBubble from "./ui/MessageBubble";
+import type { Identity, Round } from "@shared/schemas";
+
+interface Message {
+  participantId: Identity;
+  content: string;
+  roundNumber: number;
+  timestamp: number;
+}
 
 export default function MessageList() {
-  const { messages, myIdentity } = useSessionStore();
+  const matchId = sessionStorage.getItem('currentMatchId');
+  const { data: match } = useMatch(matchId);
+  const myIdentity = useMyIdentity();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Extract messages from all rounds
+  const messages = useMemo<Message[]>(() => 
+    match?.rounds?.flatMap((round: Round) => 
+      Object.entries(round.responses || {}).map(([identity, content]) => ({
+        participantId: identity as Identity,
+        content: content as string,
+        roundNumber: round.roundNumber,
+        timestamp: Date.now(), // We don't have timestamps in the new structure
+      }))
+    ) || [], 
+    [match?.rounds]
+  );
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -34,12 +56,12 @@ export default function MessageList() {
   return (
     <div className="h-full overflow-y-auto px-4 py-2">
       <div className="flex flex-col space-y-1">
-        {messages.map((message, index) => (
+        {messages.map((message: Message, index: number) => (
           <MessageBubble
-            key={`${message.timestamp}-${index}`}
-            sender={message.sender === myIdentity ? "You" : message.sender}
+            key={`${message.roundNumber}-${message.participantId}-${index}`}
+            sender={message.participantId === myIdentity ? "You" : message.participantId}
             timestamp={message.timestamp}
-            isCurrentUser={message.sender === myIdentity}
+            isCurrentUser={message.participantId === myIdentity}
           >
             {message.content}
           </MessageBubble>

@@ -1,42 +1,25 @@
-import { useSessionStore } from '../store/sessionStore';
 import ChatInterface from '../components/ChatInterface';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, Suspense } from 'react';
+import { useMatch } from '@/store/server-state/match.queries';
 
 // Wrap in Suspense to handle loading states better
 function MatchContent() {
-  const { match, connectionStatus, pollMatchUpdates } = useSessionStore();
   const navigate = useNavigate();
+  const matchId = window.sessionStorage.getItem('currentMatchId');
+  const { isLoading } = useMatch(matchId);
   
   // Check for match in sessionStorage on mount
   useEffect(() => {
-    const checkForMatch = async () => {
-      // If we already have a match, we're good
-      if (match) return;
+    // Only redirect if no matchId in storage and we're not loading
+    if (!matchId && !isLoading) {
+      const timeout = setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000);
       
-      // Check sessionStorage for matchId
-      const matchId = window.sessionStorage.getItem('currentMatchId');
-      if (matchId) {
-        // Try to reload the match data
-        await pollMatchUpdates(matchId);
-        return;
-      }
-      
-      // Only redirect if no match and no matchId in storage
-      if (connectionStatus === 'disconnected' && !match) {
-        const timeout = setTimeout(() => {
-          const state = useSessionStore.getState();
-          if (state.connectionStatus === 'disconnected' && !state.match) {
-            navigate('/dashboard');
-          }
-        }, 1000);
-        
-        return () => clearTimeout(timeout);
-      }
-    };
-    
-    checkForMatch();
-  }, [match, connectionStatus, navigate, pollMatchUpdates]);
+      return () => clearTimeout(timeout);
+    }
+  }, [matchId, isLoading, navigate]);
 
   return <ChatInterface />;
 }

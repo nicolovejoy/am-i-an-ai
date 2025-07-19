@@ -33,7 +33,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signOut = () => {
+  const signIn = async (email: string, password: string) => {
+    await cognitoService.signIn({ email, password });
+    await checkAuth(); // Refresh user state after sign in
+  };
+
+  const signUp = async (email: string, password: string, name: string) => {
+    // Note: name is required by the interface but not used by Cognito in our current setup
+    void name; // Explicitly mark as unused
+    await cognitoService.signUp({ email, password, confirmPassword: password });
+  };
+
+  const confirmSignUp = async (email: string, code: string) => {
+    await cognitoService.confirmSignUp(email, code);
+  };
+
+  const resendCode = async (email: string) => {
+    // TODO: Implement resend confirmation code in cognito service
+    void email; // Explicitly mark as unused
+    console.warn('Resend confirmation code not implemented');
+  };
+
+  const signOut = async () => {
     // Clear authentication state
     cognitoService.signOut();
     setIsAuthenticated(false);
@@ -64,6 +85,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         user,
         checkAuth,
+        signIn,
+        signUp,
+        confirmSignUp,
+        resendCode,
         signOut,
       }}
     >

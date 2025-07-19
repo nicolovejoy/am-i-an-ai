@@ -1,6 +1,6 @@
 
 import { useAuth } from "@/contexts/useAuth";
-import { useSessionStore } from "@/store/sessionStore";
+import { useCreateMatch } from "@/store/server-state/match.mutations";
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -8,7 +8,7 @@ import { Card, Button, Input } from "./ui";
 
 export default function WelcomeDashboard() {
   const { user } = useAuth();
-  const { createRealMatch, connectionStatus } = useSessionStore();
+  const createMatch = useCreateMatch();
   const navigate = useNavigate();
   const [playerName, setPlayerName] = useState(user?.email?.split('@')[0] || '');
 
@@ -19,7 +19,7 @@ export default function WelcomeDashboard() {
     }
     
     try {
-      await createRealMatch(playerName.trim());
+      await createMatch.mutateAsync(playerName.trim());
       // Navigate to match page
       navigate('/match');
     } catch (error) {
@@ -59,12 +59,12 @@ export default function WelcomeDashboard() {
             
             <Button
               onClick={handleStartMatch}
-              disabled={connectionStatus === "connecting" || !playerName.trim()}
+              disabled={createMatch.isPending || !playerName.trim()}
               size="lg"
               className="w-full"
               variant="primary"
             >
-              {connectionStatus === "connecting" ? "Starting..." : "Start Match"}
+              {createMatch.isPending ? "Starting..." : "Start Match"}
             </Button>
           </div>
         </Card>
