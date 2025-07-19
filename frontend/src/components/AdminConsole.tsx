@@ -299,57 +299,70 @@ export function AdminConsole() {
               <Button
                 variant="danger"
                 onClick={async () => {
-                  if (!confirm('Are you sure you want to delete ALL matches? This cannot be undone!')) {
+                  if (
+                    !confirm(
+                      "Are you sure you want to delete ALL matches? This cannot be undone!"
+                    )
+                  ) {
                     return;
                   }
-                  
+
                   setIsDeleting(true);
                   setDeleteResult(null);
-                  
+
                   try {
                     // For now, skip authentication - admin service not deployed yet
-                    setDeleteResult('❌ Admin service not yet deployed. Use AWS CLI to delete matches.');
-                    
+                    setDeleteResult(
+                      "❌ Admin service not yet deployed. Use AWS CLI to delete matches."
+                    );
+
                     // Clear sessionStorage anyway
                     sessionStorage.clear();
                   } catch (error) {
-                    setDeleteResult(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    setDeleteResult(
+                      `❌ Error: ${
+                        error instanceof Error ? error.message : "Unknown error"
+                      }`
+                    );
                   } finally {
                     setIsDeleting(false);
                   }
                 }}
                 disabled={isDeleting}
               >
-                {isDeleting ? 'Deleting...' : 'Delete All Matches'}
+                {isDeleting ? "Deleting..." : "Delete All Matches"}
               </Button>
-              
+
               <Button
                 variant="secondary"
                 onClick={() => {
                   // Only clear match-related data, not auth
-                  sessionStorage.removeItem('currentMatchId');
-                  sessionStorage.removeItem('matchState');
-                  
+                  sessionStorage.removeItem("currentMatchId");
+                  sessionStorage.removeItem("matchState");
+
                   // Clear any match-related items from localStorage
                   const keysToRemove = [];
                   for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
-                    if (key && (key.includes('match') || key.includes('Match'))) {
+                    if (
+                      key &&
+                      (key.includes("match") || key.includes("Match"))
+                    ) {
                       keysToRemove.push(key);
                     }
                   }
-                  keysToRemove.forEach(key => localStorage.removeItem(key));
-                  
-                  setDeleteResult('✅ Match data cleared - redirecting...');
+                  keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+                  setDeleteResult("✅ Match data cleared - redirecting...");
                   setTimeout(() => {
-                    window.location.href = '/dashboard';
+                    window.location.href = "/dashboard";
                   }, 1000);
                 }}
               >
                 Clear Match Data
               </Button>
             </div>
-            
+
             {deleteResult && (
               <div className="mt-4 p-3 rounded bg-slate-100">
                 <p className="text-sm font-mono">{deleteResult}</p>

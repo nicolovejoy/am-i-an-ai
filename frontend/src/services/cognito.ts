@@ -13,10 +13,19 @@ interface CognitoError extends Error {
   code?: string;
 }
 
+// Cognito configuration
+const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID;
+const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
+
+if (!userPoolId || !clientId) {
+  console.error('Cognito configuration missing:', { userPoolId, clientId });
+  throw new Error('Cognito is not properly configured. Please check environment variables.');
+}
+
 // Use existing v1 Cognito pool - reuse same user pool
 const userPool = new CognitoUserPool({
-  UserPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID || 'us-east-1_example', // Will be set via env
-  ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID || 'example', // Will be set via env
+  UserPoolId: userPoolId,
+  ClientId: clientId,
 });
 
 export const cognitoService = {

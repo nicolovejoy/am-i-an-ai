@@ -225,7 +225,8 @@ Provide a concise but insightful analysis.`;
     modelId: string, 
     systemPrompt: string, 
     userPrompt: string, 
-    options: any
+    options: any,
+    retryCount: number = 0
   ): Promise<string> {
     const modelMap: Record<string, string> = {
       'claude-3-opus': 'anthropic.claude-3-opus-20240229-v1:0',
@@ -234,6 +235,7 @@ Provide a concise but insightful analysis.`;
     };
 
     const actualModelId = modelMap[modelId] || modelMap['claude-3-sonnet'];
+    const maxRetries = 3;
     
     try {
       console.log(`Invoking ${modelId} (${actualModelId}) with options:`, options);
@@ -261,8 +263,38 @@ Provide a concise but insightful analysis.`;
       } else {
         throw new Error('Unexpected response format from Bedrock');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Bedrock invocation error:', error);
+      
+      // Check for rate limit errors
+      if (error.name === 'ThrottlingException' || 
+          error.message?.includes('rate exceeded') ||
+          error.$metadata?.httpStatusCode === 429) {
+        
+        if (retryCount < maxRetries) {
+          // Exponential backoff with jitter
+          const baseDelay = 1000 * Math.pow(2, retryCount); // 1s, 2s, 4s
+          const jitter = Math.random() * 500; // 0-500ms random jitter
+          const delay = baseDelay + jitter;
+          
+          console.log(`Rate limit hit for ${modelId}. Retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          
+          // Recursive retry
+          return this.invokeModel(modelId, systemPrompt, userPrompt, options, retryCount + 1);
+        }
+        
+        console.error(`Rate limit hit for ${modelId} after ${maxRetries} retries: ${error.message}`);
+        throw new Error(`Bedrock rate limit exceeded for ${modelId} after ${maxRetries} retries.`);
+      }
+      
+      // Check for model access errors
+      if (error.name === 'AccessDeniedException') {
+        console.error(`Model access denied for ${actualModelId}: ${error.message}`);
+        throw new Error(`Model ${modelId} is not enabled in Bedrock. Check model access in AWS Console.`);
+      }
+      
       throw error;
     }
   }

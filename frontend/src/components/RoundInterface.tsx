@@ -11,6 +11,7 @@ import { hasAllResponses } from "@shared/schemas";
 import PromptDisplay from "./PromptDisplay";
 import PhraseComposer from "./ResponseInput";
 import HumanOrRobot from "./HumanOrRobot";
+import RobotResponseStatus from "./RobotResponseStatus";
 import { Card } from "./ui";
 
 export default function RoundInterface() {
@@ -81,18 +82,7 @@ export default function RoundInterface() {
       )}
 
       {isWaitingForOthers && (
-        <Card className="text-center">
-          <div className="py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <h3 className="text-lg font-medium mb-2">Response submitted!</h3>
-            <p className="text-slate-600">
-              Waiting for other participants...
-            </p>
-            <div className="mt-4 text-sm text-slate-500">
-              {Object.keys(roundResponses).length}/4 responses received
-            </div>
-          </div>
-        </Card>
+        <RobotResponseStatus responsesReceived={Object.keys(roundResponses).length} />
       )}
 
       {isRecognitionPhase && (

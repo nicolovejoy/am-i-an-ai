@@ -21,16 +21,9 @@
 
 ### **🐛 Known Issues (January 18, 2025)**
 
-- **✅ FIXED: Round 5 Bug** - Migrated to React Query architecture, all rounds now working
-- **✅ FIXED: Infinite Loop** - Resolved Zustand selector issues causing re-renders
-- **Voting Page Issues** - Sometimes only showing user's response
-  - Related to status transition timing issues
-  - Phase 3 backend refactor will address this
-- **Excessive API Polling** - Making too many calls to match endpoint
-  - Need to optimize polling strategy or implement SSE
-- **Prompts Not AI-Generated** - Currently using hardcoded prompt list
 - **Admin Service** - Not deployed yet (Delete All Matches unavailable)
-- **Match History Link** - Link from match complete page needs fixing
+- on the voting page, the keyboard mostly works (you can use arrow keys to move and select and answer) but you can't submit your vote with a keystroke. maybe command enter, like the prior page, only once an answer is selected would be nice.
+- need to focus on new user experience and email and text integration.
 
 ### **🏗️ Architecture**
 
@@ -50,7 +43,33 @@ Frontend (Vite/React) → API Gateway → Lambda Functions → DynamoDB
 - CloudFront + S3 for frontend hosting
 - AWS Bedrock for AI responses (Claude models)
 
-### **📝 Recent Changes (January 15, 2025)**
+### **📝 Recent Changes (January 19, 2025)**
+
+1. **Fixed Bedrock Rate Limiting**
+
+   - Implemented staggered delays for robot responses (0s, 2s, 4s)
+   - Added exponential backoff with jitter for retry logic
+   - Better error handling and logging for throttling issues
+
+2. **Enhanced User Experience**
+
+   - Added RobotResponseStatus component showing AI processing progress
+   - Real-time status updates while waiting for robot responses
+   - Shows robot names, personalities, and thinking states
+
+3. **Admin Panel Improvements**
+
+   - Added AWS Cost Monitoring section with quota guidance
+   - Clear instructions for checking Bedrock usage and limits
+   - Estimated costs for various AWS services
+
+4. **Code Quality**
+
+   - Fixed missing types import in match-service.ts
+   - Improved seeded random function for better shuffling
+   - Added detailed documentation (BEDROCK_QUOTAS_GUIDE.md)
+
+### **📝 Previous Changes (January 15, 2025)**
 
 1. **AWS Bedrock Integration Fixed**
 
@@ -112,30 +131,37 @@ aws sqs get-queue-attributes \
 
 ### **🚀 Next Steps**
 
-1. **Fix Voting Interface Scroll Issue**
+1. **✅ COMPLETED: Bedrock Rate Limiting Fixed** (January 19, 2025)
 
-   - Add max-height and overflow-y-auto to responses container
-   - Ensure all 4 responses are fully visible and scrollable
-   - Test on different screen sizes
+   - Implemented staggered delays: Robot B: 0ms, Robot C: 2000ms, Robot D: 4000ms
+   - Added exponential backoff with jitter for retry logic
+   - Enhanced error handling for rate limit detection
+   - Admin panel now includes AWS cost monitoring guidance
 
-2. **Quick Wins**
+2. **✅ COMPLETED: Response Order Randomization** (January 19, 2025)
+
+   - Each round now has properly randomized presentation order
+   - Improved seeded random function for better distribution
+   - Verified working correctly in production
+
+3. **Quick Wins**
 
    - Add debug mode to admin panel showing raw match state
    - Increase polling interval from 1s to 3-5s
    - Add comprehensive error logging
 
-3. **Deploy Admin Service**
+4. **Deploy Admin Service**
 
    - Add admin-service.ts to infrastructure
    - Enable "Delete All Matches" functionality
 
-4. **Implement SSE**
+5. **Implement SSE**
 
    - Replace polling with Server-Sent Events
    - Real-time updates via DynamoDB Streams
    - Eliminate excessive API calls
 
-5. **Phase 3: Architecture Refactor** ⭐ **[PLANNED - See detailed plan](./PHASE3_CENTRALIZE_STATE_PLAN.md)**
+6. **Phase 3: Architecture Refactor** ⭐ **[PLANNED - See detailed plan](./PHASE3_CENTRALIZE_STATE_PLAN.md)**
 
    - Centralize ALL state transitions in match-service
    - Add state-updates SQS queue for robot→match-service notifications
@@ -144,7 +170,7 @@ aws sqs get-queue-attributes \
    - Eliminates race conditions and simplifies debugging
    - Foundation for removing frontend polling
 
-6. **Review Queueing Architecture** (Addressed in Phase 3)
+7. **Review Queueing Architecture** (Addressed in Phase 3)
    - Phase 3 adds proper SQS-based coordination
    - robot-worker notifies match-service of updates
    - Event-driven state transitions
@@ -269,8 +295,7 @@ Current: ~$5-10/month (within budget)
    - Schema validation temporarily bypassed due to API response format
    - Some TypeScript errors in old component files (not used)
    - Sync engine needs fixing for real-time updates
-   - **Scroll issue in voting interface** - Can't scroll down far enough to see all 4 responses
-     - Need to add proper max-height and overflow-y-auto to responses container
+   - ✅ **FIXED: Scroll issue in voting interface** - All 4 responses now visible
 
 ---
 

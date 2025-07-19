@@ -193,10 +193,19 @@ async function processRobotResponse(record) {
         if (roundIndex === -1) {
             throw new Error(`Round ${roundNumber} not found in match ${matchId}`);
         }
-        // Generate robot response with simulated delay
+        // Add staggered delays to avoid Bedrock rate limits
+        const robotDelays = {
+            'B': 0, // No delay for first robot
+            'C': 2000, // 2 second delay for second robot
+            'D': 4000 // 4 second delay for third robot
+        };
+        const delay = robotDelays[robotId] || 0;
+        if (delay > 0) {
+            console.log(`Waiting ${delay}ms before generating response for robot ${robotId} to avoid rate limits`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        // Generate robot response
         const response = await generateRobotResponse(prompt, robotId, roundNumber);
-        // Remove artificial delay in production
-        // await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
         // Update the match with the robot's response
         const updateExpression = `SET rounds[${roundIndex}].responses.#robotId = :response, updatedAt = :updatedAt`;
         console.log(`Updating robot ${robotId} response for match ${matchId}, round ${roundNumber}`);

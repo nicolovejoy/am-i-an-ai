@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
-import { Identity } from './types';
+// Define Identity type inline to avoid import issues
+type Identity = 'A' | 'B' | 'C' | 'D';
 
 // Initialize AWS clients
 const dynamoClient = new DynamoDBClient({});
@@ -38,6 +39,7 @@ function getRandomPrompt(): string {
 
 // Seeded random number generator for consistent shuffling
 function seededRandom(seed: string) {
+  // Use a better hash function to ensure different seeds produce different sequences
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     const char = seed.charCodeAt(i);
@@ -45,9 +47,16 @@ function seededRandom(seed: string) {
     hash = hash & hash; // Convert to 32-bit integer
   }
   
+  // Add extra mixing to ensure round numbers produce different results
+  hash = hash ^ (hash >>> 16);
+  hash = (hash * 0x85ebca6b) >>> 0;
+  hash = hash ^ (hash >>> 13);
+  hash = (hash * 0xc2b2ae35) >>> 0;
+  hash = hash ^ (hash >>> 16);
+  
   return function() {
-    hash = (hash * 9301 + 49297) % 233280;
-    return hash / 233280;
+    hash = (hash * 1664525 + 1013904223) >>> 0; // Better LCG parameters
+    return hash / 4294967296; // Use full 32-bit range
   };
 }
 
@@ -218,12 +227,13 @@ async function checkAndTransitionRound(matchId: string, roundNumber: number): Pr
   console.log(`Current responses:`, Object.keys(round.responses || {}));
   
   if (responseCount === 4) {
-    // Generate presentation order
+    // Generate presentation order - each round gets a different order
     const identities: Identity[] = ['A', 'B', 'C', 'D'];
     const seed = `${matchId}-round-${roundNumber}`;
     const presentationOrder = shuffleArray(identities, seed);
     
-    console.log(`All responses collected, transitioning to voting with order: ${presentationOrder.join(', ')}`);
+    console.log(`Round ${roundNumber} - Generated presentation order: ${presentationOrder.join(', ')}`);
+    console.log(`Seed used: "${seed}" (should be different for each round)`);
     
     // Update status to voting
     const roundIndex = match.rounds.findIndex(r => r.roundNumber === roundNumber);
