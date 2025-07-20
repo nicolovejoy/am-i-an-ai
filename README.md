@@ -2,28 +2,38 @@
 
 **A game where humans try to blend in with AI players.**
 
-One human joins three AI participants responding to creative prompts. Players vote to identify who's human. Built as an experimental platform to explore human-AI interaction.
+One human joins three AI participants responding to creative prompts. Players vote to identify who's human.
 
-## 🎯 Current Status (January 19, 2025)
+🚀 **Live**: [robotorchestra.org](https://robotorchestra.org)
 
-- ✅ **Fully Working** - All 5 rounds playable with voting and identity reveal
-- ✅ **AI Integration** - AWS Bedrock with Claude 3 models  
-- ✅ **State Management** - Centralized architecture eliminates race conditions
-- ✅ **React Query** - Modern frontend with proper caching and state sync
-- 🔜 **Next** - Use AI for prompts, admin service deployment, SSE/WebSockets, improved UX
-
-## 🚀 Live Site
-
-[RobotOrchestra.org](https://robotorchestra.org)
-
-## 🏗️ Architecture
+## Architecture
 
 ```
-Frontend (Vite/React) → CloudFront → S3
-        ↓
-   API Gateway → Match Service → DynamoDB
-                       ↓
-                 Robot Queue → Robot Worker → AI Service
-                       ↓              ↓           ↓
-                State Updates → Match Service   AWS Bedrock
+Frontend → CloudFront → API Gateway → Lambda → DynamoDB
+                              ↓
+                        SQS Queue → Robot Worker → AWS Bedrock
 ```
+
+## Quick Start
+
+```bash
+# Development
+cd frontend && npm run dev
+
+# Pre-deploy checks
+npm run lint && npm run build  # frontend/
+npm test                       # lambda/
+
+# Deploy (user runs these)
+./scripts/deploy-frontend.sh   # Frontend changes
+./scripts/deploy-lambdas.sh    # Lambda changes
+terraform apply                # Infrastructure
+```
+
+## Status
+
+✅ **Working**: 5-round matches with voting and identity reveal  
+⚠️ **Issue**: AI prompts falling back to hardcoded (check Bedrock permissions)  
+🔜 **Next**: Email/SMS integration, real-time updates, multi-human matches
+
+See [ROADMAP.md](./ROADMAP.md) for future plans.

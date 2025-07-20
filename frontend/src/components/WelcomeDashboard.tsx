@@ -1,30 +1,31 @@
-
 import { useAuth } from "@/contexts/useAuth";
 import { useCreateMatch } from "@/store/server-state/match.mutations";
-import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, Button, Input } from "./ui";
 
 export default function WelcomeDashboard() {
   const { user } = useAuth();
   const createMatch = useCreateMatch();
   const navigate = useNavigate();
-  const [playerName, setPlayerName] = useState(user?.email?.split('@')[0] || '');
+  const [playerName, setPlayerName] = useState(
+    user?.email?.split("@")[0] || ""
+  );
 
   const handleStartMatch = async () => {
     if (!playerName.trim()) {
-      alert('Please enter a player name');
+      alert("Please enter a player name");
       return;
     }
-    
+
     try {
       await createMatch.mutateAsync(playerName.trim());
       // Navigate to match page
-      navigate('/match');
+      navigate("/match");
     } catch (error) {
-      console.error('Failed to create match:', error);
-      alert('Failed to create match. Please try again.');
+      console.error("Failed to create match:", error);
+      alert("Failed to create match. Please try again.");
     }
   };
 
@@ -40,10 +41,17 @@ export default function WelcomeDashboard() {
             A social experiment for the AI age
           </p>
           <p className="text-slate-600 max-w-xl mx-auto">
-            Join an anonymous creative collaboration where humans and AI work together. 
-            Through 5 rounds of creative prompts, try to identify who&apos;s human while 
-            exploring the fascinating dynamics of trust, creativity, and connection 
-            in our AI-integrated future.
+            Join an expermintal ecosystem where humans and AI work together on
+            simple sample problems with an eye towards exploring how we think
+            about trust and identity in a world of increasingly sophisticated
+            agentic ai interfacing with humans in more and more ways. At this
+            point this is a very early stage project, with one type of
+            interaction, a "match". Through 5 rounds of creative prompts, each
+            of us try to identify who&apos;s human while discussing some topic.
+            The intention for this project is to make it fun, interactive, and
+            surprising, while also being a safe space for humans (and
+            agentic-AI) to explore what it means to trust in this brave new
+            world.
           </p>
         </Card>
 
@@ -56,7 +64,7 @@ export default function WelcomeDashboard() {
               placeholder="Enter your name"
               className="w-full text-center"
             />
-            
+
             <Button
               onClick={handleStartMatch}
               disabled={createMatch.isPending || !playerName.trim()}
@@ -71,17 +79,17 @@ export default function WelcomeDashboard() {
 
         {/* Quick Links */}
         <div className="flex gap-4 text-center">
-          <Link 
-            to="/history" 
+          <Link
+            to="/history"
             className="flex-1 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
           >
             <span className="text-blue-600 hover:text-blue-800 font-medium">
               📊 History
             </span>
           </Link>
-          
-          <Link 
-            to="/about" 
+
+          <Link
+            to="/about"
             className="flex-1 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
           >
             <span className="text-blue-600 hover:text-blue-800 font-medium">
