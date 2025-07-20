@@ -75,7 +75,7 @@ export function useMatch(matchId: string | null) {
     queryKey: matchKeys.detail(matchId || ''),
     queryFn: () => fetchMatch(matchId!),
     enabled: !!matchId,
-    refetchInterval: 2000, // Poll every 2 seconds
+    refetchInterval: 4000, // Poll every 4 seconds
     staleTime: 0, // Always consider data stale for real-time updates
   });
 }

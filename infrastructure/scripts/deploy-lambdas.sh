@@ -74,15 +74,15 @@ echo "📤 Uploading Lambda functions in parallel..."
         --zip-file fileb://lambda-deployment.zip &
     
     aws lambda update-function-code \
-        --function-name robot-orchestra-match-history \
-        --zip-file fileb://lambda-deployment.zip &
-    
-    aws lambda update-function-code \
         --function-name robot-orchestra-robot-worker \
         --zip-file fileb://lambda-deployment.zip &
     
     aws lambda update-function-code \
         --function-name robot-orchestra-ai-service \
+        --zip-file fileb://lambda-deployment.zip &
+    
+    aws lambda update-function-code \
+        --function-name robot-orchestra-admin-service \
         --zip-file fileb://lambda-deployment.zip &
 } 
 
@@ -91,9 +91,9 @@ wait
 
 echo "⏳ Waiting for functions to update..."
 aws lambda wait function-updated --function-name robot-orchestra-match-service &
-aws lambda wait function-updated --function-name robot-orchestra-match-history &
 aws lambda wait function-updated --function-name robot-orchestra-robot-worker &
 aws lambda wait function-updated --function-name robot-orchestra-ai-service &
+aws lambda wait function-updated --function-name robot-orchestra-admin-service &
 wait
 
 echo "✅ Lambda deployment complete!"
@@ -102,9 +102,9 @@ echo "✅ Lambda deployment complete!"
 echo ""
 echo "📊 Deployed Functions:"
 aws lambda get-function --function-name robot-orchestra-match-service --query 'Configuration.{Function: FunctionName, Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
-aws lambda get-function --function-name robot-orchestra-match-history --query 'Configuration.{Function: FunctionName, Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
 aws lambda get-function --function-name robot-orchestra-robot-worker --query 'Configuration.{Function: FunctionName, Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
 aws lambda get-function --function-name robot-orchestra-ai-service --query 'Configuration.{Function: FunctionName, Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
+aws lambda get-function --function-name robot-orchestra-admin-service --query 'Configuration.{Function: FunctionName, Runtime: Runtime, LastModified: LastModified, CodeSize: CodeSize}' --output table
 
 # Validate deployments with test invocations
 echo ""
@@ -127,22 +127,7 @@ else
     echo "❌ Failed (invocation error)"
 fi
 
-# Test match-history health check
-echo -n "  Testing match-history health check... "
-if aws lambda invoke \
-    --function-name robot-orchestra-match-history \
-    --payload '{"httpMethod":"GET","path":"/health"}' \
-    --cli-binary-format raw-in-base64-out \
-    /tmp/match-history-response.json >/dev/null 2>&1; then
-    if grep -q '"statusCode":200' /tmp/match-history-response.json; then
-        echo "✅ OK"
-    else
-        echo "❌ Failed (unexpected response)"
-        cat /tmp/match-history-response.json
-    fi
-else
-    echo "❌ Failed (invocation error)"
-fi
+# Match-history removed - functionality merged into match-service
 
 # Test robot-worker (SQS handler - just verify it doesn't crash)
 echo -n "  Testing robot-worker handler... "
@@ -173,8 +158,25 @@ else
     echo "❌ Failed (invocation error)"
 fi
 
+# Test admin-service health check
+echo -n "  Testing admin-service health check... "
+if aws lambda invoke \
+    --function-name robot-orchestra-admin-service \
+    --payload '{"httpMethod":"GET","path":"/health"}' \
+    --cli-binary-format raw-in-base64-out \
+    /tmp/admin-service-response.json >/dev/null 2>&1; then
+    if grep -q '"statusCode":200' /tmp/admin-service-response.json; then
+        echo "✅ OK"
+    else
+        echo "❌ Failed (unexpected response)"
+        cat /tmp/admin-service-response.json
+    fi
+else
+    echo "❌ Failed (invocation error)"
+fi
+
 # Clean up temp files
-rm -f /tmp/match-service-response.json /tmp/match-history-response.json /tmp/robot-worker-response.json /tmp/ai-service-response.json
+rm -f /tmp/match-service-response.json /tmp/robot-worker-response.json /tmp/ai-service-response.json /tmp/admin-service-response.json
 
 echo ""
 echo "✅ Deployment complete and validated!"

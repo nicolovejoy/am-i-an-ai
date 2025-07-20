@@ -143,7 +143,7 @@ resource "aws_api_gateway_integration" "get_matches_history_lambda" {
   http_method             = aws_api_gateway_method.get_matches_history.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.match_history.invoke_arn
+  uri                     = aws_lambda_function.match_service.invoke_arn
 }
 
 # Lambda integration for POST /matches -> Match Service Lambda
@@ -593,8 +593,18 @@ resource "aws_api_gateway_stage" "match_api_prod" {
 
 ############################
 # Match History Lambda Function
+# REMOVED: Functionality merged into match-service
+# To remove these resources from your infrastructure:
+# 1. Run: terraform state rm aws_lambda_function.match_history
+# 2. Run: terraform state rm aws_iam_role.match_history_lambda
+# 3. Run: terraform state rm aws_iam_role_policy_attachment.match_history_lambda_basic
+# 4. Run: terraform state rm aws_iam_role_policy_attachment.match_history_lambda_dynamodb
+# 5. Run: terraform state rm aws_cloudwatch_log_group.match_history_logs
+# 6. Run: terraform state rm aws_lambda_permission.match_history_apigateway
+# Then run terraform apply
 ############################
 
+/*
 # IAM role for Match History Lambda
 resource "aws_iam_role" "match_history_lambda" {
   name = "${local.project_name}-match-history-lambda"
@@ -704,6 +714,7 @@ data "archive_file" "match_history_placeholder" {
     filename = "index.js"
   }
 }
+*/
 
 ############################
 # Match Service Lambda Function
@@ -826,6 +837,7 @@ resource "aws_lambda_function" "match_service" {
       NODE_ENV = "production"
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.matches.name
       SQS_QUEUE_URL = aws_sqs_queue.robot_responses.url
+      AI_SERVICE_FUNCTION_NAME = aws_lambda_function.ai_service.function_name
     }
   }
 
@@ -837,7 +849,8 @@ resource "aws_lambda_function" "match_service" {
     # aws_iam_role_policy_attachment.match_service_lambda_kafka
     aws_iam_role_policy_attachment.match_service_lambda_dynamodb,
     aws_iam_role_policy_attachment.match_service_lambda_sqs,
-    aws_iam_role_policy_attachment.match_service_state_update_receive
+    aws_iam_role_policy_attachment.match_service_state_update_receive,
+    aws_iam_role_policy_attachment.match_service_lambda_invoke_ai
   ]
 
   tags = local.tags
@@ -859,6 +872,7 @@ data "archive_file" "match_service_placeholder" {
 }
 
 # Lambda permissions for API Gateway
+/*
 resource "aws_lambda_permission" "match_history_apigateway" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
@@ -866,6 +880,7 @@ resource "aws_lambda_permission" "match_history_apigateway" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.match_api.execution_arn}/*/*"
 }
+*/
 
 resource "aws_lambda_permission" "match_service_apigateway" {
   statement_id  = "AllowExecutionFromAPIGateway"
@@ -873,6 +888,32 @@ resource "aws_lambda_permission" "match_service_apigateway" {
   function_name = aws_lambda_function.match_service.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.match_api.execution_arn}/*/*"
+}
+
+# Policy for match service to invoke AI service
+resource "aws_iam_policy" "match_service_invoke_ai_service" {
+  name = "${local.project_name}-match-service-invoke-ai-service"
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction"
+        ]
+        Resource = aws_lambda_function.ai_service.arn
+      }
+    ]
+  })
+  
+  tags = local.tags
+}
+
+# Attach AI service invoke policy to match service Lambda
+resource "aws_iam_role_policy_attachment" "match_service_lambda_invoke_ai" {
+  role       = aws_iam_role.match_service_lambda.name
+  policy_arn = aws_iam_policy.match_service_invoke_ai_service.arn
 }
 
 ############################
@@ -1033,10 +1074,12 @@ output "match_api_url" {
   value       = "${aws_api_gateway_rest_api.match_api.execution_arn}/prod"
 }
 
+/*
 output "match_history_lambda_name" {
   description = "Match History Lambda function name"
   value       = aws_lambda_function.match_history.function_name
 }
+*/
 
 output "match_service_lambda_name" {
   description = "Match Service Lambda function name"
@@ -1048,13 +1091,266 @@ output "robot_worker_lambda_name" {
   value       = aws_lambda_function.robot_worker.function_name
 }
 
+############################
+# Admin Service Resources
+############################
+
+# API Gateway resource for /admin
+resource "aws_api_gateway_resource" "admin" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_rest_api.match_api.root_resource_id
+  path_part   = "admin"
+}
+
+# API Gateway resource for /admin/matches
+resource "aws_api_gateway_resource" "admin_matches" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_resource.admin.id
+  path_part   = "matches"
+}
+
+# API Gateway resource for /admin/stats
+resource "aws_api_gateway_resource" "admin_stats" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_resource.admin.id
+  path_part   = "stats"
+}
+
+# DELETE /admin/matches - Delete all matches
+resource "aws_api_gateway_method" "delete_admin_matches" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.admin_matches.id
+  http_method   = "DELETE"
+  authorization = "NONE"
+}
+
+# GET /admin/stats - Get statistics
+resource "aws_api_gateway_method" "get_admin_stats" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.admin_stats.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+# CORS OPTIONS for /admin/matches
+resource "aws_api_gateway_method" "options_admin_matches" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.admin_matches.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+# CORS OPTIONS for /admin/stats
+resource "aws_api_gateway_method" "options_admin_stats" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.admin_stats.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+# Integration for DELETE /admin/matches
+resource "aws_api_gateway_integration" "delete_admin_matches" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.admin_matches.id
+  http_method = aws_api_gateway_method.delete_admin_matches.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.admin_service.invoke_arn
+}
+
+# Integration for GET /admin/stats
+resource "aws_api_gateway_integration" "get_admin_stats" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.admin_stats.id
+  http_method = aws_api_gateway_method.get_admin_stats.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.admin_service.invoke_arn
+}
+
+# CORS integration for /admin/matches
+resource "aws_api_gateway_integration" "options_admin_matches" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.admin_matches.id
+  http_method = aws_api_gateway_method.options_admin_matches.http_method
+
+  type = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_admin_matches" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.admin_matches.id
+  http_method = aws_api_gateway_method.options_admin_matches.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "options_admin_matches" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.admin_matches.id
+  http_method = aws_api_gateway_method.options_admin_matches.http_method
+  status_code = aws_api_gateway_method_response.options_admin_matches.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'DELETE,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+# CORS integration for /admin/stats
+resource "aws_api_gateway_integration" "options_admin_stats" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.admin_stats.id
+  http_method = aws_api_gateway_method.options_admin_stats.http_method
+
+  type = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_admin_stats" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.admin_stats.id
+  http_method = aws_api_gateway_method.options_admin_stats.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "options_admin_stats" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.admin_stats.id
+  http_method = aws_api_gateway_method.options_admin_stats.http_method
+  status_code = aws_api_gateway_method_response.options_admin_stats.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+############################
+# Admin Service Lambda
+############################
+
+# IAM role for Admin Service Lambda
+resource "aws_iam_role" "admin_service_lambda" {
+  name = "${local.project_name}-admin-service-lambda"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.tags
+}
+
+# Lambda basic execution policy
+resource "aws_iam_role_policy_attachment" "admin_service_lambda_basic" {
+  role       = aws_iam_role.admin_service_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# Attach DynamoDB policy to admin service Lambda
+resource "aws_iam_role_policy_attachment" "admin_service_lambda_dynamodb" {
+  role       = aws_iam_role.admin_service_lambda.name
+  policy_arn = aws_iam_policy.dynamodb_access.arn
+}
+
+# CloudWatch Log Group for Admin Service Lambda
+resource "aws_cloudwatch_log_group" "admin_service_logs" {
+  name              = "/aws/lambda/${local.project_name}-admin-service"
+  retention_in_days = 7
+  tags              = local.tags
+}
+
+# Admin Service Lambda Function
+resource "aws_lambda_function" "admin_service" {
+  function_name = "${local.project_name}-admin-service"
+  role          = aws_iam_role.admin_service_lambda.arn
+  handler       = "admin-service.handler"
+  runtime       = "nodejs20.x"
+  timeout       = 30
+  memory_size   = 512
+
+  # Placeholder code - will be replaced by deployment script
+  filename         = "admin-service-placeholder.zip"
+  source_code_hash = data.archive_file.admin_service_placeholder.output_base64sha256
+
+  environment {
+    variables = {
+      NODE_ENV = "production"
+      DYNAMODB_TABLE_NAME = aws_dynamodb_table.matches.name
+    }
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.admin_service_logs,
+    aws_iam_role_policy_attachment.admin_service_lambda_basic,
+    aws_iam_role_policy_attachment.admin_service_lambda_dynamodb
+  ]
+
+  tags = local.tags
+}
+
+# Create placeholder Lambda deployment package for admin service
+data "archive_file" "admin_service_placeholder" {
+  type        = "zip"
+  output_path = "admin-service-placeholder.zip"
+  
+  source {
+    content = jsonencode({
+      exports = {
+        handler = "function(event, context) { return { statusCode: 200, body: 'Placeholder - deploy with deploy-lambdas.sh' }; }"
+      }
+    })
+    filename = "admin-service.js"
+  }
+}
+
+# Lambda permissions for API Gateway to invoke admin service
+resource "aws_lambda_permission" "admin_service_api_gateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.admin_service.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.match_api.execution_arn}/*/*"
+}
+
 output "match_api_endpoint" {
   description = "Match API base endpoint"
   value       = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod"
 }
 
 output "match_history_endpoint" {
-  description = "Match History API endpoint"
+  description = "Match History API endpoint (now served by match-service)"
   value       = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/history"
 }
 
