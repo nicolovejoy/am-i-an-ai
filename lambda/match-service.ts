@@ -248,7 +248,6 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
 };
 
-// Kafka removed for now - focusing on core match functionality
 
 // Handle state update messages from robot-worker
 async function handleStateUpdate(event: SQSEvent): Promise<SQSBatchResponse> {
@@ -956,7 +955,7 @@ async function submitVote(
   }
 }
 
-// Cleanup on Lambda shutdown - simplified without Kafka
+// Cleanup on Lambda shutdown
 export const cleanup = async () => {
   console.log("Lambda cleanup completed");
 };

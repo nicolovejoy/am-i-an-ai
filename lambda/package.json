@@ -7,7 +7,7 @@
     "test": "jest",
     "build": "mkdir -p dist && cp *.js *.json dist/ && cd dist && npm ci --production",
     "package": "rm -f lambda.zip && npm ci --production && zip -r lambda.zip match-handler.js node_modules && npm install",
-    "populate-kafka": "ts-node scripts/populate-kafka-samples.ts"
+    "init-ai-users": "ts-node src/scripts/init-ai-users.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "3.844.0",

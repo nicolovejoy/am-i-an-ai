@@ -90,8 +90,8 @@ export default function AboutPage() {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-yellow-900 mb-3">⚗️ Experimental & Evolving</h3>
           <p className="text-yellow-800 mb-3">
-            <strong>July 2025:</strong> We&apos;re in active development with a cutting-edge Kafka event-streaming 
-            architecture that preserves every interaction for studying communication patterns.
+            <strong>January 2025:</strong> We&apos;re building a platform for meaningful human-AI interaction, 
+            using AWS serverless architecture with real-time state management.
           </p>
           <p className="text-yellow-700">
             This platform is explicitly experimental—we&apos;re learning together about the future of 

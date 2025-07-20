@@ -123,6 +123,44 @@ resource "aws_dynamodb_table" "matches" {
   tags = local.tags
 }
 
+# Users table for persistent human and AI participants
+resource "aws_dynamodb_table" "users" {
+  name           = "${local.project_name}-users"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "userId"
+
+  attribute {
+    name = "userId"
+    type = "S"
+  }
+
+  # Global secondary index for querying by email
+  global_secondary_index {
+    name            = "email-index"
+    hash_key        = "email"
+    projection_type = "ALL"
+  }
+
+  attribute {
+    name = "email"
+    type = "S"
+  }
+
+  # Global secondary index for querying by userType
+  global_secondary_index {
+    name            = "userType-index"
+    hash_key        = "userType"
+    projection_type = "ALL"
+  }
+
+  attribute {
+    name = "userType"
+    type = "S"
+  }
+
+  tags = local.tags
+}
+
 ############################
 # SECRETS MANAGER FOR API KEYS
 ############################

@@ -32,8 +32,8 @@ terraform apply                # Infrastructure
 
 ## Status
 
-✅ **Working**: 5-round matches with voting and identity reveal  
-⚠️ **Issue**: AI prompts falling back to hardcoded (check Bedrock permissions)  
-🔜 **Next**: Email/SMS integration, real-time updates, multi-human matches
+✅ **Working**: Full game flow with voting, identity reveal, and match history  
+✅ **Phase 1 Complete**: User system foundation with persistent AI agents  
+🔜 **Next**: Multi-human matches (2v2), admin debug mode, real-time updates
 
 See [ROADMAP.md](./ROADMAP.md) for future plans.

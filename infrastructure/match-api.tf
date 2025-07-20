@@ -631,18 +631,6 @@ resource "aws_iam_role_policy_attachment" "match_history_lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# VPC access for Kafka connectivity
-# Removed - VPC not needed without Kafka
-# resource "aws_iam_role_policy_attachment" "match_history_lambda_vpc" {
-#   role       = aws_iam_role.match_history_lambda.name
-#   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-# }
-
-# Removed - Kafka access policy
-# resource "aws_iam_role_policy_attachment" "match_history_lambda_kafka" {
-#   role       = aws_iam_role.match_history_lambda.name
-#   policy_arn = aws_iam_policy.kafka_access.arn
-# }
 
 # Attach DynamoDB policy to match history Lambda
 resource "aws_iam_role_policy_attachment" "match_history_lambda_dynamodb" {
@@ -666,12 +654,6 @@ resource "aws_lambda_function" "match_history" {
   timeout       = 30
   memory_size   = 512
 
-  # VPC configuration for Kafka access
-  # Removed - VPC configuration for Kafka access
-  # vpc_config {
-  #   subnet_ids         = aws_subnet.kafka_private[*].id
-  #   security_group_ids = [aws_security_group.kafka_lambda.id]
-  # }
 
   # Placeholder code - will be replaced by deployment script
   filename         = "match-history-placeholder.zip"
@@ -679,9 +661,6 @@ resource "aws_lambda_function" "match_history" {
 
   environment {
     variables = {
-      # Removed - Kafka environment variables
-      # KAFKA_BOOTSTRAP_SERVERS = aws_msk_serverless_cluster.main.bootstrap_brokers_sasl_iam
-      # KAFKA_TOPIC = "match-events"
       NODE_ENV = "production"
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.matches.name
       SQS_QUEUE_URL = aws_sqs_queue.robot_responses.url
@@ -691,9 +670,6 @@ resource "aws_lambda_function" "match_history" {
   depends_on = [
     aws_cloudwatch_log_group.match_history_logs,
     aws_iam_role_policy_attachment.match_history_lambda_basic,
-    # Removed - VPC and Kafka dependencies
-    # aws_iam_role_policy_attachment.match_history_lambda_vpc,
-    # aws_iam_role_policy_attachment.match_history_lambda_kafka
     aws_iam_role_policy_attachment.match_history_lambda_dynamodb
   ]
 
@@ -708,7 +684,7 @@ data "archive_file" "match_history_placeholder" {
   source {
     content = jsonencode({
       exports = {
-        handler = "async (event) => ({ statusCode: 200, body: JSON.stringify({ message: 'Match History API - Phase 1 Kafka Consumer', timestamp: Date.now() }) })"
+        handler = "async (event) => ({ statusCode: 200, body: JSON.stringify({ message: 'Match History API Placeholder', timestamp: Date.now() }) })"
       }
     })
     filename = "index.js"
@@ -746,18 +722,6 @@ resource "aws_iam_role_policy_attachment" "match_service_lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# VPC access for Kafka connectivity
-# Removed - VPC not needed without Kafka
-# resource "aws_iam_role_policy_attachment" "match_service_lambda_vpc" {
-#   role       = aws_iam_role.match_service_lambda.name
-#   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-# }
-
-# Removed - Kafka access policy
-# resource "aws_iam_role_policy_attachment" "match_service_lambda_kafka" {
-#   role       = aws_iam_role.match_service_lambda.name
-#   policy_arn = aws_iam_policy.kafka_access.arn
-# }
 
 # DynamoDB access policy
 resource "aws_iam_policy" "dynamodb_access" {
@@ -776,7 +740,11 @@ resource "aws_iam_policy" "dynamodb_access" {
           "dynamodb:Query",
           "dynamodb:Scan"
         ]
-        Resource = aws_dynamodb_table.matches.arn
+        Resource = [
+          aws_dynamodb_table.matches.arn,
+          aws_dynamodb_table.users.arn,
+          "${aws_dynamodb_table.users.arn}/index/*"
+        ]
       }
     ]
   })
@@ -818,12 +786,6 @@ resource "aws_lambda_function" "match_service" {
   timeout       = 30
   memory_size   = 512
 
-  # VPC configuration for Kafka access
-  # Removed - VPC configuration for Kafka access
-  # vpc_config {
-  #   subnet_ids         = aws_subnet.kafka_private[*].id
-  #   security_group_ids = [aws_security_group.kafka_lambda.id]
-  # }
 
   # Placeholder code - will be replaced by deployment script
   filename         = "match-service-placeholder.zip"
@@ -831,11 +793,9 @@ resource "aws_lambda_function" "match_service" {
 
   environment {
     variables = {
-      # Removed - Kafka environment variables
-      # KAFKA_BOOTSTRAP_SERVERS = aws_msk_serverless_cluster.main.bootstrap_brokers_sasl_iam
-      # KAFKA_TOPIC = "match-events"
       NODE_ENV = "production"
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.matches.name
+      USERS_TABLE_NAME = aws_dynamodb_table.users.name
       SQS_QUEUE_URL = aws_sqs_queue.robot_responses.url
       AI_SERVICE_FUNCTION_NAME = aws_lambda_function.ai_service.function_name
     }
@@ -844,9 +804,6 @@ resource "aws_lambda_function" "match_service" {
   depends_on = [
     aws_cloudwatch_log_group.match_service_logs,
     aws_iam_role_policy_attachment.match_service_lambda_basic,
-    # Removed - VPC and Kafka dependencies
-    # aws_iam_role_policy_attachment.match_service_lambda_vpc,
-    # aws_iam_role_policy_attachment.match_service_lambda_kafka
     aws_iam_role_policy_attachment.match_service_lambda_dynamodb,
     aws_iam_role_policy_attachment.match_service_lambda_sqs,
     aws_iam_role_policy_attachment.match_service_state_update_receive,
@@ -1005,6 +962,7 @@ resource "aws_lambda_function" "robot_worker" {
     variables = {
       NODE_ENV = "production"
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.matches.name
+      USERS_TABLE_NAME = aws_dynamodb_table.users.name
       AI_SERVICE_FUNCTION_NAME = aws_lambda_function.ai_service.function_name
       STATE_UPDATE_QUEUE_URL = aws_sqs_queue.state_updates.url
     }
@@ -1299,6 +1257,7 @@ resource "aws_lambda_function" "admin_service" {
     variables = {
       NODE_ENV = "production"
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.matches.name
+      USERS_TABLE_NAME = aws_dynamodb_table.users.name
     }
   }
 

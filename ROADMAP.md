@@ -1,14 +1,30 @@
 # RobotOrchestra Roadmap
 
-## 🔥 Immediate Issues
+## ✅ Completed
 
-### AI Prompt Generation
+### Phase 1: User System
+- DynamoDB users table with persistent AI agents
+- 5 AI personalities (Philosopher, Scientist, Comedian, Artist, Engineer)
+- User service and schemas
+- Kafka cleanup from codebase
 
-- **Problem**: Falling back to hardcoded prompts
-- **Fix**: Check CloudWatch logs and Bedrock permissions
-- **Debug**: `aws logs tail /aws/lambda/robot-orchestra-ai-service --since 10m`
+## 🎯 Priority 1: Multi-Human Matches (2v2)
 
-## 🎯 Priority 1:
+**Goal**: Enable 2 humans + 2 robots gameplay
+
+- Implement match templates (1v3 admin, 2v2 public)
+- Add "initiated" match state for waiting
+- Dynamic role assignment (not fixed A=human)
+- Update match creation flow
+- Simple invite system (share match ID)
+
+## 🎯 Priority 2: Admin Features
+
+### Debug Mode
+- Show AI/Human tags (admin only)
+- Display model used and response time
+- Mark fallback responses
+- Add isAdmin flag to users
 
 ### Admin Dashboard
 
@@ -18,15 +34,14 @@
 - Content moderation tools
 - Invite system
 
-## 🎯 Priority 2:
+## 🎯 Priority 3: Real-time Updates
 
 ### Replace Polling with SSE/WebSockets
+- Current: 4s polling interval
+- Target: Real-time via API Gateway WebSockets
+- State management already centralized
 
-- review how our front end talks to the backend and discuss with Nico the best approach
-
-### Multi-human Matches
-
-## 🎯 Priority 3: User engagement
+## 🎯 Priority 4: User Engagement
 
 ### Email/SMS Integration
 
