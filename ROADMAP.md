@@ -22,14 +22,9 @@
 
 ### Replace Polling with SSE/WebSockets
 
-- review how our front end talks to the backend and discuss with Nico the best approch
+- review how our front end talks to the backend and discuss with Nico the best approach
 
 ### Multi-human Matches
-
-- Current: 1 human + 3 robots only
-- Need: Dynamic participant allocation
-- Matchmaking logic
-- Waiting rooms
 
 ## 🎯 Priority 3: User engagement
 
@@ -46,8 +41,3 @@
   - MFA via Cognito
 
 ### New User Experience
-
-- Onboarding flow with tutorial
-- Better error states
-- Guest mode (no signup)
-- Social sharing

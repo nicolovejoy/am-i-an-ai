@@ -41,7 +41,7 @@ export default function WelcomeDashboard() {
             A social experiment for the AI age
           </p>
           <p className="text-slate-600 max-w-xl mx-auto">
-            Join an expermintal ecosystem where humans and AI work together on
+            Join an experimental ecosystem where humans and AI work together on
             simple sample problems with an eye towards exploring how we think
             about trust and identity in a world of increasingly sophisticated
             agentic ai interfacing with humans in more and more ways. At this
