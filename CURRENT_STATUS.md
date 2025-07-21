@@ -5,9 +5,34 @@
 ## Architecture
 - Frontend: React/TypeScript with Vite
 - Backend: AWS Lambda functions
-- Database: DynamoDB
+- Database: DynamoDB (matches table with composite key: matchId + timestamp)
 - AI: AWS Bedrock (Claude models)
 - Auth: AWS Cognito
+
+### Data Models
+
+**User Entity** (persistent participants):
+- `userId`: UUID
+- `userType`: "human" | "ai"
+- `displayName`: string
+- `isActive`: boolean
+- `isAdmin`: boolean (humans only)
+- `cognitoId`: string (humans only)
+- `email`: string (humans only)
+- `personality`: string (AI only - philosopher, scientist, comedian, artist, engineer)
+- `modelConfig`: { provider: "bedrock", model: "claude-3-haiku" | "claude-3-sonnet" }
+
+**Match Templates**:
+- `classic_1v3`: 1 human + 3 AI robots (original mode)
+- `duo_2v2`: 2 humans + 2 AI robots (multi-human mode)
+
+**Match Flow**:
+1. Creator selects template and starts match
+2. For multi-human: generates 6-character invite code, waits for players
+3. When all humans join: assigns random AI users, starts round 1
+4. Players respond anonymously to prompts
+5. Responses shuffled and presented for voting
+6. After 5 rounds: reveal identities and final scores
 
 ## Completed Features
 
@@ -53,10 +78,26 @@ cd infrastructure
 - No real-time updates when other players join or make moves
 - Match templates are currently hardcoded
 
+## Technical Implementation Details
+
+### Response Anonymization
+- Backend stores responses by userId
+- Generates unique responseId for each response  
+- Creates responseMapping: responseId → userId
+- Shuffles and presents responses by responseId
+- Votes use responseId, backend resolves to userId for scoring
+
+### Database Schema
+- **users table**: Persistent user entities (human and AI)
+- **matches table**: Match state with composite key (matchId + timestamp=0)
+  - Uses table scan for invite code lookup (needs GSI for production)
+- **Future**: match_templates table for configurable templates
+
 ## Next Steps
+- Fix join match bug: UpdateCommand missing :waitingFor expression value
 - Add GSI for invite code lookups (performance improvement)
-- Admin debug mode
+- Admin debug mode showing AI metadata
 - WebSocket real-time updates
-- Email/SMS notifications
-- Configurable match templates
+- Email/SMS notifications for invites
+- Configurable match templates (3+ players)
 - Tournament mode
