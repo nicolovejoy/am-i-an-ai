@@ -248,7 +248,6 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
 };
 
-
 // Handle state update messages from robot-worker
 async function handleStateUpdate(event: SQSEvent): Promise<SQSBatchResponse> {
   const results: SQSBatchItemFailure[] = [];
@@ -704,7 +703,7 @@ async function submitResponse(
   round.responses[body.identity] = body.response;
   match.updatedAt = new Date().toISOString();
 
-  // Check if all 4 responses are now collected (this is just for human submission)
+  // Check if all participants' responses are now collected (this is just for human and ai submissions)
   const responseCount = Object.keys(round.responses).length;
   console.log(
     `Response count after update: ${responseCount}, round status: ${round.status}`
@@ -759,7 +758,7 @@ async function submitResponse(
     await triggerRobotResponses(matchId, body.round, round.prompt);
 
     // Note: Robot responses will be added asynchronously by robot-worker
-    // The robot-worker will check for all 4 responses and transition to voting
+    // The robot-worker will check for all responses being received and transition to voting
   }
 
   return {

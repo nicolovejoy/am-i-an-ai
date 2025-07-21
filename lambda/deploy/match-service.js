@@ -162,7 +162,6 @@ const CORS_HEADERS = {
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
 };
-// Kafka removed for now - focusing on core match functionality
 // Handle state update messages from robot-worker
 async function handleStateUpdate(event) {
     const results = [];
@@ -716,7 +715,7 @@ async function submitVote(event) {
         };
     }
 }
-// Cleanup on Lambda shutdown - simplified without Kafka
+// Cleanup on Lambda shutdown
 const cleanup = async () => {
     console.log("Lambda cleanup completed");
 };

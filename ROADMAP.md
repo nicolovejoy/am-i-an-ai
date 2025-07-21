@@ -8,15 +8,16 @@
 - User service and schemas
 - Kafka cleanup from codebase
 
-## 🎯 Priority 1: Multi-Human Matches (2v2)
+## 🎯 Priority 1: Multi-Human Matches (2v2) [IN PROGRESS]
 
 **Goal**: Enable 2 humans + 2 robots gameplay
 
-- Implement match templates (1v3 admin, 2v2 public)
-- Add "initiated" match state for waiting
-- Dynamic role assignment (not fixed A=human)
-- Update match creation flow
-- Simple invite system (share match ID)
+- Match templates (classic_1v3, duo_2v2, admin_custom)
+- Add "waiting_for_players" match state
+- Dynamic identity assignment (A/B/C/D randomized)
+- Invite system with 6-character codes
+- Auto-start when all humans joined
+- TDD approach with tests written first
 
 ## 🎯 Priority 2: Admin Features
 
