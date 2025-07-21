@@ -1,11 +1,17 @@
-import { DynamoDB } from 'aws-sdk';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, GetCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { User, CreateHumanUser, CreateAIUser } from '../../shared/schemas/user.schema';
 
-const dynamodb = new DynamoDB.DocumentClient();
-const USERS_TABLE = process.env.USERS_TABLE_NAME || 'robot-orchestra-users';
+const client = new DynamoDBClient({});
+const dynamodb = DynamoDBDocumentClient.from(client);
 
 export class UserService {
+  private tableName: string;
+
+  constructor(tableName: string) {
+    this.tableName = tableName;
+  }
   /**
    * Create a new human user
    */
@@ -23,10 +29,10 @@ export class UserService {
       updatedAt: now,
     };
 
-    await dynamodb.put({
+    await dynamodb.send(new PutCommand({
       TableName: USERS_TABLE,
       Item: user,
-    }).promise();
+    }));
 
     return user;
   }
@@ -48,10 +54,10 @@ export class UserService {
       updatedAt: now,
     };
 
-    await dynamodb.put({
+    await dynamodb.send(new PutCommand({
       TableName: USERS_TABLE,
       Item: user,
-    }).promise();
+    }));
 
     return user;
   }
@@ -60,10 +66,10 @@ export class UserService {
    * Get user by ID
    */
   static async getUserById(userId: string): Promise<User | null> {
-    const result = await dynamodb.get({
+    const result = await dynamodb.send(new GetCommand({
       TableName: USERS_TABLE,
       Key: { userId },
-    }).promise();
+    }));
 
     return result.Item as User | null;
   }
@@ -72,14 +78,14 @@ export class UserService {
    * Get user by email
    */
   static async getUserByEmail(email: string): Promise<User | null> {
-    const result = await dynamodb.query({
+    const result = await dynamodb.send(new QueryCommand({
       TableName: USERS_TABLE,
       IndexName: 'email-index',
       KeyConditionExpression: 'email = :email',
       ExpressionAttributeValues: {
         ':email': email,
       },
-    }).promise();
+    }));
 
     return result.Items?.[0] as User | null;
   }
@@ -88,7 +94,7 @@ export class UserService {
    * Get all active AI users
    */
   static async getActiveAIUsers(): Promise<User[]> {
-    const result = await dynamodb.query({
+    const result = await dynamodb.send(new QueryCommand({
       TableName: USERS_TABLE,
       IndexName: 'userType-index',
       KeyConditionExpression: 'userType = :userType',
@@ -97,7 +103,7 @@ export class UserService {
         ':userType': 'ai',
         ':isActive': true,
       },
-    }).promise();
+    }));
 
     return result.Items as User[];
   }
@@ -124,15 +130,40 @@ export class UserService {
     expressionAttributeNames['#updatedAt'] = 'updatedAt';
     expressionAttributeValues[':updatedAt'] = new Date().toISOString();
 
-    const result = await dynamodb.update({
+    const result = await dynamodb.send(new UpdateCommand({
       TableName: USERS_TABLE,
       Key: { userId },
       UpdateExpression: `SET ${updateExpression.join(', ')}`,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
       ReturnValues: 'ALL_NEW',
-    }).promise();
+    }));
 
     return result.Attributes as User;
   }
+
+  /**
+   * Get random AI users for a match
+   */
+  async getRandomAIUsers(count: number): Promise<User[]> {
+    const result = await dynamodb.send(new QueryCommand({
+      TableName: this.tableName,
+      IndexName: 'userType-index',
+      KeyConditionExpression: 'userType = :userType',
+      FilterExpression: 'isActive = :isActive',
+      ExpressionAttributeValues: {
+        ':userType': 'ai',
+        ':isActive': true,
+      },
+    }));
+
+    const aiUsers = result.Items as User[];
+    
+    // Shuffle and take requested count
+    const shuffled = aiUsers.sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
+  }
 }
+
+// Keep static reference to USERS_TABLE for backward compatibility
+const USERS_TABLE = process.env.USERS_TABLE_NAME || 'robot-orchestra-users';

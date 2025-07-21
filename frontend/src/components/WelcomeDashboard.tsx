@@ -1,28 +1,39 @@
 import { useAuth } from "@/contexts/useAuth";
-import { useCreateMatch } from "@/store/server-state/match.mutations";
+import { useCreateMatchWithTemplate } from "@/store/server-state/match.mutations";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Card, Button, Input } from "./ui";
+import { Card, Input } from "./ui";
 
 export default function WelcomeDashboard() {
   const { user } = useAuth();
-  const createMatch = useCreateMatch();
+  const createMatchWithTemplate = useCreateMatchWithTemplate();
   const navigate = useNavigate();
   const [playerName, setPlayerName] = useState(
     user?.email?.split("@")[0] || ""
   );
 
-  const handleStartMatch = async () => {
+  const handleSelectTemplate = async (template: "classic_1v3" | "duo_2v2") => {
     if (!playerName.trim()) {
       alert("Please enter a player name");
       return;
     }
 
     try {
-      await createMatch.mutateAsync(playerName.trim());
-      // Navigate to match page
-      navigate("/match");
+      const result = await createMatchWithTemplate.mutateAsync({
+        templateType: template,
+        creatorName: playerName.trim(),
+        creatorUserId: user?.sub
+      });
+
+      // Navigate based on match status
+      if (result.match.status === 'waiting_for_players') {
+        // Navigate to waiting room
+        navigate("/waiting");
+      } else {
+        // Navigate to match page
+        navigate("/match");
+      }
     } catch (error) {
       console.error("Failed to create match:", error);
       alert("Failed to create match. Please try again.");
@@ -55,26 +66,71 @@ export default function WelcomeDashboard() {
           </p>
         </Card>
 
-        {/* Start Match */}
+        {/* Player Name */}
         <Card className="text-center">
           <div className="space-y-4 max-w-sm mx-auto">
+            <h2 className="text-xl font-semibold text-slate-800 mb-2">
+              Enter Your Name
+            </h2>
             <Input
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               placeholder="Enter your name"
               className="w-full text-center"
             />
-
-            <Button
-              onClick={handleStartMatch}
-              disabled={createMatch.isPending || !playerName.trim()}
-              size="lg"
-              className="w-full"
-              variant="primary"
-            >
-              {createMatch.isPending ? "Starting..." : "Start Match"}
-            </Button>
           </div>
+        </Card>
+
+        {/* Match Type Selection */}
+        <Card>
+          <h2 className="text-xl font-semibold text-slate-800 mb-4 text-center">
+            Choose Match Type
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Solo Match */}
+            <button
+              onClick={() => handleSelectTemplate("classic_1v3")}
+              disabled={createMatchWithTemplate.isPending || !playerName.trim()}
+              className="p-6 border-2 border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="space-y-2">
+                <div className="text-3xl mb-2">🎭</div>
+                <h3 className="text-lg font-semibold text-slate-800">
+                  Play Solo
+                </h3>
+                <p className="text-sm text-slate-600">
+                  1 Human + 3 AI Players
+                </p>
+                <p className="text-xs text-slate-500 mt-2">
+                  Try to blend in with AI companions
+                </p>
+              </div>
+            </button>
+
+            {/* Duo Match */}
+            <button
+              onClick={() => handleSelectTemplate("duo_2v2")}
+              disabled={createMatchWithTemplate.isPending || !playerName.trim()}
+              className="p-6 border-2 border-slate-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="space-y-2">
+                <div className="text-3xl mb-2">👥</div>
+                <h3 className="text-lg font-semibold text-slate-800">
+                  Play with Friend
+                </h3>
+                <p className="text-sm text-slate-600">
+                  2 Humans + 2 AI Players
+                </p>
+                <p className="text-xs text-slate-500 mt-2">
+                  Invite a friend to join you
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {createMatchWithTemplate.isPending && (
+            <p className="text-center mt-4 text-slate-600">Starting match...</p>
+          )}
         </Card>
 
         {/* Quick Links */}

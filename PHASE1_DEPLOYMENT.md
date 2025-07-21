@@ -1,20 +1,26 @@
-# Phase 1: User System Deployment Guide
+# Deployment Guide
 
-## Overview
-This guide covers deploying the User System infrastructure changes.
+## Phase 1: User System ✅
+- Users DynamoDB table
+- AI user initialization
+- User service implementation
 
-## What's Changed
+## Phase 2: Multi-Human Matches ✅
 
-### Infrastructure (Terraform)
-- Added `users` DynamoDB table with indexes for email and userType
-- Updated all Lambda functions with `USERS_TABLE_NAME` environment variable
-- Updated IAM policies to grant Lambda functions access to users table
+### Schema Updates
+- Added `waiting_for_players` status
+- Extended Participant with userId, displayName, isReady, joinedAt
+- Extended Match with templateType, inviteCode, waitingFor, inviteUrl
 
-### Code
-- Created `User` schema and types in `shared/schemas/user.schema.ts`
-- Created `UserService` for user operations in `lambda/src/services/user-service.ts`
-- Created AI user initialization script in `lambda/src/scripts/init-ai-users.ts`
-- Added `ParticipantV2` schema (not yet used) for future migration
+### Backend Updates
+- Match template service (classic_1v3, duo_2v2, admin_custom)
+- Multi-human match service with invite system
+- New endpoints in match-service Lambda
+
+### Frontend Updates
+- Template selection on dashboard
+- Waiting room component
+- Join by invite code flow
 
 ## Deployment Steps
 

@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cleanup = exports.handler = void 0;
 const uuid_1 = require("uuid");
@@ -19,6 +52,7 @@ const lambdaClient = new client_lambda_1.LambdaClient({});
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || "robot-orchestra-matches";
 const SQS_QUEUE_URL = process.env.SQS_QUEUE_URL || "";
 const AI_SERVICE_FUNCTION_NAME = process.env.AI_SERVICE_FUNCTION_NAME || "robot-orchestra-ai-service";
+const USERS_TABLE_NAME = process.env.USERS_TABLE_NAME || "robot-orchestra-users";
 // Sample prompts for the game
 const PROMPTS = [
     "Sample Prompt One?",
@@ -269,6 +303,14 @@ const handler = async (event) => {
         if (method === "POST" &&
             (pathWithoutStage === "/matches" || path === "/matches")) {
             return await createMatch(apiEvent);
+        }
+        else if (method === "POST" &&
+            (pathWithoutStage === "/matches/create-with-template" || path === "/matches/create-with-template")) {
+            return await createMatchWithTemplateHandler(apiEvent);
+        }
+        else if (method === "POST" &&
+            pathWithoutStage.match(/^\/matches\/join\/[^\/]+$/)) {
+            return await joinMatchHandler(apiEvent);
         }
         else if (method === "GET" &&
             (pathWithoutStage === "/matches/history" || path === "/matches/history")) {
@@ -524,7 +566,7 @@ async function submitResponse(event) {
     // Store the response
     round.responses[body.identity] = body.response;
     match.updatedAt = new Date().toISOString();
-    // Check if all 4 responses are now collected (this is just for human submission)
+    // Check if all participants' responses are now collected (this is just for human and ai submissions)
     const responseCount = Object.keys(round.responses).length;
     console.log(`Response count after update: ${responseCount}, round status: ${round.status}`);
     console.log(`Current responses:`, Object.keys(round.responses));
@@ -563,7 +605,7 @@ async function submitResponse(event) {
         console.log("Human response saved, now triggering robot responses...");
         await triggerRobotResponses(matchId, body.round, round.prompt);
         // Note: Robot responses will be added asynchronously by robot-worker
-        // The robot-worker will check for all 4 responses and transition to voting
+        // The robot-worker will check for all responses being received and transition to voting
     }
     return {
         statusCode: 200,
@@ -712,6 +754,88 @@ async function submitVote(event) {
             statusCode: 500,
             headers: CORS_HEADERS,
             body: JSON.stringify({ error: "Failed to update match" }),
+        };
+    }
+}
+// Handler for creating match with template
+async function createMatchWithTemplateHandler(event) {
+    try {
+        const body = JSON.parse(event.body || "{}");
+        if (!body.templateType || !body.creatorUserId || !body.creatorName) {
+            return {
+                statusCode: 400,
+                headers: CORS_HEADERS,
+                body: JSON.stringify({
+                    error: "templateType, creatorUserId, and creatorName are required"
+                }),
+            };
+        }
+        // Set environment variable for the service
+        process.env.USERS_TABLE_NAME = USERS_TABLE_NAME;
+        process.env.MATCHES_TABLE_NAME = TABLE_NAME;
+        // Import and use the multi-human match service
+        const { createMatchWithTemplate } = await Promise.resolve().then(() => __importStar(require('./src/services/multi-human-match-service')));
+        const match = await createMatchWithTemplate(body);
+        return {
+            statusCode: 200,
+            headers: CORS_HEADERS,
+            body: JSON.stringify({ match }),
+        };
+    }
+    catch (error) {
+        console.error("Error creating match with template:", error);
+        return {
+            statusCode: 500,
+            headers: CORS_HEADERS,
+            body: JSON.stringify({ error: "Failed to create match" }),
+        };
+    }
+}
+// Handler for joining match
+async function joinMatchHandler(event) {
+    try {
+        // Extract invite code from path
+        const pathMatch = event.path.match(/\/join\/([^\/]+)$/);
+        const inviteCode = pathMatch ? pathMatch[1] : null;
+        const body = JSON.parse(event.body || "{}");
+        if (!inviteCode || !body.userId || !body.displayName) {
+            return {
+                statusCode: 400,
+                headers: CORS_HEADERS,
+                body: JSON.stringify({
+                    error: "inviteCode, userId, and displayName are required"
+                }),
+            };
+        }
+        // Set environment variable for the service
+        process.env.USERS_TABLE_NAME = USERS_TABLE_NAME;
+        process.env.MATCHES_TABLE_NAME = TABLE_NAME;
+        // Import and use the multi-human match service
+        const { joinMatch } = await Promise.resolve().then(() => __importStar(require('./src/services/multi-human-match-service')));
+        const result = await joinMatch({
+            inviteCode,
+            userId: body.userId,
+            displayName: body.displayName,
+        });
+        if (!result.success) {
+            return {
+                statusCode: 400,
+                headers: CORS_HEADERS,
+                body: JSON.stringify({ error: result.error }),
+            };
+        }
+        return {
+            statusCode: 200,
+            headers: CORS_HEADERS,
+            body: JSON.stringify({ match: result.match }),
+        };
+    }
+    catch (error) {
+        console.error("Error joining match:", error);
+        return {
+            statusCode: 500,
+            headers: CORS_HEADERS,
+            body: JSON.stringify({ error: "Failed to join match" }),
         };
     }
 }

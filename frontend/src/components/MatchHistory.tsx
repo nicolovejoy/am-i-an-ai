@@ -56,7 +56,7 @@ export function MatchHistory() {
 
   const getPlayerName = (match: Match) => {
     const humanParticipant = match.participants?.find((p: Participant) => !p.isAI);
-    return humanParticipant?.name || 'Unknown Player';
+    return humanParticipant?.playerName || 'Unknown Player';
   };
 
   const getMatchScore = (match: Match) => {

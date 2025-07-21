@@ -34,6 +34,7 @@ const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || "robot-orchestra-matches";
 const SQS_QUEUE_URL = process.env.SQS_QUEUE_URL || "";
 const AI_SERVICE_FUNCTION_NAME =
   process.env.AI_SERVICE_FUNCTION_NAME || "robot-orchestra-ai-service";
+const USERS_TABLE_NAME = process.env.USERS_TABLE_NAME || "robot-orchestra-users";
 
 // Sample prompts for the game
 const PROMPTS = [
@@ -402,6 +403,16 @@ export const handler = async (
       (pathWithoutStage === "/matches" || path === "/matches")
     ) {
       return await createMatch(apiEvent);
+    } else if (
+      method === "POST" &&
+      (pathWithoutStage === "/matches/create-with-template" || path === "/matches/create-with-template")
+    ) {
+      return await createMatchWithTemplateHandler(apiEvent);
+    } else if (
+      method === "POST" &&
+      pathWithoutStage.match(/^\/matches\/join\/[^\/]+$/)
+    ) {
+      return await joinMatchHandler(apiEvent);
     } else if (
       method === "GET" &&
       (pathWithoutStage === "/matches/history" || path === "/matches/history")
@@ -950,6 +961,101 @@ async function submitVote(
       statusCode: 500,
       headers: CORS_HEADERS,
       body: JSON.stringify({ error: "Failed to update match" }),
+    };
+  }
+}
+
+// Handler for creating match with template
+async function createMatchWithTemplateHandler(
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  try {
+    const body = JSON.parse(event.body || "{}");
+    
+    if (!body.templateType || !body.creatorUserId || !body.creatorName) {
+      return {
+        statusCode: 400,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ 
+          error: "templateType, creatorUserId, and creatorName are required" 
+        }),
+      };
+    }
+
+    // Set environment variable for the service
+    process.env.USERS_TABLE_NAME = USERS_TABLE_NAME;
+    process.env.MATCHES_TABLE_NAME = TABLE_NAME;
+    
+    // Import and use the multi-human match service
+    const { createMatchWithTemplate } = await import('./src/services/multi-human-match-service');
+    const match = await createMatchWithTemplate(body);
+
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ match }),
+    };
+  } catch (error) {
+    console.error("Error creating match with template:", error);
+    return {
+      statusCode: 500,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: "Failed to create match" }),
+    };
+  }
+}
+
+// Handler for joining match
+async function joinMatchHandler(
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  try {
+    // Extract invite code from path
+    const pathMatch = event.path.match(/\/join\/([^\/]+)$/);
+    const inviteCode = pathMatch ? pathMatch[1] : null;
+    const body = JSON.parse(event.body || "{}");
+    
+    if (!inviteCode || !body.userId || !body.displayName) {
+      return {
+        statusCode: 400,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ 
+          error: "inviteCode, userId, and displayName are required" 
+        }),
+      };
+    }
+
+    // Set environment variable for the service
+    process.env.USERS_TABLE_NAME = USERS_TABLE_NAME;
+    process.env.MATCHES_TABLE_NAME = TABLE_NAME;
+    
+    // Import and use the multi-human match service
+    const { joinMatch } = await import('./src/services/multi-human-match-service');
+    const result = await joinMatch({
+      inviteCode,
+      userId: body.userId,
+      displayName: body.displayName,
+    });
+
+    if (!result.success) {
+      return {
+        statusCode: 400,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: result.error }),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ match: result.match }),
+    };
+  } catch (error) {
+    console.error("Error joining match:", error);
+    return {
+      statusCode: 500,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: "Failed to join match" }),
     };
   }
 }

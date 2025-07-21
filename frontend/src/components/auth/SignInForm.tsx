@@ -28,7 +28,14 @@ export default function SignInForm() {
     try {
       await cognitoService.signIn(data);
       await checkAuth();
-      navigate('/');
+      
+      // Check if there's a pending invite code
+      const pendingInviteCode = sessionStorage.getItem('pendingInviteCode');
+      if (pendingInviteCode) {
+        navigate(`/join/${pendingInviteCode}`);
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(err as AuthError);
     } finally {

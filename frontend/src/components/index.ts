@@ -3,6 +3,7 @@ export { Navigation } from './Navigation';
 export { ResultsScreen } from './ResultsScreen';
 export { UserProfile } from './UserProfile';
 export { AdminConsole } from './AdminConsole';
+export { WaitingRoom } from './WaitingRoom';
 
 // Chat components
 export { default as ChatInterface } from './ChatInterface';

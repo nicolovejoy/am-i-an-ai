@@ -1,25 +1,20 @@
-# Multi-Human Matches Implementation Plan
+# Multi-Human Matches Implementation
 
-## Overview
+## Status: Complete
 
-Implementing support for multiple humans in matches using Test-Driven Development (TDD).
+### Backend Implementation
+- Match template service with 3 templates (classic_1v3, duo_2v2, admin_custom)
+- Multi-human match service with invite code generation
+- New Lambda endpoints: `/matches/create-with-template`, `/matches/join/{inviteCode}`
+- Dynamic identity assignment and AI selection
+- Auto-start logic when all humans joined
 
-## Test-First Approach
-
-1. **Created comprehensive test suite** (`lambda/match-templates.test.ts`)
-
-   - Match template definitions (1v3, 2v2, admin)
-   - Match creation with `waiting_for_players` state
-   - Invite system with shareable codes
-   - Dynamic participant assignment
-   - Auto-start when ready
-
-2. **Key behaviors defined in tests:**
-   - Matches start in `waiting_for_players` state for multi-human templates
-   - 6-character invite codes (e.g., `A7B3C9`)
-   - Random identity assignment (A/B/C/D) when match starts
-   - Diverse AI personality selection
-   - Automatic progression when all humans joined
+### Frontend Implementation
+- Template selection UI on dashboard
+- Waiting room with invite code display/sharing
+- Join flow supporting authenticated and non-authenticated users
+- Auth redirect preservation for invite codes
+- Match history player name display fixed
 
 ## Implementation Steps
 

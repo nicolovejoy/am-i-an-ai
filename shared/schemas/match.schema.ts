@@ -9,7 +9,8 @@ export const MatchStatusSchema = z.enum([
   'waiting',
   'round_active', 
   'round_voting',
-  'completed'
+  'completed',
+  'waiting_for_players' // New state for multi-human matches
 ]);
 export type MatchStatus = z.infer<typeof MatchStatusSchema>;
 
@@ -31,6 +32,11 @@ export const ParticipantSchema = z.object({
   playerName: z.string(),
   isConnected: z.boolean(),
   personality: z.string().optional(),
+  // New fields for multi-human support
+  userId: z.string().optional(),
+  displayName: z.string().optional(),
+  isReady: z.boolean().optional(),
+  joinedAt: z.string().optional()
 });
 export type Participant = z.infer<typeof ParticipantSchema>;
 
@@ -57,6 +63,10 @@ export const RoundSchema = z.object({
 });
 export type Round = z.infer<typeof RoundSchema>;
 
+// Match template type
+export const MatchTemplateTypeSchema = z.enum(['classic_1v3', 'duo_2v2', 'admin_custom']);
+export type MatchTemplateType = z.infer<typeof MatchTemplateTypeSchema>;
+
 // Main Match schema
 export const MatchSchema = z.object({
   matchId: z.string(),
@@ -68,6 +78,14 @@ export const MatchSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   completedAt: z.string().optional(),
+  // New fields for multi-human support
+  templateType: MatchTemplateTypeSchema.optional(),
+  inviteCode: z.string().optional(),
+  waitingFor: z.object({
+    humans: z.number(),
+    ai: z.number()
+  }).optional(),
+  inviteUrl: z.string().optional()
 });
 export type Match = z.infer<typeof MatchSchema>;
 

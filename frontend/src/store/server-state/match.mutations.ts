@@ -16,7 +16,66 @@ import { matchKeys } from './match.queries';
 
 const API_URL = import.meta.env.VITE_MATCH_SERVICE_API || '';
 
-// Create a new match
+// Create a match with template (multi-human support)
+export function useCreateMatchWithTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      templateType: 'classic_1v3' | 'duo_2v2' | 'admin_custom';
+      creatorName: string;
+      creatorUserId?: string;
+    }): Promise<{ match: Match }> => {
+      // For now, use a mock userId if not provided
+      const userId = params.creatorUserId || `user-${Date.now()}`;
+      
+      const response = await fetch(`${API_URL}/matches/create-with-template`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateType: params.templateType,
+          creatorUserId: userId,
+          creatorName: params.creatorName,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to create match: ${response.statusText}`);
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      const match = data.match;
+      if (match?.matchId) {
+        // Store match ID in session
+        sessionStorage.setItem('currentMatchId', match.matchId);
+        
+        // Store template type for UI purposes
+        sessionStorage.setItem('matchTemplateType', match.templateType || 'classic_1v3');
+        
+        // If it's a duo match and we're waiting for players, store invite code
+        if (match.inviteCode) {
+          sessionStorage.setItem('inviteCode', match.inviteCode);
+        }
+        
+        // Invalidate and refetch match queries
+        queryClient.invalidateQueries({ queryKey: matchKeys.all });
+        
+        // Set the match data in cache
+        queryClient.setQueryData(
+          matchKeys.detail(match.matchId),
+          match
+        );
+      }
+    },
+  });
+}
+
+// Create a new match (legacy - single player only)
 export function useCreateMatch() {
   const queryClient = useQueryClient();
 
@@ -204,6 +263,56 @@ export function useSubmitVote() {
     },
     onSettled: (_data, _error, { matchId }) => {
       queryClient.invalidateQueries({ queryKey: matchKeys.detail(matchId) });
+    },
+  });
+}
+
+// Join match by invite code
+export function useJoinMatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      inviteCode: string;
+      displayName: string;
+      userId: string;
+    }): Promise<{ match: Match }> => {
+      const response = await fetch(`${API_URL}/matches/join/${params.inviteCode}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: params.userId,
+          displayName: params.displayName,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to join match: ${response.statusText}`);
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      const match = data.match;
+      if (match?.matchId) {
+        // Store match ID in session
+        sessionStorage.setItem('currentMatchId', match.matchId);
+        
+        // Clear any pending invite code
+        sessionStorage.removeItem('pendingInviteCode');
+        
+        // Invalidate and refetch match queries
+        queryClient.invalidateQueries({ queryKey: matchKeys.all });
+        
+        // Set the match data in cache
+        queryClient.setQueryData(
+          matchKeys.detail(match.matchId),
+          match
+        );
+      }
     },
   });
 }

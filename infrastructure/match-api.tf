@@ -31,6 +31,27 @@ resource "aws_api_gateway_resource" "matches_history" {
   path_part   = "history"
 }
 
+# API Gateway resource for /matches/create-with-template
+resource "aws_api_gateway_resource" "matches_create_with_template" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_resource.matches.id
+  path_part   = "create-with-template"
+}
+
+# API Gateway resource for /matches/join
+resource "aws_api_gateway_resource" "matches_join" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_resource.matches.id
+  path_part   = "join"
+}
+
+# API Gateway resource for /matches/join/{inviteCode}
+resource "aws_api_gateway_resource" "matches_join_invite_code" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  parent_id   = aws_api_gateway_resource.matches_join.id
+  path_part   = "{inviteCode}"
+}
+
 # API Gateway resource for /matches/{matchId}
 resource "aws_api_gateway_resource" "match_by_id" {
   rest_api_id = aws_api_gateway_rest_api.match_api.id
@@ -72,6 +93,22 @@ resource "aws_api_gateway_method" "post_matches" {
   authorization = "NONE"
 }
 
+# POST /matches/create-with-template - Create Match with Template
+resource "aws_api_gateway_method" "post_matches_create_with_template" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.matches_create_with_template.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+# POST /matches/join/{inviteCode} - Join Match
+resource "aws_api_gateway_method" "post_matches_join" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.matches_join_invite_code.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
 # GET /matches/{matchId} - Get Match
 resource "aws_api_gateway_method" "get_match" {
   rest_api_id   = aws_api_gateway_rest_api.match_api.id
@@ -107,6 +144,20 @@ resource "aws_api_gateway_method" "options_matches" {
 resource "aws_api_gateway_method" "options_matches_history" {
   rest_api_id   = aws_api_gateway_rest_api.match_api.id
   resource_id   = aws_api_gateway_resource.matches_history.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method" "options_matches_create_with_template" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.matches_create_with_template.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method" "options_matches_join" {
+  rest_api_id   = aws_api_gateway_rest_api.match_api.id
+  resource_id   = aws_api_gateway_resource.matches_join_invite_code.id
   http_method   = "OPTIONS"
   authorization = "NONE"
 }
@@ -151,6 +202,26 @@ resource "aws_api_gateway_integration" "post_matches_lambda" {
   rest_api_id             = aws_api_gateway_rest_api.match_api.id
   resource_id             = aws_api_gateway_resource.matches.id
   http_method             = aws_api_gateway_method.post_matches.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.match_service.invoke_arn
+}
+
+# Lambda integration for POST /matches/create-with-template -> Match Service Lambda
+resource "aws_api_gateway_integration" "post_matches_create_with_template_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.match_api.id
+  resource_id             = aws_api_gateway_resource.matches_create_with_template.id
+  http_method             = aws_api_gateway_method.post_matches_create_with_template.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.match_service.invoke_arn
+}
+
+# Lambda integration for POST /matches/join/{inviteCode} -> Match Service Lambda
+resource "aws_api_gateway_integration" "post_matches_join_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.match_api.id
+  resource_id             = aws_api_gateway_resource.matches_join_invite_code.id
+  http_method             = aws_api_gateway_method.post_matches_join.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.match_service.invoke_arn
@@ -204,6 +275,32 @@ resource "aws_api_gateway_integration" "options_matches_history_cors" {
   rest_api_id = aws_api_gateway_rest_api.match_api.id
   resource_id = aws_api_gateway_resource.matches_history.id
   http_method = aws_api_gateway_method.options_matches_history.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
+  }
+}
+
+resource "aws_api_gateway_integration" "options_matches_create_with_template_cors" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_create_with_template.id
+  http_method = aws_api_gateway_method.options_matches_create_with_template.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
+  }
+}
+
+resource "aws_api_gateway_integration" "options_matches_join_cors" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_join_invite_code.id
+  http_method = aws_api_gateway_method.options_matches_join.http_method
   type        = "MOCK"
 
   request_templates = {
@@ -280,6 +377,30 @@ resource "aws_api_gateway_method_response" "post_matches_response" {
   }
 }
 
+# POST /matches/create-with-template responses
+resource "aws_api_gateway_method_response" "post_matches_create_with_template_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_create_with_template.id
+  http_method = aws_api_gateway_method.post_matches_create_with_template.http_method
+  status_code = "201"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
+# POST /matches/join/{inviteCode} responses
+resource "aws_api_gateway_method_response" "post_matches_join_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_join_invite_code.id
+  http_method = aws_api_gateway_method.post_matches_join.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
 # GET /matches/{matchId} responses
 resource "aws_api_gateway_method_response" "get_match_response" {
   rest_api_id = aws_api_gateway_rest_api.match_api.id
@@ -333,6 +454,32 @@ resource "aws_api_gateway_method_response" "options_matches_history_response" {
   rest_api_id = aws_api_gateway_rest_api.match_api.id
   resource_id = aws_api_gateway_resource.matches_history.id
   http_method = aws_api_gateway_method.options_matches_history.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_matches_create_with_template_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_create_with_template.id
+  http_method = aws_api_gateway_method.options_matches_create_with_template.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_matches_join_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_join_invite_code.id
+  http_method = aws_api_gateway_method.options_matches_join.http_method
   status_code = "200"
 
   response_parameters = {
@@ -412,6 +559,32 @@ resource "aws_api_gateway_integration_response" "post_matches_response" {
   depends_on = [aws_api_gateway_integration.post_matches_lambda]
 }
 
+resource "aws_api_gateway_integration_response" "post_matches_create_with_template_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_create_with_template.id
+  http_method = aws_api_gateway_method.post_matches_create_with_template.http_method
+  status_code = aws_api_gateway_method_response.post_matches_create_with_template_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.post_matches_create_with_template_lambda]
+}
+
+resource "aws_api_gateway_integration_response" "post_matches_join_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_join_invite_code.id
+  http_method = aws_api_gateway_method.post_matches_join.http_method
+  status_code = aws_api_gateway_method_response.post_matches_join_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.post_matches_join_lambda]
+}
+
 resource "aws_api_gateway_integration_response" "get_match_response" {
   rest_api_id = aws_api_gateway_rest_api.match_api.id
   resource_id = aws_api_gateway_resource.match_by_id.id
@@ -482,6 +655,36 @@ resource "aws_api_gateway_integration_response" "options_matches_history_cors_re
   depends_on = [aws_api_gateway_integration.options_matches_history_cors]
 }
 
+resource "aws_api_gateway_integration_response" "options_matches_create_with_template_cors_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_create_with_template.id
+  http_method = aws_api_gateway_method.options_matches_create_with_template.http_method
+  status_code = aws_api_gateway_method_response.options_matches_create_with_template_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.options_matches_create_with_template_cors]
+}
+
+resource "aws_api_gateway_integration_response" "options_matches_join_cors_response" {
+  rest_api_id = aws_api_gateway_rest_api.match_api.id
+  resource_id = aws_api_gateway_resource.matches_join_invite_code.id
+  http_method = aws_api_gateway_method.options_matches_join.http_method
+  status_code = aws_api_gateway_method_response.options_matches_join_response.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.options_matches_join_cors]
+}
+
 resource "aws_api_gateway_integration_response" "options_match_cors_response" {
   rest_api_id = aws_api_gateway_rest_api.match_api.id
   resource_id = aws_api_gateway_resource.match_by_id.id
@@ -535,21 +738,29 @@ resource "aws_api_gateway_deployment" "match_api" {
   depends_on = [
     aws_api_gateway_integration.get_matches_history_lambda,
     aws_api_gateway_integration.post_matches_lambda,
+    aws_api_gateway_integration.post_matches_create_with_template_lambda,
+    aws_api_gateway_integration.post_matches_join_lambda,
     aws_api_gateway_integration.get_match_lambda,
     aws_api_gateway_integration.post_responses_lambda,
     aws_api_gateway_integration.post_votes_lambda,
     aws_api_gateway_integration.options_matches_cors,
     aws_api_gateway_integration.options_matches_history_cors,
+    aws_api_gateway_integration.options_matches_create_with_template_cors,
+    aws_api_gateway_integration.options_matches_join_cors,
     aws_api_gateway_integration.options_match_cors,
     aws_api_gateway_integration.options_responses_cors,
     aws_api_gateway_integration.options_votes_cors,
     aws_api_gateway_integration_response.get_matches_history_response,
     aws_api_gateway_integration_response.post_matches_response,
+    aws_api_gateway_integration_response.post_matches_create_with_template_response,
+    aws_api_gateway_integration_response.post_matches_join_response,
     aws_api_gateway_integration_response.get_match_response,
     aws_api_gateway_integration_response.post_responses_response,
     aws_api_gateway_integration_response.post_votes_response,
     aws_api_gateway_integration_response.options_matches_cors_response,
     aws_api_gateway_integration_response.options_matches_history_cors_response,
+    aws_api_gateway_integration_response.options_matches_create_with_template_cors_response,
+    aws_api_gateway_integration_response.options_matches_join_cors_response,
     aws_api_gateway_integration_response.options_match_cors_response,
     aws_api_gateway_integration_response.options_responses_cors_response,
     aws_api_gateway_integration_response.options_votes_cors_response
@@ -561,16 +772,23 @@ resource "aws_api_gateway_deployment" "match_api" {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.matches.id,
       aws_api_gateway_resource.matches_history.id,
+      aws_api_gateway_resource.matches_create_with_template.id,
+      aws_api_gateway_resource.matches_join.id,
+      aws_api_gateway_resource.matches_join_invite_code.id,
       aws_api_gateway_resource.match_by_id.id,
       aws_api_gateway_resource.match_responses.id,
       aws_api_gateway_resource.match_votes.id,
       aws_api_gateway_method.get_matches_history.id,
       aws_api_gateway_method.post_matches.id,
+      aws_api_gateway_method.post_matches_create_with_template.id,
+      aws_api_gateway_method.post_matches_join.id,
       aws_api_gateway_method.get_match.id,
       aws_api_gateway_method.post_responses.id,
       aws_api_gateway_method.post_votes.id,
       aws_api_gateway_integration.get_matches_history_lambda.id,
       aws_api_gateway_integration.post_matches_lambda.id,
+      aws_api_gateway_integration.post_matches_create_with_template_lambda.id,
+      aws_api_gateway_integration.post_matches_join_lambda.id,
       aws_api_gateway_integration.get_match_lambda.id,
       aws_api_gateway_integration.post_responses_lambda.id,
       aws_api_gateway_integration.post_votes_lambda.id,
@@ -1310,6 +1528,8 @@ output "match_api_endpoints" {
     base_url = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod"
     history = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/history"
     create_match = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches"
+    create_with_template = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/create-with-template"
+    join_match = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/join/{inviteCode}"
     get_match = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/{matchId}"
     submit_response = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/{matchId}/responses"
     submit_vote = "https://${aws_api_gateway_rest_api.match_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/matches/{matchId}/votes"

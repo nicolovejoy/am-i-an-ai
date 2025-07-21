@@ -18,9 +18,9 @@ export function AdminConsole() {
   const [deleteResult, setDeleteResult] = useState<string | null>(null);
   const [showDebugState, setShowDebugState] = useState(false);
   // const { user } = useAuth(); // TODO: Use for authentication when admin service is deployed
-  
+
   // Get current match state for debug view
-  const currentMatchId = sessionStorage.getItem('currentMatchId');
+  const currentMatchId = sessionStorage.getItem("currentMatchId");
   const { data: matchState } = useMatch(currentMatchId);
 
   // Get all configured endpoints
@@ -155,9 +155,6 @@ export function AdminConsole() {
         <h1 className="text-3xl font-bold text-slate-900 mb-2">
           🔧 Admin Console
         </h1>
-        <p className="text-sm text-slate-600">
-          System configuration and health monitoring
-        </p>
       </Card>
 
       {/* Environment Configuration */}
@@ -199,12 +196,11 @@ export function AdminConsole() {
         </div>
       </Card>
 
-      {/* Active Configuration */}
+      {/* API URL */}
       <Card>
-        <h2 className="text-xl font-semibold mb-4">🎯 Active Configuration</h2>
         <div className="bg-slate-100 p-4 rounded-lg">
           <div className="text-sm">
-            <strong>API requests will go to:</strong>
+            <strong>API url:</strong>
             <div className="font-mono mt-2 text-blue-600">
               {getActiveApiUrl()}
             </div>
@@ -270,25 +266,6 @@ export function AdminConsole() {
               </div>
             );
           })}
-        </div>
-      </Card>
-
-      {/* System Info */}
-      <Card>
-        <h2 className="text-xl font-semibold mb-4">ℹ️ System Information</h2>
-        <div className="space-y-2 text-sm">
-          <div>
-            <span className="font-medium">Build Mode:</span>{" "}
-            {process.env.NODE_ENV}
-          </div>
-          <div>
-            <span className="font-medium">User Agent:</span>{" "}
-            {typeof window !== "undefined" ? navigator.userAgent : "N/A"}
-          </div>
-          <div>
-            <span className="font-medium">Current URL:</span>{" "}
-            {typeof window !== "undefined" ? window.location.href : "N/A"}
-          </div>
         </div>
       </Card>
 
@@ -419,16 +396,17 @@ export function AdminConsole() {
             variant="secondary"
             size="sm"
           >
-            {showDebugState ? 'Hide' : 'Show'} Raw State
+            {showDebugState ? "Hide" : "Show"} Raw State
           </Button>
         </div>
-        
+
         {currentMatchId ? (
           <>
             <div className="text-sm text-slate-600 mb-2">
-              Current Match ID: <span className="font-mono">{currentMatchId}</span>
+              Current Match ID:{" "}
+              <span className="font-mono">{currentMatchId}</span>
             </div>
-            
+
             {showDebugState && matchState && (
               <div className="bg-slate-100 rounded-lg p-4 overflow-auto max-h-96">
                 <pre className="text-xs font-mono">
@@ -436,7 +414,7 @@ export function AdminConsole() {
                 </pre>
               </div>
             )}
-            
+
             {showDebugState && !matchState && (
               <div className="text-sm text-slate-500">
                 Loading match state...
@@ -450,32 +428,21 @@ export function AdminConsole() {
         )}
       </Card>
 
-      {/* AWS Cost Monitoring */}
+      {/* System Info */}
       <Card>
-        <h2 className="text-xl font-semibold mb-4">💰 AWS Cost Monitoring</h2>
-        <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 mb-2">Bedrock Usage & Quotas</h3>
-            <p className="text-sm text-blue-800 mb-3">
-              Monitor your AWS Bedrock usage to avoid rate limiting issues:
-            </p>
-            <ol className="text-sm text-blue-800 space-y-2 ml-4">
-              <li>1. Open AWS Console → Bedrock → Model access</li>
-              <li>2. Check your enabled models (Claude 3 Haiku/Sonnet)</li>
-              <li>3. Go to Service Quotas → AWS Bedrock</li>
-              <li>4. Monitor "Tokens per minute" limits</li>
-            </ol>
+        <h2 className="text-xl font-semibold mb-4">ℹ️ System Information</h2>
+        <div className="space-y-2 text-sm">
+          <div>
+            <span className="font-medium">Build Mode:</span>{" "}
+            {process.env.NODE_ENV}
           </div>
-          
-          <div className="bg-slate-50 rounded-lg p-4">
-            <h3 className="font-medium mb-2">Estimated Monthly Costs</h3>
-            <div className="text-sm space-y-1">
-              <div>• Lambda: ~$5-10 (invocations + compute)</div>
-              <div>• DynamoDB: ~$1-2 (storage + requests)</div>
-              <div>• S3/CloudFront: ~$1 (hosting)</div>
-              <div>• Bedrock: ~$1-5 (AI responses)</div>
-              <div className="font-medium mt-2">Total: ~$8-18/month</div>
-            </div>
+          <div>
+            <span className="font-medium">User Agent:</span>{" "}
+            {typeof window !== "undefined" ? navigator.userAgent : "N/A"}
+          </div>
+          <div>
+            <span className="font-medium">Current URL:</span>{" "}
+            {typeof window !== "undefined" ? window.location.href : "N/A"}
           </div>
         </div>
       </Card>

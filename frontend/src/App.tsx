@@ -8,6 +8,8 @@ import MatchPage from './pages/MatchPage';
 import AdminPage from './pages/AdminPage';
 import AboutPage from './pages/AboutPage';
 import HistoryPage from './pages/HistoryPage';
+import WaitingPage from './pages/WaitingPage';
+import JoinPage from './pages/JoinPage';
 import SignInPage from './pages/auth/SignInPage';
 import SignUpPage from './pages/auth/SignUpPage';
 import VerifyPage from './pages/auth/VerifyPage';
@@ -24,12 +26,14 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/match" element={<MatchPage />} />
+              <Route path="/waiting" element={<WaitingPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/auth/signin" element={<SignInPage />} />
               <Route path="/auth/signup" element={<SignUpPage />} />
               <Route path="/auth/verify" element={<VerifyPage />} />
+              <Route path="/join/:inviteCode" element={<JoinPage />} />
             </Routes>
           </div>
         </AuthProvider>

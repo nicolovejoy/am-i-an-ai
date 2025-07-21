@@ -39,7 +39,13 @@ export default function VerifyForm() {
 
     try {
       await cognitoService.confirmSignUp(email, data.code);
-      navigate('/auth/signin?verified=true');
+      // Preserve invite code through verification
+      const pendingInviteCode = sessionStorage.getItem('pendingInviteCode');
+      if (pendingInviteCode) {
+        navigate('/auth/signin?verified=true&invite=' + pendingInviteCode);
+      } else {
+        navigate('/auth/signin?verified=true');
+      }
     } catch (err) {
       setError(err as AuthError);
     } finally {
