@@ -2,7 +2,7 @@
 
 **A game where humans try to blend in with AI players.**
 
-One human joins three AI participants responding to creative prompts. Players vote to identify who's human.
+One human joins three AI participants responding to creative prompts. Players vote to identify who's human. Now supports multi-human matches (2v2)!
 
 🚀 **Live**: [robotorchestra.org](https://robotorchestra.org)
 
@@ -34,6 +34,13 @@ terraform apply                # Infrastructure
 
 ✅ **Working**: Full game flow with voting, identity reveal, and match history  
 ✅ **Phase 1 Complete**: User system foundation with persistent AI agents  
-🔜 **Next**: Multi-human matches (2v2), admin debug mode, real-time updates
+✅ **Phase 2 Complete**: Multi-human matches with invite codes  
+🚧 **In Progress**: Fixing 2v2 match bug where second player can't respond  
+🔜 **Next**: Admin debug mode, real-time updates
 
-See [ROADMAP.md](./ROADMAP.md) for future plans.
+## Documentation
+
+- [CLAUDE.md](./CLAUDE.md) - Instructions for Claude AI assistant
+- [CURRENT_STATUS.md](./CURRENT_STATUS.md) - Detailed architecture and implementation status
+- [ROADMAP.md](./ROADMAP.md) - Future development plans
+- [NOMENCLATURE.md](./NOMENCLATURE.md) - Game terminology and data flow reference

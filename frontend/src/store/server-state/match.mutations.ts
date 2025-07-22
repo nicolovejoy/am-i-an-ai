@@ -48,11 +48,15 @@ export function useCreateMatchWithTemplate() {
 
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       const match = data.match;
       if (match?.matchId) {
         // Store match ID in session
         sessionStorage.setItem('currentMatchId', match.matchId);
+        
+        // Store the userId for identity lookup
+        const userId = variables.creatorUserId || `user-${Date.now()}`;
+        sessionStorage.setItem('currentUserId', userId);
         
         // Store template type for UI purposes
         sessionStorage.setItem('matchTemplateType', match.templateType || 'classic_1v3');

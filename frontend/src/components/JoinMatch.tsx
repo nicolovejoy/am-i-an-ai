@@ -45,15 +45,17 @@ export function JoinMatch() {
     setError(null);
 
     try {
+      const userId = user?.sub || `guest-${Date.now()}`;
       const result = await joinMatch.mutateAsync({
         inviteCode,
         displayName: playerName.trim(),
-        userId: user?.sub || `guest-${Date.now()}`
+        userId
       });
 
       if (result.match) {
         // Store match info
         sessionStorage.setItem('currentMatchId', result.match.matchId);
+        sessionStorage.setItem('currentUserId', userId);
         
         // Navigate based on match status
         if (result.match.status === 'waiting_for_players') {

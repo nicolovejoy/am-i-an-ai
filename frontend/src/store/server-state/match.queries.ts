@@ -92,12 +92,14 @@ export function useMatchHistory() {
 // Derived data hooks
 export function useMyIdentity(): Identity | null {
   const matchId = sessionStorage.getItem('currentMatchId');
+  const userId = sessionStorage.getItem('currentUserId');
   const { data: match } = useMatch(matchId);
   
-  if (!match) return null;
+  if (!match || !userId) return null;
   
-  const humanParticipant = match.participants.find((p: Participant) => !p.isAI);
-  return humanParticipant?.identity || null;
+  // Find participant by userId instead of !p.isAI
+  const myParticipant = match.participants.find((p: Participant) => p.userId === userId);
+  return myParticipant?.identity || null;
 }
 
 export function useCurrentRound(): Round | null {
