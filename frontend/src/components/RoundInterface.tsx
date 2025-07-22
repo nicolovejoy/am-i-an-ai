@@ -11,7 +11,7 @@ import { hasAllResponses } from "@shared/schemas";
 import PromptDisplay from "./PromptDisplay";
 import PhraseComposer from "./ResponseInput";
 import HumanOrRobot from "./HumanOrRobot";
-import RobotResponseStatus from "./RobotResponseStatus";
+import ParticipantWaitingStatus from "./ParticipantWaitingStatus";
 import { Card } from "./ui";
 
 export default function RoundInterface() {
@@ -82,7 +82,7 @@ export default function RoundInterface() {
       )}
 
       {isWaitingForOthers && (
-        <RobotResponseStatus responsesReceived={Object.keys(roundResponses).length} />
+        <ParticipantWaitingStatus myIdentity={myIdentity} />
       )}
 
       {isRecognitionPhase && (
