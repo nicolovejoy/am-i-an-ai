@@ -76,6 +76,35 @@ jest.mock('@aws-sdk/client-dynamodb', () => ({
   DynamoDBClient: jest.fn()
 }));
 
+// Global Lambda client mock
+const mockLambdaClient = {
+  send: jest.fn()
+};
+
+jest.mock('@aws-sdk/client-lambda', () => ({
+  LambdaClient: jest.fn(() => mockLambdaClient),
+  InvokeCommand: jest.fn((input: any) => ({ input, constructor: { name: 'InvokeCommand' } }))
+}));
+
+// Set default Lambda response for AI prompt generation
+mockLambdaClient.send.mockImplementation(async (command: any) => {
+  if (command.constructor.name === 'InvokeCommand') {
+    // Mock AI service response
+    return {
+      StatusCode: 200,
+      Payload: Buffer.from(JSON.stringify({
+        statusCode: 200,
+        body: JSON.stringify({
+          result: {
+            prompt: "What's a simple pleasure that brings you unexpected joy?"
+          }
+        })
+      }))
+    };
+  }
+  return {};
+});
+
 jest.mock('@aws-sdk/lib-dynamodb', () => ({
   DynamoDBDocumentClient: {
     from: jest.fn(() => ({
@@ -102,6 +131,30 @@ jest.mock('@aws-sdk/lib-dynamodb', () => ({
             });
           }
           return { Attributes: match };
+        } else if (command.constructor.name === 'ScanCommand') {
+          // Find matches by invite code
+          const inviteCode = command.input.ExpressionAttributeValues?.[':inviteCode'];
+          if (inviteCode) {
+            const matchId = inviteCodeToMatchId[inviteCode];
+            if (matchId) {
+              return { Items: [mockDataStore[matchId]] };
+            }
+          }
+          return { Items: [] };
+        } else if (command.constructor.name === 'QueryCommand') {
+          // Mock returning AI users for getRandomAIUsers
+          if (command.input.ExpressionAttributeValues?.[':userType'] === 'ai') {
+            return {
+              Items: [
+                { userId: 'ai-philosopher', displayName: 'Philosopher', personality: 'philosopher', userType: 'ai' },
+                { userId: 'ai-scientist', displayName: 'Scientist', personality: 'scientist', userType: 'ai' },
+                { userId: 'ai-comedian', displayName: 'Comedian', personality: 'comedian', userType: 'ai' },
+                { userId: 'ai-artist', displayName: 'Artist', personality: 'artist', userType: 'ai' },
+                { userId: 'ai-engineer', displayName: 'Engineer', personality: 'engineer', userType: 'ai' }
+              ]
+            };
+          }
+          return { Items: [] };
         }
         return {};
       })
@@ -109,5 +162,7 @@ jest.mock('@aws-sdk/lib-dynamodb', () => ({
   },
   PutCommand: jest.fn((input: any) => ({ input, constructor: { name: 'PutCommand' } })),
   GetCommand: jest.fn((input: any) => ({ input, constructor: { name: 'GetCommand' } })),
-  UpdateCommand: jest.fn((input: any) => ({ input, constructor: { name: 'UpdateCommand' } }))
+  UpdateCommand: jest.fn((input: any) => ({ input, constructor: { name: 'UpdateCommand' } })),
+  ScanCommand: jest.fn((input: any) => ({ input, constructor: { name: 'ScanCommand' } })),
+  QueryCommand: jest.fn((input: any) => ({ input, constructor: { name: 'QueryCommand' } }))
 }));

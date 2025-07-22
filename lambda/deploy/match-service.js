@@ -91,8 +91,8 @@ async function generateAIPrompt(round, previousPrompts = [], previousResponses =
         const result = JSON.parse(new TextDecoder().decode(response.Payload));
         if (result.statusCode === 200) {
             const body = JSON.parse(result.body);
-            console.log("AI prompt generated:", body.prompt);
-            return body.prompt;
+            console.log("AI prompt generated:", body.result?.prompt || body.prompt);
+            return body.result?.prompt || body.prompt;
         }
         else {
             console.error("AI service returned error:", result);

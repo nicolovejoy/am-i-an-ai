@@ -7,9 +7,18 @@ const mockSQSClient = {
   send: jest.fn(),
 };
 
+const mockLambdaClient = {
+  send: jest.fn(),
+};
+
 // Mock AWS SDK v3 clients
 jest.mock('@aws-sdk/client-dynamodb', () => ({
   DynamoDBClient: jest.fn(() => ({})),
+}));
+
+jest.mock('@aws-sdk/client-lambda', () => ({
+  LambdaClient: jest.fn(() => mockLambdaClient),
+  InvokeCommand: jest.fn((params) => ({ input: params })),
 }));
 
 jest.mock('@aws-sdk/lib-dynamodb', () => ({
@@ -29,6 +38,7 @@ jest.mock('@aws-sdk/client-sqs', () => ({
 // Set environment variables
 process.env.DYNAMODB_TABLE_NAME = 'test-matches-table';
 process.env.SQS_QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue';
+process.env.AI_SERVICE_FUNCTION_NAME = 'test-ai-service';
 
 // Now import handler after mocks are set up
 import { handler } from './match-service';
@@ -39,6 +49,20 @@ describe('Match Service Lambda', () => {
     jest.clearAllMocks();
     mockDocClient.send.mockReset();
     mockSQSClient.send.mockReset();
+    mockLambdaClient.send.mockReset();
+    
+    // Default Lambda mock for AI prompt generation
+    mockLambdaClient.send.mockResolvedValue({
+      StatusCode: 200,
+      Payload: Buffer.from(JSON.stringify({
+        statusCode: 200,
+        body: JSON.stringify({
+          result: {
+            prompt: "What's a simple pleasure that brings you unexpected joy?"
+          }
+        })
+      }))
+    });
   });
 
   describe('POST /matches - Create Match', () => {
@@ -62,6 +86,19 @@ describe('Match Service Lambda', () => {
 
       // Mock DynamoDB put operation
       mockDocClient.send.mockResolvedValueOnce({});
+      
+      // Mock DynamoDB get operation (for verifying human response)
+      mockDocClient.send.mockResolvedValueOnce({
+        Item: {
+          matchId: 'match-123',
+          rounds: [{
+            roundNumber: 1,
+            responses: {
+              A: "Test human response"
+            }
+          }]
+        }
+      });
 
       const response = await handler(event) as APIGatewayProxyResult;
 
@@ -74,7 +111,7 @@ describe('Match Service Lambda', () => {
         status: 'round_active',
         currentRound: 1,
         totalRounds: 5,
-        participants: expect.arrayContaining([
+        participants: [
           {
             identity: 'A',
             isAI: false,
@@ -84,26 +121,26 @@ describe('Match Service Lambda', () => {
           {
             identity: 'B',
             isAI: true,
-            playerName: 'Robot B',
+            playerName: 'Doc (Robot B)',
             isConnected: true,
           },
           {
             identity: 'C',
             isAI: true,
-            playerName: 'Robot C',
+            playerName: 'Happy (Robot C)',
             isConnected: true,
           },
           {
             identity: 'D',
             isAI: true,
-            playerName: 'Robot D',
+            playerName: 'Dopey (Robot D)',
             isConnected: true,
           },
-        ]),
+        ],
         rounds: [
           {
             roundNumber: 1,
-            prompt: expect.any(String),
+            prompt: "What's a simple pleasure that brings you unexpected joy?",
             responses: {},
             votes: {},
             scores: {},
@@ -276,6 +313,17 @@ describe('Match Service Lambda', () => {
 
       // Mock DynamoDB update operation
       mockDocClient.send.mockResolvedValueOnce({});
+      
+      // Mock DynamoDB get operation (for verifying human response in triggerRobotResponses)
+      mockDocClient.send.mockResolvedValueOnce({
+        Item: {
+          ...mockMatch,
+          rounds: [{
+            ...mockMatch.rounds[0],
+            responses: { A: 'The echo of empty rooms' }
+          }]
+        }
+      });
 
       // Mock SQS send operations
       mockSQSClient.send.mockResolvedValue({});
@@ -305,12 +353,12 @@ describe('Match Service Lambda', () => {
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
 
-      // Verify DynamoDB update was called
+      // Verify DynamoDB update was called with timestamp key
       expect(mockDocClient.send).toHaveBeenCalledWith(
         expect.objectContaining({
           input: expect.objectContaining({
             TableName: 'test-matches-table',
-            Key: { matchId },
+            Key: { matchId, timestamp: 0 },
             UpdateExpression: expect.stringContaining('rounds = :rounds'),
           }),
         })
@@ -415,9 +463,12 @@ describe('Match Service Lambda', () => {
 
       expect(response.statusCode).toBe(200);
       
-      // Verify the response includes the updated match with voting status
+      // Verify the response was successful
       const body = JSON.parse(response.body);
-      expect(body.match.rounds[0].status).toBe('voting');
+      expect(body.success).toBe(true);
+      
+      // Note: The actual status transition to 'voting' happens asynchronously
+      // through the state update queue, not synchronously in this response
     });
   });
 

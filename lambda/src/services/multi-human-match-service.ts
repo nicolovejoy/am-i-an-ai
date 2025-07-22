@@ -1,5 +1,6 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { v4 as uuidv4 } from 'uuid';
 import { Match, Participant, Identity } from '../../shared/schemas/match.schema';
 import { MatchTemplateService, MatchTemplateType } from './match-template-service';
@@ -7,6 +8,7 @@ import { UserService } from './user-service';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
+const lambdaClient = new LambdaClient({});
 
 export interface CreateMatchWithTemplateData {
   templateType: MatchTemplateType;
@@ -132,23 +134,31 @@ export class MultiHumanMatchService {
     }
 
     // Update match in database
+    const updateExpression = ['SET participants = :participants', '#status = :status', 'updatedAt = :updatedAt', 'rounds = :rounds'];
+    const expressionAttributeValues: any = {
+      ':participants': match.participants,
+      ':status': match.status,
+      ':updatedAt': new Date().toISOString(),
+      ':rounds': match.rounds || []
+    };
+
+    // Only include waitingFor if it's defined
+    if (match.waitingFor !== undefined) {
+      updateExpression.push('waitingFor = :waitingFor');
+      expressionAttributeValues[':waitingFor'] = match.waitingFor;
+    }
+
     await docClient.send(new UpdateCommand({
       TableName: this.matchesTableName,
       Key: { 
         matchId: match.matchId,
         timestamp: 0  // Main match record has timestamp 0
       },
-      UpdateExpression: 'SET participants = :participants, waitingFor = :waitingFor, #status = :status, updatedAt = :updatedAt, rounds = :rounds',
+      UpdateExpression: updateExpression.join(', '),
       ExpressionAttributeNames: {
         '#status': 'status'
       },
-      ExpressionAttributeValues: {
-        ':participants': match.participants,
-        ':waitingFor': match.waitingFor,
-        ':status': match.status,
-        ':updatedAt': new Date().toISOString(),
-        ':rounds': match.rounds || []
-      }
+      ExpressionAttributeValues: expressionAttributeValues
     }));
 
     return { success: true, match };
@@ -204,10 +214,11 @@ export class MultiHumanMatchService {
     match.status = 'waiting';
     match.waitingFor = undefined;
 
-    // Create first round
+    // Create first round with AI-generated prompt
+    const firstPrompt = await this.generateAIPrompt(1);
     match.rounds = [{
       roundNumber: 1,
-      prompt: this.getPromptForRound(1),
+      prompt: firstPrompt,
       responses: {},
       votes: {},
       scores: {},
@@ -235,7 +246,56 @@ export class MultiHumanMatchService {
     return result;
   }
 
-  private getPromptForRound(roundNumber: number): string {
+  private async generateAIPrompt(
+    round: number,
+    previousPrompts: string[] = [],
+    previousResponses: Record<string, string>[] = []
+  ): Promise<string> {
+    try {
+      console.log("Generating AI prompt for round", round);
+      const payload = {
+        httpMethod: "POST",
+        path: "/ai/generate",
+        body: JSON.stringify({
+          task: "generate_prompt",
+          model: "claude-3-haiku",
+          inputs: {
+            round,
+            previousPrompts,
+            responses: previousResponses,
+          },
+          options: {
+            temperature: 0.9,
+            maxTokens: 100,
+          },
+        }),
+      };
+
+      const command = new InvokeCommand({
+        FunctionName: process.env.AI_SERVICE_FUNCTION_NAME || 'robot-orchestra-ai-service',
+        Payload: JSON.stringify(payload),
+      });
+
+      const response = await lambdaClient.send(command);
+      const responsePayload = JSON.parse(
+        new TextDecoder().decode(response.Payload!)
+      );
+      
+      if (responsePayload.statusCode === 200) {
+        const body = JSON.parse(responsePayload.body);
+        return body.result.prompt;
+      } else {
+        console.error("AI prompt generation failed:", responsePayload);
+        // Fallback to default prompts
+        return this.getDefaultPromptForRound(round);
+      }
+    } catch (error) {
+      console.error("Error generating AI prompt:", error);
+      return this.getDefaultPromptForRound(round);
+    }
+  }
+
+  private getDefaultPromptForRound(roundNumber: number): string {
     const prompts = [
       "What's the most interesting thing that happened to you this week?",
       "If you could have dinner with any historical figure, who would it be and why?",
