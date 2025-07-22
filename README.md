@@ -34,9 +34,8 @@ terraform apply                # Infrastructure
 
 ✅ **Working**: Full game flow with voting, identity reveal, and match history  
 ✅ **Phase 1 Complete**: User system foundation with persistent AI agents  
-✅ **Phase 2 Complete**: Multi-human matches with invite codes  
-🚧 **In Progress**: Fixing 2v2 match bug where second player can't respond  
-🔜 **Next**: Admin debug mode, real-time updates
+✅ **Phase 2 Complete**: Multi-human matches (1v3 and 2v2) with invite codes  
+🔜 **Next**: Admin debug mode, real-time updates, performance optimizations
 
 ## Documentation
 
