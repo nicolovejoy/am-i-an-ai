@@ -90,7 +90,7 @@ const MatchBaseSchema = z.object({
 });
 
 // Main Match schema with refinements
-export const MatchSchema = MatchBaseSchema.superRefine((data, ctx) => {
+export const MatchSchema = MatchBaseSchema.superRefine((data: z.infer<typeof MatchBaseSchema>, ctx) => {
   // Get expected total from totalParticipants or default to 4
   const expectedTotal = data.totalParticipants || 4;
   

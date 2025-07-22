@@ -67,8 +67,8 @@ export type Round = z.infer<typeof RoundSchema>;
 export const MatchTemplateTypeSchema = z.enum(['classic_1v3', 'duo_2v2', 'admin_custom']);
 export type MatchTemplateType = z.infer<typeof MatchTemplateTypeSchema>;
 
-// Main Match schema
-export const MatchSchema = z.object({
+// Base Match schema (without refinements)
+const MatchBaseSchema = z.object({
   matchId: z.string(),
   status: MatchStatusSchema,
   currentRound: z.number().int().positive(),
@@ -87,7 +87,10 @@ export const MatchSchema = z.object({
     ai: z.number()
   }).optional(),
   inviteUrl: z.string().optional()
-}).superRefine((data, ctx) => {
+});
+
+// Main Match schema with refinements
+export const MatchSchema = MatchBaseSchema.superRefine((data, ctx) => {
   // Get expected total from totalParticipants or default to 4
   const expectedTotal = data.totalParticipants || 4;
   
@@ -119,7 +122,7 @@ export const validateMatch = (data: unknown): Match => {
 };
 
 export const validateMatchPartial = (data: unknown): Partial<Match> => {
-  return MatchSchema.partial().parse(data);
+  return MatchBaseSchema.partial().parse(data);
 };
 
 // Type guards
@@ -151,12 +154,12 @@ export const getHumanParticipant = (match: Match): Participant | undefined => {
   return match.participants.find((p: any) => !p.isAI);
 };
 
-export const hasAllResponses = (round: Round): boolean => {
-  return Object.keys(round.responses || {}).length === 4;
+export const hasAllResponses = (round: Round, totalParticipants: number = 4): boolean => {
+  return Object.keys(round.responses || {}).length === totalParticipants;
 };
 
-export const hasAllVotes = (round: Round): boolean => {
-  return Object.keys(round.votes || {}).length === 4;
+export const hasAllVotes = (round: Round, totalParticipants: number = 4): boolean => {
+  return Object.keys(round.votes || {}).length === totalParticipants;
 };
 
 export const hasParticipantResponded = (
