@@ -1,6 +1,6 @@
 # RobotOrchestra Current Status
 
-**Last Updated: 2025-07-20**
+**Last Updated: 2025-07-22**
 
 ## Architecture
 - Frontend: React/TypeScript with Vite
@@ -50,7 +50,7 @@
 - Auto-start when ready
 
 ### Core Gameplay
-- 5-round matches with prompts
+- 5-round matches with AI-generated prompts
 - Real-time response collection
 - Voting on human identity
 - Results and scoring
@@ -67,16 +67,21 @@ cd infrastructure
 ./scripts/deploy-frontend.sh
 ```
 
-## Recent Fixes (2025-07-20)
-- Fixed CORS configuration for new endpoints in API Gateway
-- Updated Lambda code to use AWS SDK v3 (required for Node.js 20 runtime)
-- Fixed DynamoDB operations to include timestamp field in composite key
-- Implemented proper invite code lookup using table scan
+## Recent Fixes (2025-07-22)
+- Fixed join match bug: UpdateCommand conditionally includes :waitingFor field
+- Implemented AI-generated prompts using AI service
+- Fixed schema validation to support variable participant counts (1-N during waiting)
+- Added totalParticipants field from match template
+- Fixed WaitingRoom to not reveal AI/Human player types
+- Fixed TypeScript errors with Zod schema refinements
 
 ## Known Issues
+- **2v2 Match Bug**: Second player doesn't see prompt and cannot respond
+  - Likely issue with identity assignment or match state after joining
+  - May be related to match status transitions or round initialization
 - Invite code lookup uses table scan instead of GSI (performance concern at scale)
 - No real-time updates when other players join or make moves
-- Match templates are currently hardcoded
+- Match status may not transition properly from `waiting` to `round_active`
 
 ## Technical Implementation Details
 
@@ -94,10 +99,25 @@ cd infrastructure
 - **Future**: match_templates table for configurable templates
 
 ## Next Steps
-- Fix join match bug: UpdateCommand missing :waitingFor expression value
+- **Fix 2v2 prompt visibility**: Debug why second player can't see/respond to prompts
+- Ensure match transitions from `waiting` → `round_active` properly
+- Add logging to track match state transitions
 - Add GSI for invite code lookups (performance improvement)
 - Admin debug mode showing AI metadata
 - WebSocket real-time updates
 - Email/SMS notifications for invites
 - Configurable match templates (3+ players)
 - Tournament mode
+
+## Debug Notes for 2v2
+The second player joining a 2v2 match experiences:
+1. Successfully joins the match
+2. Match starts (AI players added, identities assigned)
+3. But: No prompt visible, cannot submit response
+4. First player can play normally
+
+Possible causes:
+- Match status not updating to `round_active` for all participants
+- Round data not properly initialized when match starts
+- Frontend not polling/updating after match transitions
+- Identity assignment issue preventing proper UI state

@@ -1,7 +1,7 @@
 # Session Summary - 2025-07-22
 
 ## Overview
-Worked on fixing the 2v2 match experience and implementing AI-generated prompts for RobotOrchestra.
+Fixed 2v2 match validation issues and implemented AI-generated prompts, but discovered a critical bug where the second player cannot see prompts or respond.
 
 ## Completed Tasks
 
@@ -103,10 +103,50 @@ The template system defines the expected final participant count, but matches ha
 5. `docs/2v2-match-flow.md` - Created comprehensive documentation
 6. `lambda/match.schema.test.ts` - Created TDD test file
 
+## Completed Schema & Frontend Fixes (During Session)
+
+### Fixed Schema Validation
+- Split MatchSchema into base and refined versions to fix TypeScript errors
+- Added conditional validation based on match status:
+  - `waiting_for_players`: Allow 1-N participants (N from template)
+  - Active matches: Require exactly N participants
+- Added `totalParticipants` field from template
+- Fixed `hasAllResponses`/`hasAllVotes` to accept totalParticipants parameter
+
+### Fixed Frontend Issues
+- Removed "AI Player" vs "Human Player" labels in WaitingRoom
+- Now shows "Host" for first player, "Player" for others
+- Maintains complete anonymity during gameplay
+
+### Deployment Results
+- All Lambda functions deployed successfully
+- Frontend deployed with fixes
+- TypeScript build errors resolved
+
+## Critical Issue Discovered
+
+### 2v2 Match Bug: Second Player Cannot Play
+After all fixes were deployed, testing revealed:
+- ✅ Player 2 can join match successfully
+- ✅ Match appears to start (transitions from waiting room)
+- ❌ Player 2 doesn't see the prompt
+- ❌ Player 2 cannot submit a response
+- ✅ Player 1 (host) can play normally
+
+This suggests the core issue is not schema validation but rather match state synchronization or round initialization.
+
 ## Environment State
 
-- Lambda functions deployed and working
-- 2v2 matches partially functional (join works, but validation issues remain)
-- AI-generated prompts active in production
-- Tests passing for basic functionality
-- Ready for schema validation fixes in next session
+- Lambda functions deployed with all fixes
+- Frontend deployed with schema and anonymity fixes
+- AI-generated prompts working for 1v3 matches
+- 2v2 matches broken for second player (critical bug)
+- All code changes committed and ready to push
+
+## Next Session Priority
+
+Debug why the second player in 2v2 matches cannot see prompts or respond. Key areas to investigate:
+1. Match state after `startMatch` is called
+2. Round data initialization and propagation
+3. Frontend polling and state updates
+4. Identity assignment for joined players

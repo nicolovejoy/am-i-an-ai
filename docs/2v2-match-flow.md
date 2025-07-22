@@ -683,3 +683,40 @@ describe('MatchPage 2v2 Support', () => {
 2. Deploy frontend fixes
 3. Monitor for validation errors
 4. Roll back if issues arise
+
+## Current Known Issues (2025-07-22)
+
+### Critical Bug: Second Player Cannot Play
+After implementing the fixes above, a new issue was discovered:
+- Second player successfully joins the match
+- Match appears to start (AI players added)
+- **BUG**: Second player doesn't see the prompt and cannot submit responses
+- First player can play normally
+
+### Potential Root Causes
+1. **Match State Synchronization**
+   - Match may show `waiting` status for player 2 while `round_active` for player 1
+   - Frontend polling might not update properly after state transition
+
+2. **Round Initialization**
+   - Round data might not be properly set when transitioning from `waiting_for_players`
+   - The `startMatch` method might not properly update the match record
+
+3. **Identity Assignment**
+   - Player 2 might not receive their identity properly
+   - Frontend might not recognize player 2's identity in the match
+
+### Debugging Steps Needed
+1. Add console logging to track:
+   - Match status for each player
+   - Round data availability
+   - Identity assignments
+   - Frontend state updates
+
+2. Check if match transitions through states correctly:
+   - `waiting_for_players` → `waiting` → `round_active`
+
+3. Verify the match update after `startMatch` is called
+
+### Temporary Workaround
+None available - 2v2 matches are currently non-functional for the second player.
