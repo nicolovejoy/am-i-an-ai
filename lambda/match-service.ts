@@ -175,10 +175,18 @@ async function triggerRobotResponses(
         responsesInDb
       );
 
-      if (!responsesInDb.includes("A")) {
+      // Check if any human responses are in the database
+      const humanIdentities = verifyMatch.participants
+        .filter(p => !p.isAI)
+        .map(p => p.identity);
+      const humanResponsesInDb = responsesInDb.filter(id => humanIdentities.includes(id as Identity));
+      
+      if (humanResponsesInDb.length === 0) {
         console.error(
-          "[ERROR] Human response A not found in DynamoDB! This will cause voting display issues."
+          "[ERROR] No human responses found in DynamoDB! This will cause voting display issues."
         );
+      } else {
+        console.log(`[VERIFY] Human responses in DB: ${humanResponsesInDb.join(", ")}`);
       }
     }
   } catch (error) {
@@ -188,9 +196,30 @@ async function triggerRobotResponses(
     );
   }
 
-  const robots = ["B", "C", "D"];
+  // Fetch match to determine AI participants dynamically
+  let aiIdentities: string[] = ["B", "C", "D"]; // Default for backward compatibility
+  
+  try {
+    const matchResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: { matchId, timestamp: 0 },
+      })
+    );
+    
+    if (matchResult.Item) {
+      const matchData = matchResult.Item as Match;
+      // Get identities of AI participants only
+      aiIdentities = matchData.participants
+        .filter(p => p.isAI !== false) // Note: isAI might be undefined for older matches
+        .map(p => p.identity);
+      console.log(`Found AI participants: ${aiIdentities.join(", ")}`);
+    }
+  } catch (error) {
+    console.error("Failed to fetch AI participants, using defaults:", error);
+  }
 
-  for (const robotId of robots) {
+  for (const robotId of aiIdentities) {
     const message = {
       matchId,
       roundNumber,
@@ -764,12 +793,23 @@ async function submitResponse(
   }
 
   // NOW trigger robot responses after human response is safely stored
-  if (body.identity === "A") {
-    console.log("Human response saved, now triggering robot responses...");
-    await triggerRobotResponses(matchId, body.round, round.prompt);
-
-    // Note: Robot responses will be added asynchronously by robot-worker
-    // The robot-worker will check for all responses being received and transition to voting
+  // Check if the submitter is human and if all humans have responded
+  const submittingParticipant = match.participants.find(p => p.identity === body.identity);
+  if (submittingParticipant && !submittingParticipant.isAI) {
+    // Count human participants and human responses
+    const humanParticipants = match.participants.filter(p => !p.isAI);
+    const humanResponses = humanParticipants.filter(p => round.responses[p.identity]);
+    
+    console.log(`Human response saved. ${humanResponses.length}/${humanParticipants.length} humans have responded`);
+    
+    // Only trigger AI responses when ALL humans have responded
+    if (humanResponses.length === humanParticipants.length) {
+      console.log("All humans have responded, now triggering AI responses...");
+      await triggerRobotResponses(matchId, body.round, round.prompt);
+      
+      // Note: Robot responses will be added asynchronously by robot-worker
+      // The robot-worker will check for all responses being received and transition to voting
+    }
   }
 
   return {
@@ -846,27 +886,37 @@ async function submitVote(
   round.votes[body.voter] = body.votedFor;
   match.updatedAt = new Date().toISOString();
 
-  // Generate robot votes if this is from the human
-  if (body.voter === "A") {
-    // Simple robot voting for MVP - robots vote randomly but not for themselves
-    const participants = ["A", "B", "C", "D"];
-
-    // Robot B votes
-    const bChoices = participants.filter((p) => p !== "B");
-    round.votes["B"] = bChoices[Math.floor(Math.random() * bChoices.length)];
-
-    // Robot C votes
-    const cChoices = participants.filter((p) => p !== "C");
-    round.votes["C"] = cChoices[Math.floor(Math.random() * cChoices.length)];
-
-    // Robot D votes
-    const dChoices = participants.filter((p) => p !== "D");
-    round.votes["D"] = dChoices[Math.floor(Math.random() * dChoices.length)];
+  // Generate robot votes if this is from a human
+  const votingParticipant = match.participants.find(p => p.identity === body.voter);
+  if (votingParticipant && !votingParticipant.isAI) {
+    // Check if all humans have voted
+    const humanParticipants = match.participants.filter(p => !p.isAI);
+    const humanVotes = humanParticipants.filter(p => round.votes[p.identity]);
+    
+    console.log(`Human vote saved. ${humanVotes.length}/${humanParticipants.length} humans have voted`);
+    
+    // Only generate AI votes when ALL humans have voted
+    if (humanVotes.length === humanParticipants.length) {
+      console.log("All humans have voted, generating AI votes...");
+      
+      // Get all participant identities
+      const allIdentities = match.participants.map(p => p.identity);
+      
+      // Generate votes for each AI participant
+      const aiParticipants = match.participants.filter(p => p.isAI);
+      for (const ai of aiParticipants) {
+        // AI votes randomly but not for themselves
+        const choices = allIdentities.filter(id => id !== ai.identity);
+        round.votes[ai.identity] = choices[Math.floor(Math.random() * choices.length)];
+        console.log(`AI ${ai.identity} voted for ${round.votes[ai.identity]}`);
+      }
+    }
   }
 
   // Check if all votes are in
   const voteCount = Object.keys(round.votes).length;
-  if (voteCount === 4 && round.status === "voting") {
+  const totalParticipants = match.participants.length;
+  if (voteCount === totalParticipants && round.status === "voting") {
     round.status = "complete";
     console.log(`All votes collected for match ${matchId} round ${body.round}`);
 
@@ -933,18 +983,22 @@ async function submitVote(
       body.votedFor
     );
 
-    // If we just started a new round, trigger robot responses
+    // If we just started a new round and this is the first human to enter it, prepare for AI responses
     if (
-      body.voter === "A" &&
+      votingParticipant && !votingParticipant.isAI &&
       match.status === "round_active" &&
       match.currentRound > 1
     ) {
       const newRound = match.rounds[match.rounds.length - 1];
-      await triggerRobotResponses(
-        matchId,
-        newRound.roundNumber,
-        newRound.prompt
-      );
+      // Check if this is the first human entering this round
+      const humanResponsesInNewRound = match.participants
+        .filter(p => !p.isAI)
+        .filter(p => newRound.responses && newRound.responses[p.identity])
+        .length;
+      
+      if (humanResponsesInNewRound === 0) {
+        console.log("First human entering new round, AI responses will be triggered after all humans respond");
+      }
     }
 
     return {
