@@ -73,7 +73,8 @@ export const MatchSchema = z.object({
   status: MatchStatusSchema,
   currentRound: z.number().int().positive(),
   totalRounds: z.number().int().positive(),
-  participants: z.array(ParticipantSchema).length(4), // Always 4 participants
+  totalParticipants: z.number().int().positive().optional(), // Expected total from template
+  participants: z.array(ParticipantSchema),
   rounds: z.array(RoundSchema),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -86,6 +87,29 @@ export const MatchSchema = z.object({
     ai: z.number()
   }).optional(),
   inviteUrl: z.string().optional()
+}).superRefine((data, ctx) => {
+  // Get expected total from totalParticipants or default to 4
+  const expectedTotal = data.totalParticipants || 4;
+  
+  if (data.status === 'waiting_for_players') {
+    // During waiting, allow 1 to expectedTotal participants
+    if (data.participants.length < 1 || data.participants.length > expectedTotal) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Waiting matches must have 1-${expectedTotal} participants`,
+        path: ['participants']
+      });
+    }
+  } else {
+    // Active matches must have exact count
+    if (data.participants.length !== expectedTotal) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Active matches must have exactly ${expectedTotal} participants`,
+        path: ['participants']
+      });
+    }
+  }
 });
 export type Match = z.infer<typeof MatchSchema>;
 
