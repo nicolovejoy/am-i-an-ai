@@ -55,7 +55,7 @@ export function WaitingRoom() {
             {participant.displayName || participant.playerName}
           </p>
           <p className="text-xs text-slate-500">
-            {participant.isAI ? 'AI Player' : 'Human Player'}
+            {index === 0 ? 'Host' : 'Player'}
           </p>
         </div>
         {index === 0 && (

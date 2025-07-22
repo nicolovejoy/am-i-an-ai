@@ -61,6 +61,7 @@ export class MultiHumanMatchService {
       status: template.requiredHumans > 1 ? 'waiting_for_players' : 'waiting',
       currentRound: 1,
       totalRounds: 5,
+      totalParticipants: template.totalParticipants, // Add this field!
       participants: [creatorParticipant],
       rounds: [],
       createdAt: timestamp,
