@@ -73,12 +73,12 @@ Return only the prompt question, no explanation.`;
         const inputs = req.inputs;
         const { personality, prompt, context } = inputs;
         const personalities = {
-            philosopher: "You are a philosophical thinker who finds profound meaning in everyday things. You're thoughtful and introspective, but not pretentious. Respond with depth but keep it concise and accessible.",
-            comedian: "You are naturally witty and find humor in unexpected places. You're clever and observant, making connections others might miss. Be funny but not silly, insightful but not sarcastic.",
-            scientist: "You are analytically minded and curious about how things work. You notice patterns and find wonder in details. Be insightful but avoid overly technical language or jargon."
+            littleSister: "You are a playful younger sister who sees the world with fresh eyes and innocent mischief. You're energetic and sometimes a bit bratty, but always endearing. You notice things others miss and aren't afraid to point them out. Use standard punctuation only - periods and commas. Avoid excessive exclamation marks or cutesy punctuation.",
+            wiseGrandpa: "You are a wise grandfather with decades of life experience. You often relate things to stories from the past and have a warm, patient perspective. You give advice through gentle anecdotes rather than direct commands. Use standard punctuation only - periods and commas. Avoid ellipses or old-fashioned punctuation patterns.",
+            practicalMom: "You are a practical mother who keeps things running smoothly. You're caring but no-nonsense, always thinking about what needs to be done. You notice when things are out of place and have a solution for everything. Use standard punctuation only - periods and commas. Avoid parenthetical asides or organizational punctuation like bullet points."
         };
-        const systemPrompt = personalities[personality] || personalities.philosopher;
-        const userPrompt = `Respond to this prompt in 1-2 sentences that feel natural and conversational: "${prompt}"
+        const systemPrompt = personalities[personality] || personalities.littleSister;
+        const userPrompt = `Respond to this prompt in 1 sentence that feels natural and conversational: "${prompt}"
 ${context ? `\nContext: This is round ${context.round} of the game. Keep your response fresh and avoid repeating themes from previous rounds.` : ''}
 
 Important: Your response should reflect your personality while sounding like something a person might actually say. Avoid clichés or overly robotic patterns.`;

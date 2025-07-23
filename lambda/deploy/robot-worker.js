@@ -51,17 +51,11 @@ const robotPersonalities = {
         ],
     },
 };
-// Map robot IDs to AI personalities and dwarf names
+// Map robot IDs to AI personalities
 const robotToPersonality = {
-    'B': 'philosopher', // poetic → philosopher
-    'C': 'scientist', // analytical → scientist
-    'D': 'comedian' // whimsical → comedian
-};
-// Map robot IDs to dwarf names for consistent identity
-const robotToDwarfName = {
-    'B': 'Doc', // The wise philosopher (Doc seems fitting)
-    'C': 'Happy', // The analytical scientist (ironic but memorable)
-    'D': 'Dopey' // The whimsical comedian (perfect match)
+    'B': 'littleSister', // playful and mischievous
+    'C': 'wiseGrandpa', // experienced storyteller
+    'D': 'practicalMom' // organized and caring
 };
 async function generateRobotResponse(prompt, robotId, roundNumber) {
     const personality = robotToPersonality[robotId];
@@ -109,8 +103,7 @@ async function generateRobotResponse(prompt, robotId, roundNumber) {
             console.error(`AI service response missing expected fields. Body:`, parsedBody);
             throw new Error('Invalid response from AI service');
         }
-        const dwarfName = robotToDwarfName[robotId] || robotId;
-        return parsedBody.result.response + ` [AI: ${dwarfName}]`;
+        return parsedBody.result.response;
     }
     catch (error) {
         console.error(`Failed to generate AI response for robot ${robotId}:`, error);
@@ -125,8 +118,7 @@ function generateFallbackResponse(_prompt, robotId) {
     }
     // Use existing hardcoded responses as fallback
     const responses = personality.responses;
-    const dwarfName = robotToDwarfName[robotId] || robotId;
-    return responses[Math.floor(Math.random() * responses.length)] + ` [Fallback: ${dwarfName}]`;
+    return responses[Math.floor(Math.random() * responses.length)];
 }
 // Notify match-service of robot response completion
 async function notifyStateUpdate(matchId, roundNumber, robotId) {

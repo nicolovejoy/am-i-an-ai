@@ -83,13 +83,13 @@ export function PlayerInput({ playerNumber, onSendMessage, isActive, messageCoun
               e.target.style.borderColor = config.borderColor;
               e.target.style.boxShadow = 'none';
             }}
-            maxLength={280}
+            maxLength={150}
           />
           
           {/* Character count */}
           <div 
             className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium"
-            style={{ color: messageInput.length > 250 ? '#EF4444' : config.color }}
+            style={{ color: messageInput.length > 130 ? '#EF4444' : config.color }}
           >
             {messageInput.length}/280
           </div>

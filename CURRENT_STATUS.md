@@ -3,6 +3,7 @@
 **Last Updated: 2025-07-23**
 
 ## Architecture
+
 - Frontend: React/TypeScript with Vite
 - Backend: AWS Lambda functions
 - Database: DynamoDB (matches table with composite key: matchId + timestamp)
@@ -12,6 +13,7 @@
 ### Data Models
 
 **User Entity** (persistent participants):
+
 - `userId`: UUID
 - `userType`: "human" | "ai"
 - `displayName`: string
@@ -23,10 +25,12 @@
 - `modelConfig`: { provider: "bedrock", model: "claude-3-haiku" | "claude-3-sonnet" }
 
 **Match Templates**:
+
 - `classic_1v3`: 1 human + 3 AI robots (original mode)
 - `duo_2v2`: 2 humans + 2 AI robots (multi-human mode)
 
 **Match Flow**:
+
 1. Creator selects template and starts match
 2. For multi-human: generates 6-character invite code, waits for players
 3. When all humans join: assigns random AI users, starts round 1
@@ -37,11 +41,13 @@
 ## Completed Features
 
 ### User System
+
 - Persistent users table (human and AI)
 - 5 AI personalities with unique traits
 - User service for CRUD operations
 
 ### Multi-Human Matches
+
 - Template-based match creation (1v3, 2v2)
 - 6-character invite codes
 - Waiting room with player status
@@ -50,6 +56,7 @@
 - Auto-start when ready
 
 ### Core Gameplay
+
 - 5-round matches with AI-generated prompts
 - Real-time response collection
 - Voting on human identity
@@ -57,27 +64,35 @@
 - Match history tracking
 
 ## Deployment
+
 ```bash
 # Backend
 cd infrastructure
 ./scripts/deploy-lambdas.sh
 
-# Frontend  
+# Frontend
 cd infrastructure
 ./scripts/deploy-frontend.sh
 ```
 
 ## Recent Updates (2025-07-23)
+
 - **Added Admin Debug Mode**: Shows AI metadata during matches
   - Toggle button in bottom-right corner (admin users only)
   - Displays participant AI/Human status, personalities
   - Shows fallback response indicators
   - Real-time voting tracking
   - Full match state inspection
+- **CloudWatch Monitoring**: Added scripts for metrics and dashboard
+  - setup-cloudwatch-metrics.sh creates metric filters
+  - create-cloudwatch-dashboard.sh builds monitoring dashboard
+  - Tracks AI prompt failures, match activity, errors
 - **Improved Testing**: Added comprehensive integration tests for 2v2 flow
 - **Code Documentation**: Added TODO comments for future >4 player support
+- **Identity Refactor Plan**: Documented approach to align with NOMENCLATURE.md
 
 ## Recent Fixes (2025-07-22)
+
 - Fixed join match bug: UpdateCommand conditionally includes :waitingFor field
 - Implemented AI-generated prompts using AI service
 - Fixed schema validation to support variable participant counts (1-N during waiting)
@@ -92,31 +107,36 @@ cd infrastructure
   - Replaced RobotResponseStatus with anonymous ParticipantWaitingStatus
 
 ## Known Issues
+
+- **AI prompt generation failing**: Model name format mismatch causes fallback to hardcoded prompts (see AI_PROMPT_FIX.md)
 - **No invite code input on dashboard**: Must use full URL to join matches (no way to enter just the code)
-- **AI prompt generation inconsistency**: Fallback prompts may appear if AI service fails
 - Invite code lookup uses table scan instead of GSI (performance concern at scale)
 - No real-time updates when other players join or make moves
 
 ## Technical Implementation Details
 
 ### Response Anonymization
+
 - Backend stores responses by userId
-- Generates unique responseId for each response  
+- Generates unique responseId for each response
 - Creates responseMapping: responseId → userId
 - Shuffles and presents responses by responseId
 - Votes use responseId, backend resolves to userId for scoring
 
 ### Database Schema
+
 - **users table**: Persistent user entities (human and AI)
 - **matches table**: Match state with composite key (matchId + timestamp=0)
   - Uses table scan for invite code lookup (needs GSI for production)
 - **Future**: match_templates table for configurable templates
 
 ## Next Steps
+
+- **Fix AI prompt generation** (change model name format - see AI_PROMPT_FIX.md)
+- **Add invite code input field** on dashboard
+- **Implement identity refactor** (see IDENTITY_REFACTOR_PLAN.md)
 - Add GSI for invite code lookups (performance improvement)
-- Admin debug mode showing AI metadata
 - WebSocket real-time updates
-- Email/SMS notifications for invites
-- Configurable match templates (3+ players)
-- Tournament mode
-- Code splitting to reduce frontend bundle size (currently 518KB)
+  -- Email/SMS notifications for invites as well as "it's your turn to play, (name)":
+- Error handling for player disconnections
+- Code splitting to reduce frontend bundle size (currently 522KB)

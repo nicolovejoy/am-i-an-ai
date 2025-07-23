@@ -12,7 +12,7 @@ export const GAME_CONFIG = {
   participantsPerMatch: 4,
   humansPerMatch: 2,
   aiPerMatch: 2,
-  messageMaxLength: 280
+  messageMaxLength: 150
 } as const;
 
 export const IDENTITIES = ['A', 'B', 'C', 'D'] as const;

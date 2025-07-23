@@ -85,7 +85,7 @@ export default function ResponseInputV2() {
             onKeyDown={handleKeyPress}
             placeholder="Write your response... Let your humanity shine through!"
             className="w-full h-32 px-4 py-3 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder-slate-500 disabled:opacity-50"
-            maxLength={280}
+            maxLength={150}
             disabled={isSubmitting}
           />
           

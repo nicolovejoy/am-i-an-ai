@@ -14,10 +14,10 @@ const USERS_TABLE = process.env.USERS_TABLE_NAME || 'robot-orchestra-users';
 const AI_USERS: Omit<User, 'userId' | 'createdAt' | 'updatedAt'>[] = [
   {
     userType: 'ai',
-    displayName: 'Thoughtful Philosopher',
+    displayName: 'Playful Little Sister',
     isActive: true,
     isAdmin: false,
-    personality: 'philosopher',
+    personality: 'littleSister',
     modelConfig: {
       provider: 'bedrock',
       model: 'claude-3-haiku',
@@ -25,10 +25,10 @@ const AI_USERS: Omit<User, 'userId' | 'createdAt' | 'updatedAt'>[] = [
   },
   {
     userType: 'ai',
-    displayName: 'Analytical Scientist',
+    displayName: 'Wise Grandpa',
     isActive: true,
     isAdmin: false,
-    personality: 'scientist',
+    personality: 'wiseGrandpa',
     modelConfig: {
       provider: 'bedrock',
       model: 'claude-3-haiku',
@@ -36,32 +36,10 @@ const AI_USERS: Omit<User, 'userId' | 'createdAt' | 'updatedAt'>[] = [
   },
   {
     userType: 'ai',
-    displayName: 'Witty Comedian',
+    displayName: 'Practical Mom',
     isActive: true,
     isAdmin: false,
-    personality: 'comedian',
-    modelConfig: {
-      provider: 'bedrock',
-      model: 'claude-3-haiku',
-    },
-  },
-  {
-    userType: 'ai',
-    displayName: 'Creative Artist',
-    isActive: true,
-    isAdmin: false,
-    personality: 'artist',
-    modelConfig: {
-      provider: 'bedrock',
-      model: 'claude-3-sonnet',
-    },
-  },
-  {
-    userType: 'ai',
-    displayName: 'Pragmatic Engineer',
-    isActive: true,
-    isAdmin: false,
-    personality: 'engineer',
+    personality: 'practicalMom',
     modelConfig: {
       provider: 'bedrock',
       model: 'claude-3-haiku',

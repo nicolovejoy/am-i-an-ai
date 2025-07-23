@@ -61,7 +61,7 @@ async function generateAIPrompt(
       path: "/ai/generate",
       body: JSON.stringify({
         task: "generate_prompt",
-        model: "anthropic.claude-3-haiku-20240307-v1:0",
+        model: "claude-3-haiku",
         inputs: {
           round,
           previousPrompts,
