@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 // Request validation schema
 const AIRequestSchema = z.object({
-  task: z.enum(['generate_prompt', 'robot_response', 'analyze_match', 'summarize', 'custom']),
+  task: z.enum(['generate_prompt', 'robot_response', 'analyze_match', 'summarize', 'grammar_correction', 'custom']),
   model: z.enum(['claude-3-sonnet', 'claude-3-haiku', 'claude-3-opus']).optional(),
   inputs: z.record(z.any()),
   options: z.object({

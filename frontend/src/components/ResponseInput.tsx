@@ -1,18 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
-import { FiSend } from 'react-icons/fi';
+import { FiSend, FiEdit3 } from 'react-icons/fi';
 import { Card, Button } from './ui';
 import { useSubmitResponse } from '@/store/server-state/match.mutations';
 import { useMyIdentity, useCurrentRound } from '@/store/server-state/match.queries';
 import { useUIStore } from '@/store/ui-state/ui.store';
+import { useGrammarCorrection } from '@/hooks/useGrammarCorrection';
+import CorrectionPreview from './CorrectionPreview';
 
 export default function ResponseInputV2() {
   const [response, setResponse] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [correctionResult, setCorrectionResult] = useState<{
+    corrected: string;
+    changes: Array<{ original: string; corrected: string; type: string }>;
+  } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Server state
   const myIdentity = useMyIdentity();
   const currentRound = useCurrentRound();
   const submitResponse = useSubmitResponse();
+  const grammarCorrection = useGrammarCorrection();
   
   // UI state - use individual selectors
   const setLocalTyping = useUIStore(state => state.setLocalTyping);
@@ -58,6 +66,35 @@ export default function ResponseInputV2() {
       handleSubmit();
     }
   };
+  
+  const handlePolish = async () => {
+    const trimmedResponse = response.trim();
+    if (!trimmedResponse) return;
+    
+    try {
+      const result = await grammarCorrection.mutateAsync({
+        text: trimmedResponse,
+        preserveStyle: true
+      });
+      
+      setCorrectionResult(result);
+      setShowPreview(true);
+    } catch (error) {
+      console.error('Grammar correction failed:', error);
+      // Could show a toast notification here
+    }
+  };
+  
+  const acceptCorrection = () => {
+    if (correctionResult) {
+      setResponse(correctionResult.corrected);
+      textareaRef.current?.focus();
+    }
+  };
+  
+  const rejectCorrection = () => {
+    textareaRef.current?.focus();
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setResponse(e.target.value);
@@ -68,7 +105,8 @@ export default function ResponseInputV2() {
   const isSubmitting = submitResponse.isPending;
 
   return (
-    <Card className={animationsEnabled ? 'transition-all duration-200' : ''}>
+    <>
+      <Card className={animationsEnabled ? 'transition-all duration-200' : ''}>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Your Response</h3>
@@ -99,17 +137,41 @@ export default function ResponseInputV2() {
               </span>
             </div>
             
-            <Button
-              onClick={handleSubmit}
-              disabled={!response.trim() || isSubmitting}
-              className="flex items-center justify-center gap-2 w-full sm:w-auto"
-            >
-              <FiSend size={16} />
-              {isSubmitting ? 'Submitting...' : 'Submit Response'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handlePolish}
+                disabled={!response.trim() || grammarCorrection.isPending}
+                variant="secondary"
+                className="flex items-center gap-2"
+              >
+                <FiEdit3 size={16} />
+                Polish
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!response.trim() || isSubmitting}
+                className="flex items-center justify-center gap-2 flex-1 sm:flex-initial"
+              >
+                <FiSend size={16} />
+                {isSubmitting ? 'Submitting...' : 'Submit'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-    </Card>
+      </Card>
+      
+      {correctionResult && (
+        <CorrectionPreview
+          isOpen={showPreview}
+          onClose={() => setShowPreview(false)}
+          original={response}
+          corrected={correctionResult.corrected}
+          changes={correctionResult.changes}
+          onAccept={acceptCorrection}
+          onReject={rejectCorrection}
+        />
+      )}
+    </>
   );
 }

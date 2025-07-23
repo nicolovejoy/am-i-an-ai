@@ -66,7 +66,8 @@ async function generateRobotResponse(
   prompt: string, 
   robotId: string, 
   roundNumber?: number,
-  humanResponses?: { current?: string; previous?: string[] }
+  humanResponses?: { current?: string; previous?: string[] },
+  previousAIResponses?: string[]
 ): Promise<string> {
   const personality = robotToPersonality[robotId];
   
@@ -85,7 +86,8 @@ async function generateRobotResponse(
         prompt,
         context: {
           round: roundNumber,
-          humanResponses: humanResponses
+          humanResponses: humanResponses,
+          previousAIResponses: previousAIResponses
         }
       },
       options: {
@@ -283,8 +285,17 @@ async function processRobotResponse(record: SQSRecord): Promise<void> {
     }
   }
   
-  // Generate robot response with human style context
-  const response = await generateRobotResponse(prompt, robotId, roundNumber, humanResponses);
+  // Collect this AI's previous responses to avoid repetition
+  const previousAIResponses: string[] = [];
+  for (let i = 0; i < roundIndex; i++) {
+    const previousRound = match.rounds[i];
+    if (previousRound.responses && previousRound.responses[robotId]) {
+      previousAIResponses.push(previousRound.responses[robotId]);
+    }
+  }
+  
+  // Generate robot response with human style context and previous responses
+  const response = await generateRobotResponse(prompt, robotId, roundNumber, humanResponses, previousAIResponses);
   
   // Update the match with the robot's response
   const updateExpression = `SET rounds[${roundIndex}].responses.#robotId = :response, updatedAt = :updatedAt`;
