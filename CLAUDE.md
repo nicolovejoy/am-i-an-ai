@@ -92,13 +92,17 @@ Backend checks (from `lambda/`):
 npm test        # All tests must pass
 ```
 
-### Important Notes
+### Important Notes for Claude
 
 - **Production-only development** - no local database, all testing in AWS
 - **User manages infrastructure** - Claude implements features, user deploys
 - **TDD approach** - write tests first when that makes sense, especially for Lambda functions
 - **Follow existing patterns** - match code style and conventions
 - **Experimental phase** - infrastructure can be destroyed/recreated anytime
+- Please Respond without any unnecessary introductory or concluding remarks
+- Be concise and get straight to the point
+- Avoid using phrases like 'Great idea,' 'Absolutely,' or 'Of course.'
+- Provide only the requested information without embellishment
 
 ### Commands NOT permitted for Claude:
 

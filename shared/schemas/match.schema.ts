@@ -2,6 +2,8 @@
 import { z } from 'zod';
 
 // Core game types
+// TODO: To support more than 4 players, extend this enum with 'E', 'F', 'G', 'H', etc.
+// This will require updates to UI components, shuffle logic, and identity assignment
 export const IdentitySchema = z.enum(['A', 'B', 'C', 'D']);
 export type Identity = z.infer<typeof IdentitySchema>;
 

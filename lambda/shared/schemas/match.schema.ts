@@ -2,6 +2,8 @@
 import { z } from 'zod';
 
 // Core game types
+// TODO: To support more than 4 players, extend this enum with 'E', 'F', 'G', 'H', etc.
+// This will require updates to UI components, shuffle logic, and identity assignment
 export const IdentitySchema = z.enum(['A', 'B', 'C', 'D']);
 export type Identity = z.infer<typeof IdentitySchema>;
 
@@ -90,7 +92,7 @@ const MatchBaseSchema = z.object({
 });
 
 // Main Match schema with refinements
-export const MatchSchema = MatchBaseSchema.superRefine((data, ctx) => {
+export const MatchSchema = MatchBaseSchema.superRefine((data: z.infer<typeof MatchBaseSchema>, ctx: z.RefinementCtx) => {
   // Get expected total from totalParticipants or default to 4
   const expectedTotal = data.totalParticipants || 4;
   

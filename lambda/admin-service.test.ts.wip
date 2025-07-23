@@ -1,0 +1,522 @@
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, ScanCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { mockClient } from 'aws-sdk-client-mock';
+import { handler } from './admin-service';
+import { APIGatewayProxyEvent } from 'aws-lambda';
+
+const mockDocClient = mockClient(DynamoDBDocumentClient);
+
+describe('Admin Service Lambda', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDocClient.reset();
+    
+    // Set environment variables
+    process.env.USERS_TABLE_NAME = 'test-users';
+    process.env.MATCHES_TABLE_NAME = 'test-matches';
+  });
+
+  const createEvent = (
+    httpMethod: string,
+    path: string,
+    body?: any,
+    headers?: any
+  ): APIGatewayProxyEvent => ({
+    httpMethod,
+    path,
+    body: body ? JSON.stringify(body) : null,
+    headers: headers || { Authorization: 'Bearer admin-token' },
+    multiValueHeaders: {},
+    isBase64Encoded: false,
+    pathParameters: path.includes('{') ? {} : null,
+    queryStringParameters: null,
+    multiValueQueryStringParameters: null,
+    stageVariables: null,
+    requestContext: {} as any,
+    resource: ''
+  });
+
+  describe('Authentication', () => {
+    it('should reject requests without auth header', async () => {
+      const event = createEvent('GET', '/admin/users', null, {});
+      const response = await handler(event);
+      
+      expect(response.statusCode).toBe(401);
+      expect(JSON.parse(response.body).error).toContain('Unauthorized');
+    });
+
+    it('should reject requests with invalid auth token', async () => {
+      const event = createEvent('GET', '/admin/users', null, {
+        Authorization: 'Bearer invalid-token'
+      });
+      const response = await handler(event);
+      
+      expect(response.statusCode).toBe(401);
+      expect(JSON.parse(response.body).error).toContain('Unauthorized');
+    });
+  });
+
+  describe('User Management', () => {
+    describe('GET /admin/users', () => {
+      it('should list all users with admin metadata', async () => {
+        mockDocClient.on(ScanCommand).resolves({
+          Items: [
+            {
+              userId: 'user-1',
+              userType: 'human',
+              displayName: 'Alice',
+              email: 'alice@example.com',
+              isActive: true,
+              isAdmin: true,
+              createdAt: '2025-01-01T00:00:00Z'
+            },
+            {
+              userId: 'user-2',
+              userType: 'human',
+              displayName: 'Bob',
+              email: 'bob@example.com',
+              isActive: true,
+              isAdmin: false,
+              createdAt: '2025-01-02T00:00:00Z'
+            },
+            {
+              userId: 'ai-1',
+              userType: 'ai',
+              displayName: 'Claude',
+              personality: 'philosopher',
+              modelConfig: { provider: 'bedrock', model: 'claude-3-haiku' },
+              isActive: true
+            }
+          ]
+        });
+
+        const event = createEvent('GET', '/admin/users');
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.users).toHaveLength(3);
+        expect(body.users[0]).toHaveProperty('email');
+        expect(body.users[2]).toHaveProperty('personality');
+      });
+
+      it('should filter users by type', async () => {
+        mockDocClient.on(ScanCommand).resolves({
+          Items: [
+            {
+              userId: 'ai-1',
+              userType: 'ai',
+              displayName: 'Claude',
+              personality: 'philosopher'
+            },
+            {
+              userId: 'ai-2',
+              userType: 'ai',
+              displayName: 'GPT',
+              personality: 'comedian'
+            }
+          ]
+        });
+
+        const event = createEvent('GET', '/admin/users?type=ai');
+        event.queryStringParameters = { type: 'ai' };
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.users).toHaveLength(2);
+        expect(body.users.every((u: any) => u.userType === 'ai')).toBe(true);
+      });
+    });
+
+    describe('PATCH /admin/users/{userId}', () => {
+      it('should update user admin status', async () => {
+        mockDocClient.on(GetCommand).resolves({
+          Item: {
+            userId: 'user-1',
+            userType: 'human',
+            displayName: 'Alice',
+            isAdmin: false
+          }
+        });
+
+        mockDocClient.on(UpdateCommand).resolves({
+          Attributes: {
+            userId: 'user-1',
+            userType: 'human',
+            displayName: 'Alice',
+            isAdmin: true
+          }
+        });
+
+        const event = createEvent('PATCH', '/admin/users/user-1', { isAdmin: true });
+        event.pathParameters = { userId: 'user-1' };
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.user.isAdmin).toBe(true);
+      });
+
+      it('should prevent making AI users admin', async () => {
+        mockDocClient.on(GetCommand).resolves({
+          Item: {
+            userId: 'ai-1',
+            userType: 'ai',
+            displayName: 'Claude'
+          }
+        });
+
+        const event = createEvent('PATCH', '/admin/users/ai-1', { isAdmin: true });
+        event.pathParameters = { userId: 'ai-1' };
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(400);
+        expect(JSON.parse(response.body).error).toContain('AI users cannot be admins');
+      });
+
+      it('should update user active status', async () => {
+        mockDocClient.on(GetCommand).resolves({
+          Item: {
+            userId: 'user-1',
+            userType: 'human',
+            displayName: 'Alice',
+            isActive: true
+          }
+        });
+
+        mockDocClient.on(UpdateCommand).resolves({
+          Attributes: {
+            userId: 'user-1',
+            userType: 'human',
+            displayName: 'Alice',
+            isActive: false
+          }
+        });
+
+        const event = createEvent('PATCH', '/admin/users/user-1', { isActive: false });
+        event.pathParameters = { userId: 'user-1' };
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.user.isActive).toBe(false);
+      });
+    });
+  });
+
+  describe('Match Management', () => {
+    describe('GET /admin/matches', () => {
+      it('should list all matches with admin metadata', async () => {
+        mockDocClient.on(ScanCommand).resolves({
+          Items: [
+            {
+              matchId: 'match-1',
+              status: 'completed',
+              templateType: 'classic_1v3',
+              participants: [
+                { identity: 'A', userId: 'user-1', displayName: 'Alice', isAI: false },
+                { identity: 'B', userId: 'ai-1', displayName: 'Claude', isAI: true, personality: 'philosopher' },
+                { identity: 'C', userId: 'ai-2', displayName: 'GPT', isAI: true, personality: 'comedian' },
+                { identity: 'D', userId: 'ai-3', displayName: 'Gemini', isAI: true, personality: 'scientist' }
+              ],
+              createdAt: '2025-01-20T10:00:00Z',
+              completedAt: '2025-01-20T10:30:00Z',
+              timestamp: 0
+            },
+            {
+              matchId: 'match-2',
+              status: 'round_active',
+              templateType: 'duo_2v2',
+              currentRound: 3,
+              participants: [
+                { identity: 'A', userId: 'user-1', displayName: 'Alice', isAI: false },
+                { identity: 'B', userId: 'user-2', displayName: 'Bob', isAI: false },
+                { identity: 'C', userId: 'ai-1', displayName: 'Claude', isAI: true },
+                { identity: 'D', userId: 'ai-2', displayName: 'GPT', isAI: true }
+              ],
+              createdAt: '2025-01-20T11:00:00Z',
+              timestamp: 0
+            }
+          ]
+        });
+
+        const event = createEvent('GET', '/admin/matches');
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.matches).toHaveLength(2);
+        expect(body.matches[0].participants.some((p: any) => p.personality)).toBe(true);
+      });
+
+      it('should filter matches by status', async () => {
+        mockDocClient.on(ScanCommand).resolves({
+          Items: [
+            {
+              matchId: 'match-1',
+              status: 'completed',
+              templateType: 'classic_1v3',
+              timestamp: 0
+            }
+          ]
+        });
+
+        const event = createEvent('GET', '/admin/matches?status=completed');
+        event.queryStringParameters = { status: 'completed' };
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.matches).toHaveLength(1);
+        expect(body.matches[0].status).toBe('completed');
+      });
+
+      it('should filter matches by date range', async () => {
+        const startDate = '2025-01-20';
+        const endDate = '2025-01-21';
+        
+        mockDocClient.on(ScanCommand).resolves({
+          Items: [
+            {
+              matchId: 'match-1',
+              createdAt: '2025-01-20T10:00:00Z',
+              timestamp: 0
+            }
+          ]
+        });
+
+        const event = createEvent('GET', `/admin/matches?startDate=${startDate}&endDate=${endDate}`);
+        event.queryStringParameters = { startDate, endDate };
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.matches).toHaveLength(1);
+      });
+    });
+
+    describe('GET /admin/matches/{matchId}', () => {
+      it('should get detailed match information with AI metadata', async () => {
+        mockDocClient.on(GetCommand).resolves({
+          Item: {
+            matchId: 'match-1',
+            status: 'completed',
+            participants: [
+              { 
+                identity: 'A', 
+                userId: 'user-1', 
+                displayName: 'Alice', 
+                isAI: false,
+                score: 10
+              },
+              { 
+                identity: 'B', 
+                userId: 'ai-1', 
+                displayName: 'Claude', 
+                isAI: true, 
+                personality: 'philosopher',
+                modelConfig: { provider: 'bedrock', model: 'claude-3-haiku' },
+                score: 15
+              }
+            ],
+            rounds: [
+              {
+                roundNumber: 1,
+                prompt: 'What brings you joy?',
+                responses: {
+                  'A': 'Sunshine and coffee',
+                  'B': 'The pursuit of knowledge'
+                },
+                responseMetadata: {
+                  'B': {
+                    modelUsed: 'claude-3-haiku',
+                    responseTime: 1234,
+                    fallback: false
+                  }
+                },
+                votes: {
+                  'A': 'resp-2',
+                  'B': 'resp-1'
+                }
+              }
+            ],
+            timestamp: 0
+          }
+        });
+
+        const event = createEvent('GET', '/admin/matches/match-1');
+        event.pathParameters = { matchId: 'match-1' };
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.match.participants[1]).toHaveProperty('personality');
+        expect(body.match.rounds[0]).toHaveProperty('responseMetadata');
+      });
+    });
+
+    describe('DELETE /admin/matches/{matchId}', () => {
+      it('should soft delete a match', async () => {
+        mockDocClient.on(GetCommand).resolves({
+          Item: {
+            matchId: 'match-1',
+            status: 'completed',
+            timestamp: 0
+          }
+        });
+
+        mockDocClient.on(UpdateCommand).resolves({
+          Attributes: {
+            matchId: 'match-1',
+            status: 'completed',
+            deleted: true,
+            deletedAt: new Date().toISOString(),
+            deletedBy: 'admin-user'
+          }
+        });
+
+        const event = createEvent('DELETE', '/admin/matches/match-1');
+        event.pathParameters = { matchId: 'match-1' };
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.message).toContain('deleted');
+      });
+
+      it('should prevent deleting active matches', async () => {
+        mockDocClient.on(GetCommand).resolves({
+          Item: {
+            matchId: 'match-1',
+            status: 'round_active',
+            timestamp: 0
+          }
+        });
+
+        const event = createEvent('DELETE', '/admin/matches/match-1');
+        event.pathParameters = { matchId: 'match-1' };
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(400);
+        expect(JSON.parse(response.body).error).toContain('Cannot delete active match');
+      });
+    });
+  });
+
+  describe('Analytics', () => {
+    describe('GET /admin/analytics/usage', () => {
+      it('should return AI usage statistics', async () => {
+        // Mock scanning matches for AI usage
+        mockDocClient.on(ScanCommand).resolves({
+          Items: [
+            {
+              matchId: 'match-1',
+              participants: [
+                { isAI: true, modelConfig: { model: 'claude-3-haiku' } },
+                { isAI: true, modelConfig: { model: 'claude-3-sonnet' } }
+              ],
+              rounds: [
+                { responseMetadata: { 'B': { modelUsed: 'claude-3-haiku', responseTime: 1000 } } },
+                { responseMetadata: { 'C': { modelUsed: 'claude-3-sonnet', responseTime: 2000 } } }
+              ],
+              timestamp: 0
+            }
+          ]
+        });
+
+        const event = createEvent('GET', '/admin/analytics/usage');
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.usage).toHaveProperty('byModel');
+        expect(body.usage).toHaveProperty('totalResponses');
+        expect(body.usage).toHaveProperty('averageResponseTime');
+      });
+    });
+
+    describe('GET /admin/analytics/matches', () => {
+      it('should return match statistics', async () => {
+        mockDocClient.on(ScanCommand).resolves({
+          Items: [
+            { status: 'completed', templateType: 'classic_1v3', timestamp: 0 },
+            { status: 'completed', templateType: 'duo_2v2', timestamp: 0 },
+            { status: 'round_active', templateType: 'duo_2v2', timestamp: 0 },
+            { status: 'abandoned', templateType: 'classic_1v3', timestamp: 0 }
+          ]
+        });
+
+        const event = createEvent('GET', '/admin/analytics/matches');
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.stats).toHaveProperty('total');
+        expect(body.stats).toHaveProperty('byStatus');
+        expect(body.stats).toHaveProperty('byTemplate');
+        expect(body.stats.total).toBe(4);
+        expect(body.stats.byStatus.completed).toBe(2);
+        expect(body.stats.byTemplate.duo_2v2).toBe(2);
+      });
+    });
+  });
+
+  describe('System Management', () => {
+    describe('GET /admin/system/health', () => {
+      it('should return system health status', async () => {
+        // Mock DynamoDB health check
+        mockDocClient.on(ScanCommand).resolves({ Items: [] });
+
+        const event = createEvent('GET', '/admin/system/health');
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.status).toBe('healthy');
+        expect(body.services).toHaveProperty('dynamodb');
+        expect(body.services).toHaveProperty('sqs');
+      });
+    });
+
+    describe('POST /admin/system/maintenance', () => {
+      it('should toggle maintenance mode', async () => {
+        const event = createEvent('POST', '/admin/system/maintenance', { enabled: true });
+        const response = await handler(event);
+        
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.maintenanceMode).toBe(true);
+      });
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle invalid paths', async () => {
+      const event = createEvent('GET', '/admin/invalid');
+      const response = await handler(event);
+      
+      expect(response.statusCode).toBe(404);
+      expect(JSON.parse(response.body).error).toContain('Not found');
+    });
+
+    it('should handle DynamoDB errors gracefully', async () => {
+      mockDocClient.on(ScanCommand).rejects(new Error('DynamoDB error'));
+
+      const event = createEvent('GET', '/admin/users');
+      const response = await handler(event);
+      
+      expect(response.statusCode).toBe(500);
+      expect(JSON.parse(response.body).error).toContain('Internal server error');
+    });
+
+    it('should validate request body', async () => {
+      const event = createEvent('PATCH', '/admin/users/user-1', { invalidField: true });
+      event.pathParameters = { userId: 'user-1' };
+      const response = await handler(event);
+      
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body).error).toContain('Invalid request');
+    });
+  });
+});

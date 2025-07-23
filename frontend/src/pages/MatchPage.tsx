@@ -2,6 +2,7 @@ import ChatInterface from '../components/ChatInterface';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, Suspense } from 'react';
 import { useMatch } from '@/store/server-state/match.queries';
+import { AdminDebugPanel } from '../components/AdminDebugPanel';
 
 // Wrap in Suspense to handle loading states better
 function MatchContent() {
@@ -21,7 +22,12 @@ function MatchContent() {
     }
   }, [matchId, isLoading, navigate]);
 
-  return <ChatInterface />;
+  return (
+    <>
+      <ChatInterface />
+      <AdminDebugPanel matchId={matchId || undefined} />
+    </>
+  );
 }
 
 export default function MatchPage() {

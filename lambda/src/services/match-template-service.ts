@@ -12,6 +12,10 @@ export interface MatchTemplate {
 }
 
 export class MatchTemplateService {
+  // TODO: When adding templates with >4 participants (e.g., trio_3v3 with 6 players):
+  // 1. Update IdentitySchema in match.schema.ts to include 'E', 'F', etc.
+  // 2. Update frontend components to handle additional identities
+  // 3. Ensure shuffle/assignment logic works with more players
   private static templates: Map<MatchTemplateType, MatchTemplate> = new Map([
     ['classic_1v3', {
       type: 'classic_1v3',

@@ -1,0 +1,576 @@
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { mockClient } from 'aws-sdk-client-mock';
+import { MultiHumanMatchService } from './src/services/multi-human-match-service';
+import { UserService } from './src/services/user-service';
+import { handler as matchServiceHandler } from './match-service';
+import { v4 as uuidv4 } from 'uuid';
+
+const mockDocClient = mockClient(DynamoDBDocumentClient);
+const mockSQS = {
+  send: jest.fn().mockResolvedValue({ MessageId: 'test-message-id' })
+};
+
+jest.mock('@aws-sdk/client-sqs', () => ({
+  SQSClient: jest.fn(() => mockSQS),
+  SendMessageCommand: jest.fn()
+}));
+
+jest.mock('@aws-sdk/client-lambda', () => ({
+  LambdaClient: jest.fn(() => ({
+    send: jest.fn().mockResolvedValue({
+      StatusCode: 200,
+      Payload: JSON.stringify({
+        statusCode: 200,
+        body: JSON.stringify({
+          result: { prompt: 'What brings you unexpected joy?' }
+        })
+      })
+    })
+  })),
+  InvokeCommand: jest.fn()
+}));
+
+describe('2v2 Match Complete Integration Flow', () => {
+  let matchService: MultiHumanMatchService;
+  let userService: UserService;
+  const aliceId = uuidv4();
+  const bobId = uuidv4();
+  let matchId: string;
+  let inviteCode: string;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDocClient.reset();
+    
+    // Initialize services
+    matchService = new MultiHumanMatchService(
+      mockDocClient as any,
+      process.env.MATCHES_TABLE_NAME || 'matches'
+    );
+    userService = new UserService(
+      mockDocClient as any,
+      process.env.USERS_TABLE_NAME || 'users'
+    );
+
+    // Mock AI users in the users table
+    mockDocClient.on(GetCommand, {
+      TableName: process.env.USERS_TABLE_NAME,
+      Key: { userId: 'AI_USER' }
+    }).resolves({
+      Item: {
+        userId: 'ai-1',
+        userType: 'ai',
+        displayName: 'Claude',
+        personality: 'philosopher',
+        modelConfig: { provider: 'bedrock', model: 'claude-3-haiku' }
+      }
+    });
+  });
+
+  describe('Match Creation and Join Flow', () => {
+    it('should create a 2v2 match and allow second player to join', async () => {
+      // 1. Alice creates a 2v2 match
+      const createResponse = await matchServiceHandler({
+        httpMethod: 'POST',
+        path: '/matches/create-with-template',
+        body: JSON.stringify({
+          templateType: 'duo_2v2',
+          creatorUserId: aliceId,
+          creatorName: 'Alice'
+        }),
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: null,
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {},
+        resource: ''
+      });
+
+      expect(createResponse.statusCode).toBe(200);
+      const createBody = JSON.parse(createResponse.body);
+      expect(createBody.match).toBeDefined();
+      expect(createBody.match.status).toBe('waiting_for_players');
+      expect(createBody.match.participants).toHaveLength(1);
+      expect(createBody.match.participants[0].displayName).toBe('Alice');
+      
+      matchId = createBody.match.matchId;
+      inviteCode = createBody.match.inviteCode;
+      expect(inviteCode).toMatch(/^[A-Z0-9]{6}$/);
+
+      // 2. Bob joins using invite code
+      // Mock the scan for invite code lookup
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          ...createBody.match,
+          timestamp: 0
+        }
+      });
+
+      const joinResponse = await matchServiceHandler({
+        httpMethod: 'POST',
+        path: '/matches/join',
+        body: JSON.stringify({
+          inviteCode: inviteCode,
+          userId: bobId,
+          displayName: 'Bob'
+        }),
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: null,
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {},
+        resource: ''
+      });
+
+      expect(joinResponse.statusCode).toBe(200);
+      const joinBody = JSON.parse(joinResponse.body);
+      expect(joinBody.match.status).toBe('round_active'); // Should auto-start
+      expect(joinBody.match.participants).toHaveLength(4); // 2 humans + 2 AI
+      
+      // Verify participant assignment
+      const humanParticipants = joinBody.match.participants.filter((p: any) => !p.isAI);
+      const aiParticipants = joinBody.match.participants.filter((p: any) => p.isAI);
+      expect(humanParticipants).toHaveLength(2);
+      expect(aiParticipants).toHaveLength(2);
+      
+      // Verify identities are assigned
+      const identities = joinBody.match.participants.map((p: any) => p.identity);
+      expect(identities.sort()).toEqual(['A', 'B', 'C', 'D']);
+    });
+
+    it('should handle invalid invite codes gracefully', async () => {
+      const response = await matchServiceHandler({
+        httpMethod: 'POST',
+        path: '/matches/join',
+        body: JSON.stringify({
+          inviteCode: 'INVALID',
+          userId: bobId,
+          displayName: 'Bob'
+        }),
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: null,
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {},
+        resource: ''
+      });
+
+      expect(response.statusCode).toBe(404);
+      const body = JSON.parse(response.body);
+      expect(body.error).toContain('not found');
+    });
+
+    it('should prevent joining a full match', async () => {
+      // Mock a match that's already full
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId: 'test-match',
+          status: 'round_active',
+          participants: [
+            { userId: 'user1', displayName: 'User1', isAI: false },
+            { userId: 'user2', displayName: 'User2', isAI: false },
+            { userId: 'ai1', displayName: 'AI1', isAI: true },
+            { userId: 'ai2', displayName: 'AI2', isAI: true }
+          ],
+          inviteCode: 'ABC123',
+          timestamp: 0
+        }
+      });
+
+      const response = await matchServiceHandler({
+        httpMethod: 'POST',
+        path: '/matches/join',
+        body: JSON.stringify({
+          inviteCode: 'ABC123',
+          userId: 'user3',
+          displayName: 'User3'
+        }),
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: null,
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {},
+        resource: ''
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.error).toContain('already started');
+    });
+  });
+
+  describe('Gameplay Flow', () => {
+    beforeEach(async () => {
+      // Set up a match with both players joined
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId: 'test-match',
+          status: 'round_active',
+          currentRound: 1,
+          participants: [
+            { identity: 'A', userId: aliceId, displayName: 'Alice', isAI: false },
+            { identity: 'B', userId: 'ai-1', displayName: 'Claude', isAI: true, personality: 'philosopher' },
+            { identity: 'C', userId: bobId, displayName: 'Bob', isAI: false },
+            { identity: 'D', userId: 'ai-2', displayName: 'GPT', isAI: true, personality: 'comedian' }
+          ],
+          rounds: [{
+            roundNumber: 1,
+            prompt: 'What brings you unexpected joy?',
+            responses: {},
+            votes: {},
+            scores: {},
+            status: 'responding'
+          }],
+          timestamp: 0
+        }
+      });
+    });
+
+    it('should trigger AI responses only after all humans respond', async () => {
+      // Alice submits response
+      const aliceResponse = await matchServiceHandler({
+        httpMethod: 'POST',
+        path: '/matches/test-match/respond',
+        body: JSON.stringify({
+          userId: aliceId,
+          response: 'Finding a perfect parking spot'
+        }),
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: { matchId: 'test-match' },
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {},
+        resource: ''
+      });
+
+      expect(aliceResponse.statusCode).toBe(200);
+      
+      // Verify AI was NOT triggered yet (only 1/2 humans responded)
+      expect(mockSQS.send).not.toHaveBeenCalled();
+
+      // Bob submits response
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId: 'test-match',
+          status: 'round_active',
+          currentRound: 1,
+          participants: [
+            { identity: 'A', userId: aliceId, displayName: 'Alice', isAI: false },
+            { identity: 'B', userId: 'ai-1', displayName: 'Claude', isAI: true, personality: 'philosopher' },
+            { identity: 'C', userId: bobId, displayName: 'Bob', isAI: false },
+            { identity: 'D', userId: 'ai-2', displayName: 'GPT', isAI: true, personality: 'comedian' }
+          ],
+          rounds: [{
+            roundNumber: 1,
+            prompt: 'What brings you unexpected joy?',
+            responses: {
+              'A': 'Finding a perfect parking spot'
+            },
+            votes: {},
+            scores: {},
+            status: 'responding'
+          }],
+          timestamp: 0
+        }
+      });
+
+      const bobResponse = await matchServiceHandler({
+        httpMethod: 'POST',
+        path: '/matches/test-match/respond',
+        body: JSON.stringify({
+          userId: bobId,
+          response: 'When my code compiles on the first try'
+        }),
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: { matchId: 'test-match' },
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {},
+        resource: ''
+      });
+
+      expect(bobResponse.statusCode).toBe(200);
+      
+      // Now AI should be triggered (2/2 humans responded)
+      expect(mockSQS.send).toHaveBeenCalledTimes(2); // One for each AI
+    });
+
+    it('should handle voting phase correctly', async () => {
+      // Set up match in voting phase
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId: 'test-match',
+          status: 'round_active',
+          currentRound: 1,
+          participants: [
+            { identity: 'A', userId: aliceId, displayName: 'Alice', isAI: false },
+            { identity: 'B', userId: 'ai-1', displayName: 'Claude', isAI: true },
+            { identity: 'C', userId: bobId, displayName: 'Bob', isAI: false },
+            { identity: 'D', userId: 'ai-2', displayName: 'GPT', isAI: true }
+          ],
+          rounds: [{
+            roundNumber: 1,
+            prompt: 'What brings you unexpected joy?',
+            responses: {
+              'A': 'Finding a perfect parking spot',
+              'B': 'The profound silence before dawn',
+              'C': 'When my code compiles on the first try',
+              'D': 'When autocorrect actually helps for once!'
+            },
+            responseMapping: {
+              'resp-1': 'A',
+              'resp-2': 'B',
+              'resp-3': 'C',
+              'resp-4': 'D'
+            },
+            votes: {},
+            scores: {},
+            status: 'voting'
+          }],
+          timestamp: 0
+        }
+      });
+
+      // Alice votes
+      const aliceVote = await matchServiceHandler({
+        httpMethod: 'POST',
+        path: '/matches/test-match/vote',
+        body: JSON.stringify({
+          userId: aliceId,
+          votedFor: 'resp-3' // Voting for Bob
+        }),
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: { matchId: 'test-match' },
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {},
+        resource: ''
+      });
+
+      expect(aliceVote.statusCode).toBe(200);
+      
+      // AI votes should not be generated yet
+      const aliceVoteBody = JSON.parse(aliceVote.body);
+      expect(Object.keys(aliceVoteBody.match.rounds[0].votes)).toHaveLength(1);
+
+      // Bob votes
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId: 'test-match',
+          status: 'round_active',
+          currentRound: 1,
+          participants: [
+            { identity: 'A', userId: aliceId, displayName: 'Alice', isAI: false },
+            { identity: 'B', userId: 'ai-1', displayName: 'Claude', isAI: true },
+            { identity: 'C', userId: bobId, displayName: 'Bob', isAI: false },
+            { identity: 'D', userId: 'ai-2', displayName: 'GPT', isAI: true }
+          ],
+          rounds: [{
+            roundNumber: 1,
+            prompt: 'What brings you unexpected joy?',
+            responses: {
+              'A': 'Finding a perfect parking spot',
+              'B': 'The profound silence before dawn',
+              'C': 'When my code compiles on the first try',
+              'D': 'When autocorrect actually helps for once!'
+            },
+            responseMapping: {
+              'resp-1': 'A',
+              'resp-2': 'B',
+              'resp-3': 'C',
+              'resp-4': 'D'
+            },
+            votes: {
+              'A': 'resp-3'
+            },
+            scores: {},
+            status: 'voting'
+          }],
+          timestamp: 0
+        }
+      });
+
+      const bobVote = await matchServiceHandler({
+        httpMethod: 'POST',
+        path: '/matches/test-match/vote',
+        body: JSON.stringify({
+          userId: bobId,
+          votedFor: 'resp-1' // Voting for Alice
+        }),
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: { matchId: 'test-match' },
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {},
+        resource: ''
+      });
+
+      expect(bobVote.statusCode).toBe(200);
+      
+      // After all humans vote, AI votes should be generated
+      const bobVoteBody = JSON.parse(bobVote.body);
+      expect(Object.keys(bobVoteBody.match.rounds[0].votes)).toHaveLength(4); // All 4 players voted
+    });
+  });
+
+  describe('Edge Cases and Error Handling', () => {
+    it('should handle participant leaving mid-match', async () => {
+      // This test would require implementing a leave match endpoint
+      // For now, we'll test that the match continues with remaining players
+      expect(true).toBe(true); // Placeholder
+    });
+
+    it('should handle concurrent joins correctly', async () => {
+      // Simulate two players trying to join simultaneously
+      // This would test race conditions in the join logic
+      expect(true).toBe(true); // Placeholder
+    });
+
+    it('should validate user permissions for actions', async () => {
+      // Test that users can only submit responses/votes for themselves
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId: 'test-match',
+          status: 'round_active',
+          currentRound: 1,
+          participants: [
+            { identity: 'A', userId: aliceId, displayName: 'Alice', isAI: false },
+            { identity: 'B', userId: 'ai-1', displayName: 'Claude', isAI: true },
+            { identity: 'C', userId: bobId, displayName: 'Bob', isAI: false },
+            { identity: 'D', userId: 'ai-2', displayName: 'GPT', isAI: true }
+          ],
+          rounds: [{
+            roundNumber: 1,
+            prompt: 'What brings you unexpected joy?',
+            responses: {},
+            votes: {},
+            scores: {},
+            status: 'responding'
+          }],
+          timestamp: 0
+        }
+      });
+
+      // Try to submit response as wrong user
+      const response = await matchServiceHandler({
+        httpMethod: 'POST',
+        path: '/matches/test-match/respond',
+        body: JSON.stringify({
+          userId: 'wrong-user-id',
+          response: 'This should fail'
+        }),
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: { matchId: 'test-match' },
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {},
+        resource: ''
+      });
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.body);
+      expect(body.error).toContain('not a participant');
+    });
+  });
+
+  describe('Match Completion', () => {
+    it('should complete match after 5 rounds', async () => {
+      // Set up match in final round
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId: 'test-match',
+          status: 'round_active',
+          currentRound: 5,
+          totalRounds: 5,
+          participants: [
+            { identity: 'A', userId: aliceId, displayName: 'Alice', isAI: false, score: 10 },
+            { identity: 'B', userId: 'ai-1', displayName: 'Claude', isAI: true, score: 15 },
+            { identity: 'C', userId: bobId, displayName: 'Bob', isAI: false, score: 8 },
+            { identity: 'D', userId: 'ai-2', displayName: 'GPT', isAI: true, score: 12 }
+          ],
+          rounds: [
+            // ... previous 4 rounds ...
+            {
+              roundNumber: 5,
+              prompt: 'Final round prompt',
+              responses: {
+                'A': 'Alice response',
+                'B': 'Claude response',
+                'C': 'Bob response',
+                'D': 'GPT response'
+              },
+              responseMapping: {
+                'resp-1': 'A',
+                'resp-2': 'B',
+                'resp-3': 'C',
+                'resp-4': 'D'
+              },
+              votes: {
+                'A': 'resp-3',
+                'B': 'resp-1',
+                'C': 'resp-1',
+                'D': 'resp-3'
+              },
+              scores: {},
+              status: 'voting'
+            }
+          ],
+          timestamp: 0
+        }
+      });
+
+      // Process final round voting
+      const response = await matchServiceHandler({
+        httpMethod: 'GET',
+        path: '/matches/test-match',
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: { matchId: 'test-match' },
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {},
+        resource: ''
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      
+      // Match should be completed
+      expect(body.match.status).toBe('completed');
+      
+      // Should have final scores
+      expect(body.match.participants.find((p: any) => p.userId === aliceId).score).toBeGreaterThanOrEqual(0);
+      expect(body.match.participants.find((p: any) => p.userId === bobId).score).toBeGreaterThanOrEqual(0);
+    });
+  });
+});

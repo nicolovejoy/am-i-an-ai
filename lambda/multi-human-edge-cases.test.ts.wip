@@ -1,0 +1,521 @@
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { mockClient } from 'aws-sdk-client-mock';
+import { MultiHumanMatchService } from './src/services/multi-human-match-service';
+import { v4 as uuidv4 } from 'uuid';
+
+const mockDocClient = mockClient(DynamoDBDocumentClient);
+
+// Mock SQS
+jest.mock('@aws-sdk/client-sqs', () => ({
+  SQSClient: jest.fn(() => ({
+    send: jest.fn().mockResolvedValue({ MessageId: 'test-message-id' })
+  })),
+  SendMessageCommand: jest.fn()
+}));
+
+describe('Multi-Human Match Service - Edge Cases', () => {
+  let matchService: any; // Using any to avoid mocking all methods
+  const matchesTable = 'test-matches';
+  
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDocClient.reset();
+    
+    // Create a mock service with only the methods we need
+    matchService = {
+      joinMatch: jest.fn(),
+      checkAndAbandonStaleMatch: jest.fn(),
+      leaveMatch: jest.fn(),
+      submitResponse: jest.fn(),
+      submitVote: jest.fn(),
+      getAvailableAIUsers: jest.fn(),
+      calculateFinalRankings: jest.fn(),
+      calculateRoundScores: jest.fn()
+    };
+  });
+
+  describe('Concurrent Join Attempts', () => {
+    it('should handle race condition when two players join simultaneously', async () => {
+      const matchId = uuidv4();
+      const inviteCode = 'ABC123';
+      
+      // Initial match state with 1 player
+      const initialMatch = {
+        matchId,
+        inviteCode,
+        status: 'waiting_for_players',
+        templateType: 'duo_2v2',
+        participants: [
+          { userId: 'alice', displayName: 'Alice', isAI: false }
+        ],
+        waitingFor: { humans: 1, ai: 2 },
+        timestamp: 0
+      };
+
+      // Mock initial get
+      mockDocClient.on(GetCommand).resolves({ Item: initialMatch });
+      
+      // Mock the conditional update to simulate one succeeding and one failing
+      let updateCount = 0;
+      mockDocClient.on(UpdateCommand).callsFake(() => {
+        updateCount++;
+        if (updateCount === 1) {
+          // First update succeeds
+          return Promise.resolve({
+            Attributes: {
+              ...initialMatch,
+              participants: [
+                ...initialMatch.participants,
+                { userId: 'bob', displayName: 'Bob', isAI: false }
+              ]
+            }
+          });
+        } else {
+          // Second update fails due to condition check
+          const error: any = new Error('ConditionalCheckFailedException');
+          error.name = 'ConditionalCheckFailedException';
+          throw error;
+        }
+      });
+
+      // Two players try to join at the same time
+      const [result1, result2] = await Promise.allSettled([
+        matchService.joinMatch(inviteCode, 'bob', 'Bob'),
+        matchService.joinMatch(inviteCode, 'charlie', 'Charlie')
+      ]);
+
+      // One should succeed, one should fail
+      expect(result1.status).toBe('fulfilled');
+      expect(result2.status).toBe('rejected');
+      
+      if (result2.status === 'rejected') {
+        expect(result2.reason.message).toContain('changed');
+      }
+    });
+
+    it('should prevent duplicate joins by same user', async () => {
+      const inviteCode = 'ABC123';
+      const userId = 'alice';
+      
+      // Match where alice is already a participant
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId: uuidv4(),
+          inviteCode,
+          status: 'waiting_for_players',
+          participants: [
+            { userId: 'alice', displayName: 'Alice', isAI: false },
+            { userId: 'bob', displayName: 'Bob', isAI: false }
+          ],
+          waitingFor: { humans: 0, ai: 2 },
+          timestamp: 0
+        }
+      });
+
+      await expect(
+        matchService.joinMatch(inviteCode, userId, 'Alice')
+      ).rejects.toThrow('already in this match');
+    });
+  });
+
+  describe('Match State Transitions', () => {
+    it('should handle transition from waiting to active when last human joins', async () => {
+      const matchId = uuidv4();
+      const inviteCode = 'XYZ789';
+      
+      // Mock match with 1/2 humans
+      const waitingMatch = {
+        matchId,
+        inviteCode,
+        status: 'waiting_for_players',
+        templateType: 'duo_2v2',
+        participants: [
+          { userId: 'alice', displayName: 'Alice', isAI: false }
+        ],
+        waitingFor: { humans: 1, ai: 2 },
+        totalParticipants: 4,
+        timestamp: 0
+      };
+
+      mockDocClient.on(GetCommand).resolves({ Item: waitingMatch });
+      
+      // Mock AI users for assignment
+      mockDocClient.on(ScanCommand).resolves({
+        Items: [
+          { userId: 'ai-1', userType: 'ai', displayName: 'Claude', personality: 'philosopher' },
+          { userId: 'ai-2', userType: 'ai', displayName: 'GPT', personality: 'comedian' }
+        ]
+      });
+
+      // Mock successful update
+      mockDocClient.on(UpdateCommand).resolves({
+        Attributes: {
+          ...waitingMatch,
+          status: 'round_active',
+          participants: [
+            { identity: 'A', userId: 'alice', displayName: 'Alice', isAI: false },
+            { identity: 'B', userId: 'bob', displayName: 'Bob', isAI: false },
+            { identity: 'C', userId: 'ai-1', displayName: 'Claude', isAI: true },
+            { identity: 'D', userId: 'ai-2', displayName: 'GPT', isAI: true }
+          ]
+        }
+      });
+
+      const result = await matchService.joinMatch(inviteCode, 'bob', 'Bob');
+      
+      expect(result.match.status).toBe('round_active');
+      expect(result.match.participants).toHaveLength(4);
+      expect(result.autoStarted).toBe(true);
+    });
+
+    it('should handle 3+ player matches with dynamic templates', async () => {
+      // Future-proofing for 3v3, 4v4 templates
+      const inviteCode = 'TRIO33';
+      
+      const trioMatch = {
+        matchId: uuidv4(),
+        inviteCode,
+        status: 'waiting_for_players',
+        templateType: 'trio_3v3',
+        participants: [
+          { userId: 'alice', displayName: 'Alice', isAI: false },
+          { userId: 'bob', displayName: 'Bob', isAI: false }
+        ],
+        waitingFor: { humans: 1, ai: 3 },
+        totalParticipants: 6,
+        timestamp: 0
+      };
+
+      mockDocClient.on(GetCommand).resolves({ Item: trioMatch });
+      mockDocClient.on(UpdateCommand).resolves({
+        Attributes: {
+          ...trioMatch,
+          participants: [
+            ...trioMatch.participants,
+            { userId: 'charlie', displayName: 'Charlie', isAI: false }
+          ]
+        }
+      });
+
+      const result = await matchService.joinMatch(inviteCode, 'charlie', 'Charlie');
+      
+      // Should still be waiting (3/3 humans but not started yet)
+      expect(result.match.status).toBe('waiting_for_players');
+      expect(result.match.participants).toHaveLength(3);
+    });
+  });
+
+  describe('Disconnection and Abandonment', () => {
+    it('should mark match as abandoned if no activity for timeout period', async () => {
+      const matchId = uuidv4();
+      const staleTimestamp = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30 mins ago
+      
+      const staleMatch = {
+        matchId,
+        status: 'round_active',
+        currentRound: 2,
+        lastActivityAt: staleTimestamp,
+        participants: [
+          { identity: 'A', userId: 'alice', displayName: 'Alice', isAI: false },
+          { identity: 'B', userId: 'ai-1', displayName: 'Claude', isAI: true },
+          { identity: 'C', userId: 'bob', displayName: 'Bob', isAI: false },
+          { identity: 'D', userId: 'ai-2', displayName: 'GPT', isAI: true }
+        ],
+        timestamp: 0
+      };
+
+      mockDocClient.on(GetCommand).resolves({ Item: staleMatch });
+      mockDocClient.on(UpdateCommand).resolves({
+        Attributes: {
+          ...staleMatch,
+          status: 'abandoned',
+          abandonedAt: new Date().toISOString(),
+          abandonReason: 'timeout'
+        }
+      });
+
+      // This would be called by a scheduled cleanup job
+      const result = await matchService.checkAndAbandonStaleMatch(matchId);
+      
+      expect(result.abandoned).toBe(true);
+      expect(result.reason).toBe('timeout');
+    });
+
+    it('should handle player leaving during waiting phase', async () => {
+      const inviteCode = 'LEAVE1';
+      
+      const waitingMatch = {
+        matchId: uuidv4(),
+        inviteCode,
+        status: 'waiting_for_players',
+        participants: [
+          { userId: 'alice', displayName: 'Alice', isAI: false },
+          { userId: 'bob', displayName: 'Bob', isAI: false }
+        ],
+        waitingFor: { humans: 0, ai: 2 },
+        timestamp: 0
+      };
+
+      mockDocClient.on(GetCommand).resolves({ Item: waitingMatch });
+      mockDocClient.on(UpdateCommand).resolves({
+        Attributes: {
+          ...waitingMatch,
+          participants: [
+            { userId: 'alice', displayName: 'Alice', isAI: false }
+          ],
+          waitingFor: { humans: 1, ai: 2 }
+        }
+      });
+
+      const result = await matchService.leaveMatch(waitingMatch.matchId, 'bob');
+      
+      expect(result.match.participants).toHaveLength(1);
+      expect(result.match.waitingFor.humans).toBe(1);
+    });
+  });
+
+  describe('Invalid State Handling', () => {
+    it('should reject responses when match is not in responding state', async () => {
+      const matchId = uuidv4();
+      
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId,
+          status: 'round_active',
+          currentRound: 1,
+          rounds: [{
+            roundNumber: 1,
+            status: 'voting', // Not in responding phase
+            responses: {},
+            votes: {}
+          }],
+          participants: [
+            { identity: 'A', userId: 'alice', isAI: false }
+          ],
+          timestamp: 0
+        }
+      });
+
+      await expect(
+        matchService.submitResponse(matchId, 'alice', 'My response')
+      ).rejects.toThrow('not accepting responses');
+    });
+
+    it('should handle missing round data gracefully', async () => {
+      const matchId = uuidv4();
+      
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId,
+          status: 'round_active',
+          currentRound: 2,
+          rounds: [
+            { roundNumber: 1, status: 'completed' }
+            // Round 2 is missing!
+          ],
+          participants: [
+            { identity: 'A', userId: 'alice', isAI: false }
+          ],
+          timestamp: 0
+        }
+      });
+
+      await expect(
+        matchService.submitResponse(matchId, 'alice', 'My response')
+      ).rejects.toThrow('Round 2 not found');
+    });
+  });
+
+  describe('AI Participant Edge Cases', () => {
+    it('should handle insufficient AI users in pool', async () => {
+      const inviteCode = 'NOAI01';
+      
+      // Only 1 AI user available but need 2
+      mockDocClient.on(ScanCommand).resolves({
+        Items: [
+          { userId: 'ai-1', userType: 'ai', displayName: 'Claude' }
+        ]
+      });
+
+      const waitingMatch = {
+        matchId: uuidv4(),
+        inviteCode,
+        status: 'waiting_for_players',
+        templateType: 'duo_2v2',
+        participants: [
+          { userId: 'alice', displayName: 'Alice', isAI: false }
+        ],
+        waitingFor: { humans: 1, ai: 2 },
+        timestamp: 0
+      };
+
+      mockDocClient.on(GetCommand).resolves({ Item: waitingMatch });
+
+      // Should fail to start match
+      await expect(
+        matchService.joinMatch(inviteCode, 'bob', 'Bob')
+      ).rejects.toThrow('Not enough AI users');
+    });
+
+    it('should exclude inactive AI users from selection', async () => {
+      mockDocClient.on(ScanCommand).resolves({
+        Items: [
+          { userId: 'ai-1', userType: 'ai', displayName: 'Claude', isActive: true },
+          { userId: 'ai-2', userType: 'ai', displayName: 'GPT', isActive: false }, // Inactive
+          { userId: 'ai-3', userType: 'ai', displayName: 'Gemini', isActive: true }
+        ]
+      });
+
+      const activeAIs = await matchService.getAvailableAIUsers(2);
+      
+      expect(activeAIs).toHaveLength(2);
+      expect(activeAIs.every(ai => ai.isActive)).toBe(true);
+    });
+  });
+
+  describe('Response and Vote Validation', () => {
+    it('should prevent empty responses', async () => {
+      const matchId = uuidv4();
+      
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId,
+          status: 'round_active',
+          currentRound: 1,
+          rounds: [{
+            roundNumber: 1,
+            status: 'responding',
+            prompt: 'Test prompt',
+            responses: {}
+          }],
+          participants: [
+            { identity: 'A', userId: 'alice', isAI: false }
+          ],
+          timestamp: 0
+        }
+      });
+
+      await expect(
+        matchService.submitResponse(matchId, 'alice', '')
+      ).rejects.toThrow('Response cannot be empty');
+
+      await expect(
+        matchService.submitResponse(matchId, 'alice', '   ')
+      ).rejects.toThrow('Response cannot be empty');
+    });
+
+    it('should prevent voting for own response', async () => {
+      const matchId = uuidv4();
+      
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId,
+          status: 'round_active',
+          currentRound: 1,
+          rounds: [{
+            roundNumber: 1,
+            status: 'voting',
+            responseMapping: {
+              'resp-1': 'A', // Alice's response
+              'resp-2': 'B',
+              'resp-3': 'C',
+              'resp-4': 'D'
+            },
+            votes: {}
+          }],
+          participants: [
+            { identity: 'A', userId: 'alice', isAI: false },
+            { identity: 'B', userId: 'ai-1', isAI: true },
+            { identity: 'C', userId: 'bob', isAI: false },
+            { identity: 'D', userId: 'ai-2', isAI: true }
+          ],
+          timestamp: 0
+        }
+      });
+
+      await expect(
+        matchService.submitVote(matchId, 'alice', 'resp-1')
+      ).rejects.toThrow('Cannot vote for your own response');
+    });
+
+    it('should handle invalid vote response IDs', async () => {
+      const matchId = uuidv4();
+      
+      mockDocClient.on(GetCommand).resolves({
+        Item: {
+          matchId,
+          status: 'round_active',
+          currentRound: 1,
+          rounds: [{
+            roundNumber: 1,
+            status: 'voting',
+            responseMapping: {
+              'resp-1': 'A',
+              'resp-2': 'B',
+              'resp-3': 'C',
+              'resp-4': 'D'
+            },
+            votes: {}
+          }],
+          participants: [
+            { identity: 'A', userId: 'alice', isAI: false }
+          ],
+          timestamp: 0
+        }
+      });
+
+      await expect(
+        matchService.submitVote(matchId, 'alice', 'invalid-resp-id')
+      ).rejects.toThrow('Invalid response ID');
+    });
+  });
+
+  describe('Score Calculation Edge Cases', () => {
+    it('should handle tie-breaking in final scores', async () => {
+      const match = {
+        participants: [
+          { identity: 'A', userId: 'alice', isAI: false, score: 10 },
+          { identity: 'B', userId: 'bob', isAI: false, score: 10 },
+          { identity: 'C', userId: 'ai-1', isAI: true, score: 8 },
+          { identity: 'D', userId: 'ai-2', isAI: true, score: 8 }
+        ]
+      };
+
+      const rankings = matchService.calculateFinalRankings(match.participants);
+      
+      // Tied players should have same rank
+      expect(rankings[0].rank).toBe(1);
+      expect(rankings[1].rank).toBe(1);
+      expect(rankings[2].rank).toBe(3);
+      expect(rankings[3].rank).toBe(3);
+    });
+
+    it('should award bonus points correctly for successful deception', async () => {
+      const votes = {
+        'A': 'resp-3', // Human voted for AI
+        'B': 'resp-3', // AI voted for AI
+        'C': 'resp-1', // Human voted for Human
+        'D': 'resp-3'  // AI voted for AI
+      };
+      
+      const responseMapping = {
+        'resp-1': 'A', // Human
+        'resp-2': 'B', // AI
+        'resp-3': 'C', // Human
+        'resp-4': 'D'  // AI
+      };
+      
+      const participants = [
+        { identity: 'A', isAI: false },
+        { identity: 'B', isAI: true },
+        { identity: 'C', isAI: false },
+        { identity: 'D', isAI: true }
+      ];
+
+      const scores = matchService.calculateRoundScores(votes, responseMapping, participants);
+      
+      // Human C should get bonus for deceiving Human A
+      expect(scores['C']).toBeGreaterThan(scores['A']);
+    });
+  });
+});

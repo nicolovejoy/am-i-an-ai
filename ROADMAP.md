@@ -3,12 +3,13 @@
 ## ✅ Completed
 
 ### Phase 1: User System
+
 - DynamoDB users table with persistent AI agents
 - 5 AI personalities (Philosopher, Scientist, Comedian, Artist, Engineer)
 - User service and schemas
-- Kafka cleanup from codebase
 
 ### Phase 2: Multi-Human Matches
+
 - Match templates (classic_1v3, duo_2v2, admin_custom)
 - Waiting room with invite codes
 - Dynamic identity assignment
@@ -19,6 +20,7 @@
 ## 🎯 Priority 2: Admin Features
 
 ### Debug Mode
+
 - Show AI/Human tags (admin only)
 - Display model used and response time
 - Mark fallback responses
@@ -35,6 +37,7 @@
 ## 🎯 Priority 3: Real-time Updates
 
 ### Replace Polling with SSE/WebSockets
+
 - Current: 4s polling interval
 - Target: Real-time via API Gateway WebSockets
 - State management already centralized

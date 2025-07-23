@@ -3,6 +3,12 @@ process.env.USERS_TABLE_NAME = 'test-users-table';
 process.env.MATCHES_TABLE_NAME = 'test-matches-table';
 process.env.AWS_REGION = 'us-east-1';
 
+// Mock Zod for schema imports
+jest.mock('zod', () => {
+  const actual = jest.requireActual('zod');
+  return actual;
+});
+
 // Store for mock data
 const mockDataStore: { [key: string]: any } = {};
 const inviteCodeToMatchId: { [key: string]: string } = {};

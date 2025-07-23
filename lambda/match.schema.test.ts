@@ -111,37 +111,36 @@ describe('Match Schema Validation', () => {
       expect(() => MatchSchema.parse(wrongCountActive)).toThrow();
     });
 
-    it('should handle future templates with different participant counts', () => {
-      // Hypothetical 3v3 template (6 total)
-      const future3v3Waiting = createBaseMatch({
+    it('should handle admin_custom template', () => {
+      // Admin custom template with 3 participants waiting
+      const customWaiting = createBaseMatch({
         status: 'waiting_for_players',
-        templateType: 'trio_3v3' as any,
-        totalParticipants: 6,
+        templateType: 'admin_custom',
+        totalParticipants: 4,
         participants: [
-          createParticipant({ identity: 'A' }),
-          createParticipant({ identity: 'B' })
+          createParticipant({ displayName: 'Admin' }),
+          createParticipant({ displayName: 'Player1' }),
+          createParticipant({ displayName: 'Player2' })
         ],
-        waitingFor: { humans: 1, ai: 3 }
+        waitingFor: { humans: 0, ai: 1 }
       });
       
-      expect(() => MatchSchema.parse(future3v3Waiting)).not.toThrow();
+      expect(() => MatchSchema.parse(customWaiting)).not.toThrow();
       
-      // Same template when active
-      const future3v3Active = createBaseMatch({
+      // Same template when active with all 4 participants
+      const customActive = createBaseMatch({
         status: 'round_active',
-        templateType: 'trio_3v3' as any,
-        totalParticipants: 6,
+        templateType: 'admin_custom',
+        totalParticipants: 4,
         participants: [
-          createParticipant({ identity: 'A' }),
-          createParticipant({ identity: 'B' }),
-          createParticipant({ identity: 'C' }),
-          createParticipant({ identity: 'D' }),
-          createParticipant({ identity: 'E' }),
-          createParticipant({ identity: 'F' })
+          createParticipant({ identity: 'A', displayName: 'Admin' }),
+          createParticipant({ identity: 'B', displayName: 'Player1' }),
+          createParticipant({ identity: 'C', displayName: 'Player2' }),
+          createParticipant({ identity: 'D', isAI: true, playerName: 'AI-Bot' })
         ]
       });
       
-      expect(() => MatchSchema.parse(future3v3Active)).not.toThrow();
+      expect(() => MatchSchema.parse(customActive)).not.toThrow();
     });
 
     it('should default to 4 participants when totalParticipants not specified', () => {

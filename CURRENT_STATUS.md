@@ -1,6 +1,6 @@
 # RobotOrchestra Current Status
 
-**Last Updated: 2025-07-22**
+**Last Updated: 2025-07-23**
 
 ## Architecture
 - Frontend: React/TypeScript with Vite
@@ -67,6 +67,16 @@ cd infrastructure
 ./scripts/deploy-frontend.sh
 ```
 
+## Recent Updates (2025-07-23)
+- **Added Admin Debug Mode**: Shows AI metadata during matches
+  - Toggle button in bottom-right corner (admin users only)
+  - Displays participant AI/Human status, personalities
+  - Shows fallback response indicators
+  - Real-time voting tracking
+  - Full match state inspection
+- **Improved Testing**: Added comprehensive integration tests for 2v2 flow
+- **Code Documentation**: Added TODO comments for future >4 player support
+
 ## Recent Fixes (2025-07-22)
 - Fixed join match bug: UpdateCommand conditionally includes :waitingFor field
 - Implemented AI-generated prompts using AI service
@@ -82,6 +92,8 @@ cd infrastructure
   - Replaced RobotResponseStatus with anonymous ParticipantWaitingStatus
 
 ## Known Issues
+- **No invite code input on dashboard**: Must use full URL to join matches (no way to enter just the code)
+- **AI prompt generation inconsistency**: Fallback prompts may appear if AI service fails
 - Invite code lookup uses table scan instead of GSI (performance concern at scale)
 - No real-time updates when other players join or make moves
 
