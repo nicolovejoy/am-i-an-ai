@@ -62,7 +62,12 @@ const robotToPersonality: Record<string, string> = {
 };
 
 
-async function generateRobotResponse(prompt: string, robotId: string, roundNumber?: number): Promise<string> {
+async function generateRobotResponse(
+  prompt: string, 
+  robotId: string, 
+  roundNumber?: number,
+  humanResponses?: { current?: string; previous?: string[] }
+): Promise<string> {
   const personality = robotToPersonality[robotId];
   
   if (!personality) {
@@ -78,7 +83,10 @@ async function generateRobotResponse(prompt: string, robotId: string, roundNumbe
       inputs: {
         personality,
         prompt,
-        context: roundNumber ? { round: roundNumber } : undefined
+        context: {
+          round: roundNumber,
+          humanResponses: humanResponses
+        }
       },
       options: {
         temperature: 0.85,
@@ -234,8 +242,49 @@ async function processRobotResponse(record: SQSRecord): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, delay));
   }
   
-  // Generate robot response
-  const response = await generateRobotResponse(prompt, robotId, roundNumber);
+  // Collect human responses for style mimicry
+  const humanResponses: { current?: string; previous?: string[] } = {};
+  
+  // Get current round's human response (if any)
+  const currentRound = match.rounds[roundIndex];
+  const humanParticipants = match.participants.filter((p: any) => !p.isAI);
+  const aiParticipants = match.participants.filter((p: any) => p.isAI);
+  
+  // Assign each AI to mimic a specific human (round-robin assignment)
+  let targetHumanIndex = 0;
+  if (humanParticipants.length > 1) {
+    // Find this robot's index among AI participants
+    const robotIndex = aiParticipants.findIndex((p: any) => p.identity === robotId);
+    // Assign to human based on robot index
+    targetHumanIndex = robotIndex % humanParticipants.length;
+  }
+  
+  const targetHuman = humanParticipants[targetHumanIndex];
+  
+  if (targetHuman) {
+    console.log(`Robot ${robotId} will mimic writing style of human ${targetHuman.identity} (${targetHuman.displayName})`);
+  }
+  
+  if (targetHuman && currentRound.responses) {
+    // Get the specific human's response that this AI should mimic
+    if (currentRound.responses[targetHuman.identity]) {
+      humanResponses.current = currentRound.responses[targetHuman.identity];
+    }
+  }
+  
+  // Get previous rounds' responses from the same human
+  if (targetHuman && roundIndex > 0) {
+    humanResponses.previous = [];
+    for (let i = 0; i < roundIndex; i++) {
+      const previousRound = match.rounds[i];
+      if (previousRound.responses && previousRound.responses[targetHuman.identity]) {
+        humanResponses.previous.push(previousRound.responses[targetHuman.identity]);
+      }
+    }
+  }
+  
+  // Generate robot response with human style context
+  const response = await generateRobotResponse(prompt, robotId, roundNumber, humanResponses);
   
   // Update the match with the robot's response
   const updateExpression = `SET rounds[${roundIndex}].responses.#robotId = :response, updatedAt = :updatedAt`;

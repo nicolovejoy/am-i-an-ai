@@ -21,7 +21,13 @@ export interface PromptGenerationInputs {
 export interface RobotResponseInputs {
   personality: string;
   prompt: string;
-  context?: any;
+  context?: {
+    round?: number;
+    humanResponses?: {
+      current?: string;
+      previous?: string[];
+    };
+  };
 }
 
 export interface MatchAnalysisInputs {
@@ -130,8 +136,24 @@ Return only the prompt question, no explanation.`;
 
     const systemPrompt = personalities[personality] || personalities.littleSister;
     
+    let styleGuidance = '';
+    if (context?.humanResponses) {
+      const { current, previous } = context.humanResponses;
+      if (current || (previous && previous.length > 0)) {
+        styleGuidance = '\n\nStyle Mimicry Instructions:';
+        if (current) {
+          styleGuidance += `\nThe human just wrote: "${current}"`;
+        }
+        if (previous && previous.length > 0) {
+          styleGuidance += `\nPrevious human responses: ${previous.map(r => `"${r}"`).join(', ')}`;
+        }
+        styleGuidance += '\n\nSubtly mirror their writing style (punctuation patterns, capitalization choices, sentence structure, formality level) while maintaining your unique personality and perspective. Do NOT copy their content or ideas - only adopt their syntactic patterns and tone.';
+      }
+    }
+    
     const userPrompt = `Respond to this prompt in 1 sentence that feels natural and conversational: "${prompt}"
 ${context ? `\nContext: This is round ${context.round} of the game. Keep your response fresh and avoid repeating themes from previous rounds.` : ''}
+${styleGuidance}
 
 Important: Your response should reflect your personality while sounding like something a person might actually say. Avoid clichés or overly robotic patterns. Keep your response under 150 characters.`;
 
