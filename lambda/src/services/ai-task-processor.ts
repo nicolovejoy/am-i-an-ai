@@ -133,15 +133,21 @@ Return only the prompt question, no explanation.`;
     const userPrompt = `Respond to this prompt in 1 sentence that feels natural and conversational: "${prompt}"
 ${context ? `\nContext: This is round ${context.round} of the game. Keep your response fresh and avoid repeating themes from previous rounds.` : ''}
 
-Important: Your response should reflect your personality while sounding like something a person might actually say. Avoid clichés or overly robotic patterns.`;
+Important: Your response should reflect your personality while sounding like something a person might actually say. Avoid clichés or overly robotic patterns. Keep your response under 150 characters.`;
 
     const response = await this.invokeModel(req.model, systemPrompt, userPrompt, {
       ...req.options,
       temperature: req.options.temperature || 0.85 // Higher for more personality variation
     });
 
+    // Truncate to 150 characters if needed
+    const trimmedResponse = response.trim().replace(/^["']|["']$/g, ''); // Remove quotes if present
+    const finalResponse = trimmedResponse.length > 150 
+      ? trimmedResponse.substring(0, 147) + '...' 
+      : trimmedResponse;
+    
     return { 
-      response: response.trim().replace(/^["']|["']$/g, '') // Remove quotes if present
+      response: finalResponse
     };
   }
 

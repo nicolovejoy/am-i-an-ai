@@ -64,7 +64,7 @@ export default function ResponseInputV2() {
     setLocalTyping(e.target.value.length > 0);
   };
 
-  const remainingChars = 280 - response.length;
+  const remainingChars = 150 - response.length;
   const isSubmitting = submitResponse.isPending;
 
   return (
@@ -83,18 +83,18 @@ export default function ResponseInputV2() {
             value={response}
             onChange={handleChange}
             onKeyDown={handleKeyPress}
-            placeholder="Write your response... Let your humanity shine through!"
+            placeholder="Write a short response... Be authentic!"
             className="w-full h-32 px-4 py-3 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder-slate-500 disabled:opacity-50"
             maxLength={150}
             disabled={isSubmitting}
           />
           
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-sm text-slate-500">
               <span className={remainingChars < 20 ? 'text-orange-600' : ''}>
                 {remainingChars} characters remaining
               </span>
-              <span className="ml-4 text-slate-400">
+              <span className="ml-4 text-slate-400 hidden sm:inline">
                 Tip: ⌘/Ctrl + Enter to submit
               </span>
             </div>
@@ -102,7 +102,7 @@ export default function ResponseInputV2() {
             <Button
               onClick={handleSubmit}
               disabled={!response.trim() || isSubmitting}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <FiSend size={16} />
               {isSubmitting ? 'Submitting...' : 'Submit Response'}

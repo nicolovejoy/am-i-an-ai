@@ -95,7 +95,7 @@ export default function ChatInterface() {
 
   // Main game interface
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header with match info */}
       <Card 
         className="bg-white/95 backdrop-blur-lg shadow-sm z-10 mx-2 sm:mx-4 lg:mx-auto lg:max-w-4xl mt-2 sm:mt-4" 
@@ -150,11 +150,11 @@ export default function ChatInterface() {
       <ParticipantBar />
 
       {/* Main Content - Round Interface */}
-      <div className="flex-1 flex flex-col overflow-hidden px-2 sm:px-4 lg:px-0 lg:max-w-4xl lg:mx-auto w-full">
+      <div className="flex-1 overflow-y-auto px-2 sm:px-4 lg:px-0 lg:max-w-4xl lg:mx-auto w-full pb-4">
         {currentRound ? (
           <RoundInterface />
         ) : (
-          <Card className="flex-1 flex flex-col overflow-hidden" padding="sm">
+          <Card className="flex-1 flex flex-col" padding="sm">
             <div className="flex-1 overflow-y-auto p-2 sm:p-4">
               <MessageList />
             </div>

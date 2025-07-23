@@ -49,6 +49,9 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
     return {
       isAI: participant?.isAI || false,
       isMe: identity === myIdentity,
+      displayName: participant?.displayName || participant?.playerName || 'Unknown',
+      personality: participant?.personality,
+      modelConfig: participant?.modelConfig,
     };
   };
   
@@ -91,7 +94,7 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
                       : 'border-slate-200 bg-white'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-2">
                     <div>
                       <span className="text-lg font-medium">Player {identity}</span>
                       {info.isMe && (
@@ -105,6 +108,22 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
                     }`}>
                       {info.isAI ? '🤖 AI' : '👤 Human'}
                     </div>
+                  </div>
+                  <div className="text-sm text-slate-600">
+                    <div className="font-medium">{info.displayName}</div>
+                    {info.isAI && info.personality && (
+                      <div className="text-xs mt-1">
+                        Personality: {info.personality === 'littleSister' ? 'Playful Little Sister' :
+                                     info.personality === 'wiseGrandpa' ? 'Wise Grandpa' :
+                                     info.personality === 'practicalMom' ? 'Practical Mom' :
+                                     info.personality}
+                      </div>
+                    )}
+                    {info.isAI && info.modelConfig && (
+                      <div className="text-xs text-slate-500">
+                        Model: {info.modelConfig.model || 'claude-3-haiku'}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
