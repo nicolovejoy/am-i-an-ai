@@ -148,6 +148,7 @@ export default function MatchAccordion({
                       <HumanOrRobot 
                         responses={roundResponses} 
                         presentationOrder={currentRound.presentationOrder}
+                        prompt={currentRound.prompt}
                       />
                     )}
                     
@@ -178,7 +179,7 @@ export default function MatchAccordion({
                         <div className="text-sm font-medium text-slate-700">Responses:</div>
                         {Object.entries(round.responses).map(([identity, response]) => (
                           <div key={identity} className="text-sm text-slate-600 pl-3 border-l-2 border-slate-200">
-                            <span className="font-medium">Participant {identity}:</span> {String(response)}
+                            {String(response)}
                           </div>
                         ))}
                       </div>

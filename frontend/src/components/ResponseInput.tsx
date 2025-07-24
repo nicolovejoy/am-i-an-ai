@@ -41,11 +41,11 @@ export default function ResponseInputV2() {
   }, []);
 
   const handleSubmit = useCallback(() => {
-    const trimmedResponse = response.trim();
     if (!matchId || !myIdentity || !currentRound) return;
     
-    // Submit even if empty (when timer expires)
-    const finalResponse = trimmedResponse || '(No response)';
+    // When timer expires, submit whatever text is in the box
+    // Only submit '(No response)' if the box is completely empty
+    const finalResponse = response || '(No response)';
     
     // Submit the response
     submitResponse.mutate(

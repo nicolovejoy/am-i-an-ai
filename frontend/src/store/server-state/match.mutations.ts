@@ -222,7 +222,8 @@ export function useSubmitVote() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to submit vote: ${response.statusText}`);
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to submit vote: ${response.statusText}`);
       }
 
       return response.json();

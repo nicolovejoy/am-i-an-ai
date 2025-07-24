@@ -728,6 +728,16 @@ async function submitVote(event) {
             body: JSON.stringify({ error: "Invalid round number" }),
         };
     }
+    // Check if the voter submitted a response in this round
+    if (!round.responses[body.voter] || round.responses[body.voter] === '(No response)') {
+        return {
+            statusCode: 403,
+            headers: CORS_HEADERS,
+            body: JSON.stringify({
+                error: "You cannot vote in this round because you did not submit a response"
+            }),
+        };
+    }
     // Store the vote
     round.votes[body.voter] = body.votedFor;
     match.updatedAt = new Date().toISOString();

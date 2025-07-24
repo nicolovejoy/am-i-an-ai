@@ -12,11 +12,13 @@ import toast from "react-hot-toast";
 interface HumanOrRobotProps {
   responses: Record<string, string>;
   presentationOrder?: Identity[];
+  prompt?: string;
 }
 
 export default function HumanOrRobot({
   responses,
   presentationOrder,
+  prompt,
 }: HumanOrRobotProps) {
   // Server state
   const matchId = sessionStorage.getItem('currentMatchId');
@@ -104,7 +106,8 @@ export default function HumanOrRobot({
           setSelectedResponse(null);
         },
         onError: (error) => {
-          toast.error('Failed to submit vote');
+          const errorMessage = error instanceof Error ? error.message : 'Failed to submit vote';
+          toast.error(errorMessage);
           console.error('Vote submission failed:', error);
         },
       }
@@ -170,6 +173,13 @@ export default function HumanOrRobot({
   return (
     <Card>
       <div className="space-y-4">
+        {prompt && (
+          <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="text-sm font-medium text-slate-700 mb-1">Prompt:</div>
+            <div className="text-sm text-slate-600 italic">"{prompt}"</div>
+          </div>
+        )}
+        
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">
             Which response was written by a human?
@@ -182,7 +192,7 @@ export default function HumanOrRobot({
         </div>
 
         <div className="space-y-3">
-          {orderedResponses.map(([identity, response], index) => {
+          {orderedResponses.map(([identity, response]) => {
             const isMyResponse = identity === myIdentity;
             const isSelected = selectedResponse === identity;
             const isFocused = !isMyResponse && 
@@ -212,21 +222,20 @@ export default function HumanOrRobot({
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="text-sm font-medium text-slate-500">
-                        Response {index + 1}
+                    {(isMyResponse || isSelected) && (
+                      <div className="flex items-center gap-3 mb-2">
+                        {isMyResponse && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                            Your response
+                          </span>
+                        )}
+                        {isSelected && !isMyResponse && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                            Selected
+                          </span>
+                        )}
                       </div>
-                      {isMyResponse && (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                          Your response
-                        </span>
-                      )}
-                      {isSelected && !isMyResponse && (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                          Selected
-                        </span>
-                      )}
-                    </div>
+                    )}
                     <p className="text-slate-800 leading-relaxed break-words whitespace-pre-wrap">
                       {response || <span className="text-slate-400">...</span>}
                     </p>
@@ -257,13 +266,7 @@ export default function HumanOrRobot({
         <div className="flex items-center justify-between pt-4 border-t">
           <div className="text-sm text-slate-600">
             {selectedResponse ? (
-              <span>
-                You think{" "}
-                <span className="font-semibold">
-                  Response {orderedResponses.findIndex(([id]) => id === selectedResponse) + 1}
-                </span>{" "}
-                was written by a human
-              </span>
+              <span>You've selected your choice</span>
             ) : (
               <span>Select the response you think was written by a human</span>
             )}
