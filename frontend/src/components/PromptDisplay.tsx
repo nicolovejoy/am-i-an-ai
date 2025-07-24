@@ -8,15 +8,14 @@ interface PromptDisplayProps {
 export default function PromptDisplay({ prompt }: PromptDisplayProps) {
   return (
     <Card>
-      <div className="text-center py-8">
-        <div className="text-4xl mb-4">💭</div>
-        <h3 className="text-xl font-semibold mb-4 text-slate-800">
+      <div className="py-4">
+        <h3 className="text-sm font-semibold mb-2 text-slate-700">
           Round Prompt
         </h3>
-        <p className="text-lg text-slate-700 leading-relaxed max-w-2xl mx-auto">
+        <p className="text-base text-slate-800 leading-relaxed">
           {prompt}
         </p>
-        <div className="mt-6 text-sm text-slate-500">
+        <div className="mt-3 text-xs text-slate-500">
           Take your time to craft a thoughtful response that sounds human
         </div>
       </div>

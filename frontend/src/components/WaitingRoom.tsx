@@ -148,7 +148,7 @@ export function WaitingRoom() {
         {/* Participants */}
         <Card>
           <h2 className="text-lg font-semibold text-slate-800 mb-4">
-            Players ({match.participants?.length || 0}/4)
+            Players ({match.participants?.length || 0}/{match.totalParticipants || 4})
           </h2>
           <div className="space-y-2">
             {match.participants?.map((participant: Participant, index: number) => 

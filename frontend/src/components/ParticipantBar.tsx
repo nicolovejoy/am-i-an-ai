@@ -2,11 +2,14 @@ import type { Identity } from "@shared/schemas";
 import {
   useParticipants,
   useMyIdentity,
+  useMatch,
 } from "@/store/server-state/match.queries";
 
 export default function ParticipantBar() {
   const participants = useParticipants();
   const myIdentity = useMyIdentity();
+  const matchId = sessionStorage.getItem('currentMatchId');
+  const { data: match } = useMatch(matchId);
 
   const getIdentityColor = (identity: Identity) => {
     const colors: Record<Identity, string> = {
@@ -14,6 +17,10 @@ export default function ParticipantBar() {
       B: "bg-green-500",
       C: "bg-purple-500",
       D: "bg-orange-500",
+      E: "bg-pink-500",
+      F: "bg-yellow-500",
+      G: "bg-indigo-500",
+      H: "bg-red-500",
     };
     return colors[identity];
   };
@@ -23,12 +30,22 @@ export default function ParticipantBar() {
     identity: Identity;
     isConnected: boolean;
     isMe: boolean;
-  }> = (["A", "B", "C", "D"] as Identity[]).map((identity) => {
+    displayName: string;
+  }> = (() => {
+    // Generate identities based on match total participants
+    const totalParticipants = match?.totalParticipants || participants.length || 4;
+    const identities = Array.from(
+      { length: totalParticipants },
+      (_, i) => String.fromCharCode(65 + i) as Identity
+    );
+    return identities;
+  })().map((identity) => {
     const participant = participants.find((p) => p.identity === identity);
     return {
       identity,
       isConnected: participant?.isConnected ?? false,
       isMe: identity === myIdentity,
+      displayName: participant?.displayName || "Empty Seat",
     };
   });
 
@@ -38,12 +55,12 @@ export default function ParticipantBar() {
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-gray-700">Participants</h2>
           <div className="text-xs text-gray-500">
-            {participants.filter((p) => p.isConnected).length}/4 connected
+            {participants.filter((p) => p.isConnected).length}/{match?.totalParticipants || participants.length} connected
           </div>
         </div>
 
         <div className="flex gap-3 mt-2">
-          {allSlots.map(({ identity, isConnected, isMe }) => (
+          {allSlots.map(({ identity, isConnected, isMe, displayName }) => (
             <div
               key={identity}
               className={`
@@ -69,7 +86,7 @@ export default function ParticipantBar() {
                 ${isConnected ? "text-gray-900" : "text-gray-400"}
               `}
               >
-                {identity}
+                {displayName}
               </span>
 
               {isMe && (
@@ -85,7 +102,7 @@ export default function ParticipantBar() {
           ))}
         </div>
 
-        {participants.filter((p) => p.isConnected).length < 4 && (
+        {participants.filter((p) => p.isConnected).length < (match?.totalParticipants || 4) && (
           <p className="text-xs text-gray-500 mt-2">
             Session will begin when all participants have joined
           </p>

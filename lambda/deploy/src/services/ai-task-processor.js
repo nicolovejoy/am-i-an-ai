@@ -15,6 +15,7 @@ class AITaskProcessor {
             ['robot_response', this.generateRobotResponse.bind(this)],
             ['analyze_match', this.analyzeMatch.bind(this)],
             ['summarize', this.summarize.bind(this)],
+            ['grammar_correction', this.correctGrammar.bind(this)],
             ['custom', this.customTask.bind(this)]
         ]);
     }
@@ -78,8 +79,30 @@ Return only the prompt question, no explanation.`;
             practicalMom: "You are a practical mother who keeps things running smoothly. You're caring but no-nonsense, always thinking about what needs to be done. You notice when things are out of place and have a solution for everything. Use standard punctuation only - periods and commas. Avoid parenthetical asides or organizational punctuation like bullet points."
         };
         const systemPrompt = personalities[personality] || personalities.littleSister;
+        let styleGuidance = '';
+        if (context?.humanResponses) {
+            const { current, previous } = context.humanResponses;
+            if (current || (previous && previous.length > 0)) {
+                styleGuidance = '\n\nStyle Mimicry Instructions:';
+                if (current) {
+                    styleGuidance += `\nThe human just wrote: "${current}"`;
+                }
+                if (previous && previous.length > 0) {
+                    styleGuidance += `\nPrevious human responses: ${previous.map(r => `"${r}"`).join(', ')}`;
+                }
+                styleGuidance += '\n\nSubtly mirror their writing style (punctuation patterns, capitalization choices, sentence structure, formality level) while maintaining your unique personality and perspective. Do NOT copy their content or ideas - only adopt their syntactic patterns and tone.';
+            }
+        }
+        let previousResponsesGuidance = '';
+        if (context?.previousAIResponses && context.previousAIResponses.length > 0) {
+            previousResponsesGuidance = '\n\nIMPORTANT: You have already given these responses in previous rounds:';
+            previousResponsesGuidance += context.previousAIResponses.map((r, i) => `\nRound ${i + 1}: "${r}"`).join('');
+            previousResponsesGuidance += '\n\nYou MUST give a completely different response. Do not repeat ideas, phrases, or themes from your previous responses.';
+        }
         const userPrompt = `Respond to this prompt in 1 sentence that feels natural and conversational: "${prompt}"
 ${context ? `\nContext: This is round ${context.round} of the game. Keep your response fresh and avoid repeating themes from previous rounds.` : ''}
+${styleGuidance}
+${previousResponsesGuidance}
 
 Important: Your response should reflect your personality while sounding like something a person might actually say. Avoid clichés or overly robotic patterns. Keep your response under 150 characters.`;
         const response = await this.invokeModel(req.model, systemPrompt, userPrompt, {
@@ -146,6 +169,40 @@ Provide a concise but insightful analysis.`;
             originalLength: text.length,
             summaryLength: response.trim().length
         };
+    }
+    async correctGrammar(req) {
+        const inputs = req.inputs;
+        const { text, preserveStyle = true } = inputs;
+        const systemPrompt = `You are a grammar and spelling correction assistant. Fix errors while preserving the writer's voice and style. Keep the same tone, formality level, and personality. Only fix clear errors, don't rewrite for style unless it's grammatically incorrect.`;
+        const userPrompt = `Correct the grammar and spelling in this text: "${text}"
+    
+Return your response as valid JSON with this exact structure:
+{
+  "corrected": "the corrected text",
+  "changes": [
+    {"original": "word or phrase", "corrected": "corrected version", "type": "spelling|grammar|punctuation|capitalization"}
+  ],
+  "confidence": 0.95
+}
+
+${preserveStyle ? 'Preserve the author\'s style, intentional capitalization choices, and punctuation patterns unless clearly incorrect.' : 'Standardize capitalization and punctuation.'}
+Only include actual changes in the changes array. If no corrections are needed, return an empty changes array.`;
+        const response = await this.invokeModel(req.model || 'claude-3-haiku', systemPrompt, userPrompt, {
+            ...req.options,
+            temperature: 0.1 // Very low temperature for consistent corrections
+        });
+        try {
+            const result = JSON.parse(response);
+            return result;
+        }
+        catch (error) {
+            // Fallback if JSON parsing fails
+            return {
+                corrected: text,
+                changes: [],
+                confidence: 0
+            };
+        }
     }
     async customTask(req) {
         const inputs = req.inputs;

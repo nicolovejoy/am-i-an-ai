@@ -2,9 +2,8 @@
 import { z } from 'zod';
 
 // Core game types
-// TODO: To support more than 4 players, extend this enum with 'E', 'F', 'G', 'H', etc.
-// This will require updates to UI components, shuffle logic, and identity assignment
-export const IdentitySchema = z.enum(['A', 'B', 'C', 'D']);
+// Extended to support up to 8 players for variable match formats
+export const IdentitySchema = z.enum(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
 export type Identity = z.infer<typeof IdentitySchema>;
 
 export const MatchStatusSchema = z.enum([
@@ -66,7 +65,7 @@ export const RoundSchema = z.object({
 export type Round = z.infer<typeof RoundSchema>;
 
 // Match template type
-export const MatchTemplateTypeSchema = z.enum(['classic_1v3', 'duo_2v2', 'admin_custom']);
+export const MatchTemplateTypeSchema = z.enum(['classic_1v3', 'duo_2v2', 'admin_custom', 'trio_3v3', 'solo_1v5', 'duel_2v1', 'mega_4v4']);
 export type MatchTemplateType = z.infer<typeof MatchTemplateTypeSchema>;
 
 // Base Match schema (without refinements)

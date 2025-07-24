@@ -1,4 +1,4 @@
-export type MatchTemplateType = 'classic_1v3' | 'duo_2v2' | 'admin_custom';
+export type MatchTemplateType = 'classic_1v3' | 'duo_2v2' | 'admin_custom' | 'trio_3v3' | 'solo_1v5' | 'duel_2v1' | 'mega_4v4';
 
 export interface MatchTemplate {
   type: MatchTemplateType;
@@ -12,10 +12,6 @@ export interface MatchTemplate {
 }
 
 export class MatchTemplateService {
-  // TODO: When adding templates with >4 participants (e.g., trio_3v3 with 6 players):
-  // 1. Update IdentitySchema in match.schema.ts to include 'E', 'F', etc.
-  // 2. Update frontend components to handle additional identities
-  // 3. Ensure shuffle/assignment logic works with more players
   private static templates: Map<MatchTemplateType, MatchTemplate> = new Map([
     ['classic_1v3', {
       type: 'classic_1v3',
@@ -44,6 +40,42 @@ export class MatchTemplateService {
       totalParticipants: 4,
       isPublic: false,
       isAdminOnly: true,
+    }],
+    ['trio_3v3', {
+      type: 'trio_3v3',
+      name: 'Trio Match',
+      description: 'Three humans compete with three AI players',
+      requiredHumans: 3,
+      requiredAI: 3,
+      totalParticipants: 6,
+      isPublic: true,
+    }],
+    ['solo_1v5', {
+      type: 'solo_1v5',
+      name: 'Solo Challenge',
+      description: 'One human tries to blend in with five AI players',
+      requiredHumans: 1,
+      requiredAI: 5,
+      totalParticipants: 6,
+      isPublic: true,
+    }],
+    ['duel_2v1', {
+      type: 'duel_2v1',
+      name: 'Duel Match',
+      description: 'Two humans face off against one AI player',
+      requiredHumans: 2,
+      requiredAI: 1,
+      totalParticipants: 3,
+      isPublic: true,
+    }],
+    ['mega_4v4', {
+      type: 'mega_4v4',
+      name: 'Mega Match',
+      description: 'Four humans compete with four AI players',
+      requiredHumans: 4,
+      requiredAI: 4,
+      totalParticipants: 8,
+      isPublic: true,
     }],
   ]);
 

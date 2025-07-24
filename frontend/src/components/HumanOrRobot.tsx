@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { FiCheckCircle } from "react-icons/fi";
 import { Card, Button } from "./ui";
-import type { Identity } from "@shared/schemas";
-import { useMyIdentity, useCurrentRound } from "@/store/server-state/match.queries";
+import type { Identity, Match, Round, Participant } from "@shared/schemas";
+import { useMyIdentity, useCurrentRound, useMatch } from "@/store/server-state/match.queries";
 import { useSubmitVote } from "@/store/server-state/match.mutations";
 import { useUIStore } from "@/store/ui-state/ui.store";
+import { useVotingStore } from "@/store/ui-state/voting.store";
+import { calculateCumulativeScores } from "@/utils/scoring";
 import toast from "react-hot-toast";
 
 interface HumanOrRobotProps {
@@ -17,9 +19,12 @@ export default function HumanOrRobot({
   presentationOrder,
 }: HumanOrRobotProps) {
   // Server state
+  const matchId = sessionStorage.getItem('currentMatchId');
+  const { data: match } = useMatch(matchId);
   const myIdentity = useMyIdentity();
   const currentRound = useCurrentRound();
   const submitVote = useSubmitVote();
+  const setVoteFeedback = useVotingStore(state => state.setVoteFeedback);
   
   // UI state - use individual selectors to avoid re-render issues
   const selectedResponse = useUIStore(state => state.selectedResponse);
@@ -28,8 +33,6 @@ export default function HumanOrRobot({
   const setFocusedIndex = useUIStore(state => state.setFocusedIndex);
   const isKeyboardNavEnabled = useUIStore(state => state.isKeyboardNavEnabled);
   const soundEnabled = useUIStore(state => state.soundEnabled);
-
-  const matchId = sessionStorage.getItem('currentMatchId');
 
   // Use server-provided presentation order if available
   const orderedResponses = useMemo(() => {
@@ -67,12 +70,37 @@ export default function HumanOrRobot({
         round: currentRound.roundNumber,
       },
       {
-        onSuccess: () => {
+        onSuccess: (response) => {
           if (soundEnabled) {
             // Play success sound
             console.log('Playing vote success sound');
           }
-          toast.success('Vote submitted!');
+          
+          // Check if we have the updated match data with scores
+          const updatedMatch = response.match as Match | undefined;
+          if (updatedMatch && currentRound) {
+            const round = updatedMatch.rounds.find((r: Round) => r.roundNumber === currentRound.roundNumber);
+            
+            if (round?.scores && match) {
+              // Find the human participant (correct answer)
+              const humanParticipant = match.participants.find((p: Participant) => !p.isAI);
+              if (humanParticipant) {
+                const correctAnswer = humanParticipant.identity;
+                const pointsEarned = round.scores[myIdentity] || 0;
+                const cumulativeScores = calculateCumulativeScores(updatedMatch.rounds);
+                const totalScore = cumulativeScores[myIdentity] || 0;
+                
+                // Set feedback state
+                setVoteFeedback({
+                  votedFor: selectedResponse,
+                  correctAnswer,
+                  pointsEarned,
+                  totalScore,
+                });
+              }
+            }
+          }
+          
           setSelectedResponse(null);
         },
         onError: (error) => {
@@ -81,7 +109,7 @@ export default function HumanOrRobot({
         },
       }
     );
-  }, [selectedResponse, matchId, myIdentity, currentRound, submitVote, soundEnabled, setSelectedResponse]);
+  }, [selectedResponse, matchId, myIdentity, currentRound, submitVote, soundEnabled, setSelectedResponse, match, setVoteFeedback]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -186,7 +214,7 @@ export default function HumanOrRobot({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="text-sm font-medium text-slate-500">
-                        Response {String.fromCharCode(65 + index)}
+                        Response {index + 1}
                       </div>
                       {isMyResponse && (
                         <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
@@ -232,7 +260,7 @@ export default function HumanOrRobot({
               <span>
                 You think{" "}
                 <span className="font-semibold">
-                  Response {String.fromCharCode(65 + orderedResponses.findIndex(([id]) => id === selectedResponse))}
+                  Response {orderedResponses.findIndex(([id]) => id === selectedResponse) + 1}
                 </span>{" "}
                 was written by a human
               </span>

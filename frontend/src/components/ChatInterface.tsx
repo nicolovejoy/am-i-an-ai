@@ -95,71 +95,46 @@ export default function ChatInterface() {
 
   // Main game interface
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Header with match info */}
-      <Card 
-        className="bg-white/95 backdrop-blur-lg shadow-sm z-10 mx-2 sm:mx-4 lg:mx-auto lg:max-w-4xl mt-2 sm:mt-4" 
-        padding="sm"
-      >
-        <div className="flex justify-between items-start">
-          <div>
+    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
+      {/* Fixed header */}
+      <div className="flex-shrink-0">
+        <Card 
+          className="bg-white/95 backdrop-blur-lg shadow-sm z-10 mx-2 sm:mx-4 lg:mx-auto lg:max-w-4xl mt-2 sm:mt-4" 
+          padding="sm"
+        >
+          <div className="flex justify-between items-center">
             <h1 className="text-lg sm:text-xl font-bold text-slate-900">
               Robot Orchestra
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600 hidden sm:block">
-              Figure out who&apos;s human and who&apos;s AI
-            </p>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
             <Button
               onClick={handleLeaveMatch}
               variant="ghost"
               size="sm"
-              className="hidden sm:flex"
             >
               Leave Match
             </Button>
-            <Button
-              onClick={handleLeaveMatch}
-              variant="ghost"
-              size="sm"
-              className="sm:hidden"
-            >
-              Leave
-            </Button>
           </div>
-        </div>
+        </Card>
 
-        {/* Game info */}
-        <div className="flex justify-between items-center text-xs text-slate-600 mt-2 pt-2 border-t border-slate-200">
-          <span className="hidden sm:inline">
-            Round {match.currentRound} of {match.totalRounds}
-          </span>
-          <span className="sm:hidden">R{match.currentRound}</span>
-          <span className="hidden sm:inline">
-            You are participant{" "}
-            <span className="font-semibold text-blue-600">{myIdentity}</span>
-          </span>
-          <span className="sm:hidden font-semibold text-blue-600">
-            You: {myIdentity}
-          </span>
+        {/* Participants Bar */}
+        <div className="px-2 sm:px-4 lg:px-0 lg:max-w-4xl lg:mx-auto">
+          <ParticipantBar />
         </div>
-      </Card>
-
-      {/* Participants */}
-      <ParticipantBar />
+      </div>
 
       {/* Main Content - Round Interface */}
-      <div className="flex-1 overflow-y-auto px-2 sm:px-4 lg:px-0 lg:max-w-4xl lg:mx-auto w-full pb-4">
-        {currentRound ? (
-          <RoundInterface />
-        ) : (
-          <Card className="flex-1 flex flex-col" padding="sm">
-            <div className="flex-1 overflow-y-auto p-2 sm:p-4">
-              <MessageList />
-            </div>
-          </Card>
-        )}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full lg:max-w-4xl lg:mx-auto">
+          {currentRound ? (
+            <RoundInterface />
+          ) : (
+            <Card className="h-full flex flex-col m-4" padding="sm">
+              <div className="flex-1 overflow-y-auto p-2 sm:p-4">
+                <MessageList />
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );

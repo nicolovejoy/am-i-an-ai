@@ -5,7 +5,7 @@ const ai_task_processor_1 = require("../services/ai-task-processor");
 const zod_1 = require("zod");
 // Request validation schema
 const AIRequestSchema = zod_1.z.object({
-    task: zod_1.z.enum(['generate_prompt', 'robot_response', 'analyze_match', 'summarize', 'custom']),
+    task: zod_1.z.enum(['generate_prompt', 'robot_response', 'analyze_match', 'summarize', 'grammar_correction', 'custom']),
     model: zod_1.z.enum(['claude-3-sonnet', 'claude-3-haiku', 'claude-3-opus']).optional(),
     inputs: zod_1.z.record(zod_1.z.any()),
     options: zod_1.z.object({

@@ -14,12 +14,15 @@ export default function ParticipantWaitingStatus({ myIdentity }: ParticipantWait
   if (!match || !currentRound) return null;
   
   // Get all participant identities from the match
-  const allIdentities: Identity[] = ['A', 'B', 'C', 'D'].slice(0, match.participants.length);
+  const totalParticipants = match.totalParticipants || match.participants.length;
+  const allIdentities: Identity[] = Array.from(
+    { length: totalParticipants },
+    (_, i) => String.fromCharCode(65 + i) as Identity
+  );
   
   // Check who has responded
   const responses = currentRound.responses || {};
   const respondedCount = Object.keys(responses).length;
-  const totalParticipants = match.participants.length;
   
   // Create participant status list
   const participantStatuses = allIdentities.map(identity => ({
@@ -47,7 +50,11 @@ export default function ParticipantWaitingStatus({ myIdentity }: ParticipantWait
             Participant Status:
           </div>
           
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid gap-2 ${
+            totalParticipants <= 4 ? 'grid-cols-2' : 
+            totalParticipants <= 6 ? 'grid-cols-3' : 
+            'grid-cols-4'
+          }`}>
             {participantStatuses.map(({ identity, hasResponded, isMe }) => (
               <div 
                 key={identity} 
@@ -59,7 +66,7 @@ export default function ParticipantWaitingStatus({ myIdentity }: ParticipantWait
               >
                 <div className="flex items-center gap-2">
                   <span className="font-medium">
-                    Player {identity}
+                    Participant
                   </span>
                   {isMe && (
                     <span className="text-xs text-blue-600 font-medium">

@@ -31,15 +31,39 @@ export const PLAYER_COLORS = {
     primary: '#A855F7',     // fuchsia-500
     background: '#FAE8FF',  // fuchsia-100
     border: '#E9D5FF'       // fuchsia-300
+  },
+  5: {
+    primary: '#F59E0B',     // amber-500
+    background: '#FEF3C7',  // amber-100
+    border: '#FCD34D'       // amber-300
+  },
+  6: {
+    primary: '#EF4444',     // red-500
+    background: '#FEE2E2',  // red-100
+    border: '#FCA5A5'       // red-300
+  },
+  7: {
+    primary: '#6366F1',     // indigo-500
+    background: '#E0E7FF',  // indigo-100
+    border: '#A5B4FC'       // indigo-300
+  },
+  8: {
+    primary: '#14B8A6',     // teal-500
+    background: '#CCFBF1',  // teal-100
+    border: '#5EEAD4'       // teal-300
   }
 } as const;
 
-// Identity mapping: A=Ashley, B=Brianna, C=Chloe, D=David
+// Identity mapping extended for 8 players
 export const IDENTITY_NAMES = {
   A: 'Ashley',
   B: 'Brianna',
   C: 'Chloe',
-  D: 'David'
+  D: 'David',
+  E: 'Emily',
+  F: 'Frank',
+  G: 'Grace',
+  H: 'Henry'
 } as const;
 
 export const PLAYER_CONFIG: Record<1 | 2 | 3 | 4, PlayerConfig> = {
@@ -49,7 +73,7 @@ export const PLAYER_CONFIG: Record<1 | 2 | 3 | 4, PlayerConfig> = {
     bgColor: PLAYER_COLORS[1].background,
     borderColor: PLAYER_COLORS[1].border,
     position: 'top-left',
-    label: 'Player 1',
+    label: 'Seat 1',
     name: 'Player 1' // Will be overridden by identity mapping
   },
   2: {
@@ -58,7 +82,7 @@ export const PLAYER_CONFIG: Record<1 | 2 | 3 | 4, PlayerConfig> = {
     bgColor: PLAYER_COLORS[2].background,
     borderColor: PLAYER_COLORS[2].border,
     position: 'top-right',
-    label: 'Player 2',
+    label: 'Seat 2',
     name: 'Player 2' // Will be overridden by identity mapping
   },
   3: {
@@ -67,7 +91,7 @@ export const PLAYER_CONFIG: Record<1 | 2 | 3 | 4, PlayerConfig> = {
     bgColor: PLAYER_COLORS[3].background,
     borderColor: PLAYER_COLORS[3].border,
     position: 'bottom-left',
-    label: 'Player 3',
+    label: 'Seat 3',
     name: 'Player 3' // Will be overridden by identity mapping
   },
   4: {
@@ -76,7 +100,7 @@ export const PLAYER_CONFIG: Record<1 | 2 | 3 | 4, PlayerConfig> = {
     bgColor: PLAYER_COLORS[4].background,
     borderColor: PLAYER_COLORS[4].border,
     position: 'bottom-right',
-    label: 'Player 4',
+    label: 'Seat 4',
     name: 'Player 4' // Will be overridden by identity mapping
   }
 };

@@ -249,6 +249,7 @@ interface Match {
   status: "waiting" | "round_active" | "round_voting" | "completed";
   currentRound: number;
   totalRounds: number;
+  totalParticipants?: number;
   participants: Participant[];
   rounds: Round[];
   createdAt: string;
@@ -277,6 +278,36 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
 };
+
+// Scoring constants
+const POINTS_CORRECT_VOTE = 100;
+const POINTS_INCORRECT_VOTE = 0;
+
+// Calculate scores for a round
+function calculateRoundScores(round: Round, participants: Participant[]): Record<string, number> {
+  const scores: Record<string, number> = {};
+  
+  // Find who the human participant is
+  const humanParticipant = participants.find(p => !p.isAI);
+  if (!humanParticipant) {
+    console.error("No human participant found");
+    return scores;
+  }
+  
+  const correctAnswer = humanParticipant.identity;
+  
+  // Calculate score for each vote
+  for (const [voter, votedFor] of Object.entries(round.votes)) {
+    if (votedFor === correctAnswer) {
+      scores[voter] = POINTS_CORRECT_VOTE;
+    } else {
+      scores[voter] = POINTS_INCORRECT_VOTE;
+    }
+  }
+  
+  return scores;
+}
+
 
 // Handle state update messages from robot-worker
 async function handleStateUpdate(event: SQSEvent): Promise<SQSBatchResponse> {
@@ -335,14 +366,15 @@ async function checkAndTransitionRound(
   }
 
   const responseCount = Object.keys(round.responses || {}).length;
+  const totalParticipants = match.totalParticipants || match.participants.length || 4;
+  
   console.log(
-    `Match ${matchId} round ${roundNumber}: ${responseCount}/4 responses`
+    `Match ${matchId} round ${roundNumber}: ${responseCount}/${totalParticipants} responses`
   );
   console.log(`Current responses:`, Object.keys(round.responses || {}));
-
-  if (responseCount === 4) {
+  if (responseCount === totalParticipants) {
     // Generate presentation order - each round gets a different order
-    const identities: Identity[] = ["A", "B", "C", "D"];
+    const identities = match.participants.map((p: Participant) => p.identity);
     const seed = `${matchId}-round-${roundNumber}`;
     const presentationOrder = shuffleArray(identities, seed);
 
@@ -919,6 +951,10 @@ async function submitVote(
   if (voteCount === totalParticipants && round.status === "voting") {
     round.status = "complete";
     console.log(`All votes collected for match ${matchId} round ${body.round}`);
+    
+    // Calculate scores for this round
+    round.scores = calculateRoundScores(round, match.participants);
+    console.log(`Round ${body.round} scores:`, round.scores);
 
     // Move to next round or complete match
     if (match.currentRound < match.totalRounds) {

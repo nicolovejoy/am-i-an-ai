@@ -9,11 +9,17 @@ export const PROJECT_INFO = {
 
 export const GAME_CONFIG = {
   totalRounds: 5,
-  participantsPerMatch: 4,
+  participantsPerMatch: 4, // Default, but matches can have 3-8
   humansPerMatch: 2,
   aiPerMatch: 2,
-  messageMaxLength: 150
+  messageMaxLength: 150,
+  minParticipants: 3,
+  maxParticipants: 8
 } as const;
 
-export const IDENTITIES = ['A', 'B', 'C', 'D'] as const;
-export type Identity = typeof IDENTITIES[number];
+// All possible identities (matches will use a subset)
+export const ALL_IDENTITIES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
+export type Identity = typeof ALL_IDENTITIES[number];
+
+// Legacy export for backward compatibility
+export const IDENTITIES = ALL_IDENTITIES;

@@ -203,8 +203,12 @@ export class MultiHumanMatchService {
       });
     }
 
-    // Assign random identities
-    const identities: Identity[] = ['A', 'B', 'C', 'D'];
+    // Assign random identities based on total participants
+    const totalParticipants = match.totalParticipants || match.participants.length;
+    const identities: Identity[] = Array.from(
+      { length: totalParticipants }, 
+      (_, i) => String.fromCharCode(65 + i) as Identity
+    );
     const shuffledIdentities = this.shuffle([...identities]);
     
     match.participants.forEach((participant, index) => {

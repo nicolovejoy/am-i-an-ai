@@ -12,32 +12,34 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
   const navigate = useNavigate();
   
   // Calculate final scores
-  const finalScores: Record<Identity, number> = { A: 0, B: 0, C: 0, D: 0 };
-  const votingAccuracy: Record<Identity, { correct: number; total: number }> = {
-    A: { correct: 0, total: 0 },
-    B: { correct: 0, total: 0 },
-    C: { correct: 0, total: 0 },
-    D: { correct: 0, total: 0 },
-  };
+  const participantIdentities = match.participants.map((p: Participant) => p.identity);
+  const finalScores: Record<Identity, number> = {};
+  const votingAccuracy: Record<Identity, { correct: number; total: number }> = {};
+  
+  // Initialize scores and accuracy for each participant
+  participantIdentities.forEach((identity: Identity) => {
+    finalScores[identity] = 0;
+    votingAccuracy[identity] = { correct: 0, total: 0 };
+  });
   
   // Calculate scores from all rounds
   match.rounds.forEach((round: Round) => {
     // Add up scores from each round
     Object.entries(round.scores || {}).forEach(([identity, score]) => {
-      if (identity === 'A' || identity === 'B' || identity === 'C' || identity === 'D') {
-        finalScores[identity] += (typeof score === 'number' ? score : 0);
+      if (participantIdentities.includes(identity as Identity)) {
+        finalScores[identity as Identity] += (typeof score === 'number' ? score : 0);
       }
     });
     
     // Calculate voting accuracy
     Object.entries(round.votes || {}).forEach(([voter, votedFor]) => {
-      if (voter === 'A' || voter === 'B' || voter === 'C' || voter === 'D') {
-        votingAccuracy[voter].total += 1;
+      if (participantIdentities.includes(voter as Identity)) {
+        votingAccuracy[voter as Identity].total += 1;
         
         // Check if the vote was correct (voted for a human)
         const votedParticipant = match.participants.find((p: Participant) => p.identity === votedFor);
         if (votedParticipant && !votedParticipant.isAI) {
-          votingAccuracy[voter].correct += 1;
+          votingAccuracy[voter as Identity].correct += 1;
         }
       }
     });
@@ -56,8 +58,8 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
   };
   
   // Sort participants by score
-  const sortedParticipants = (['A', 'B', 'C', 'D'] as Identity[])
-    .sort((a, b) => finalScores[b] - finalScores[a]);
+  const sortedParticipants = participantIdentities
+    .sort((a: Identity, b: Identity) => finalScores[b] - finalScores[a]);
   
   const handlePlayAgain = () => {
     // Clear session and navigate
@@ -82,8 +84,12 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
         {/* Identity Reveal */}
         <div className="mb-8">
           <h3 className="text-xl font-semibold mb-4">Identity Reveal</h3>
-          <div className="grid grid-cols-2 gap-4">
-            {(['A', 'B', 'C', 'D'] as Identity[]).map(identity => {
+          <div className={`grid gap-4 ${
+            participantIdentities.length <= 4 ? 'grid-cols-2' :
+            participantIdentities.length <= 6 ? 'grid-cols-3' :
+            'grid-cols-4'
+          }`}>
+            {participantIdentities.map((identity: Identity) => {
               const info = getParticipantInfo(identity);
               return (
                 <div
@@ -96,7 +102,7 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="text-lg font-medium">Player {identity}</span>
+                      <span className="text-lg font-medium">{info.displayName}</span>
                       {info.isMe && (
                         <span className="ml-2 text-sm text-blue-600">(You)</span>
                       )}
@@ -135,7 +141,7 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
         <div className="mb-8">
           <h3 className="text-xl font-semibold mb-4">Final Scores</h3>
           <div className="space-y-3">
-            {sortedParticipants.map((identity, index) => {
+            {sortedParticipants.map((identity: Identity, index: number) => {
               const info = getParticipantInfo(identity);
               const score = finalScores[identity];
               const accuracy = votingAccuracy[identity];
@@ -156,7 +162,7 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
                     </div>
                     <div>
                       <div className="font-medium">
-                        Player {identity}
+                        {info.displayName}
                         {info.isMe && <span className="text-blue-600 ml-1">(You)</span>}
                       </div>
                       <div className="text-sm text-slate-600">

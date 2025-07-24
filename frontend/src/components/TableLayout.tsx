@@ -122,28 +122,30 @@ export function TableLayout({ participants, messages, myIdentity }: TableLayoutP
   return (
     <Card className="p-6">
       <div className="text-center mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">🎮 Table for Four</h3>
+        <h3 className="text-lg font-semibold text-slate-900">🎮 Game Table</h3>
         <p className="text-sm text-slate-600">
           Each player sees the same view • Random seating each game
         </p>
       </div>
 
-      {/* 2x2 Grid Layout */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Top Row */}
-        <div>{renderPlayerSlot(1)}</div>
-        <div>{renderPlayerSlot(2)}</div>
-        
-        {/* Bottom Row */}
-        <div>{renderPlayerSlot(3)}</div>
-        <div>{renderPlayerSlot(4)}</div>
+      {/* Dynamic Grid Layout based on participant count */}
+      <div className={`grid gap-4 ${
+        participants.length <= 2 ? 'grid-cols-2' :
+        participants.length === 3 ? 'grid-cols-3' :
+        participants.length === 4 ? 'grid-cols-2' :
+        participants.length <= 6 ? 'grid-cols-3' :
+        'grid-cols-4'
+      }`}>
+        {Array.from({ length: Math.max(participants.length, 4) }, (_, i) => (
+          <div key={i + 1}>{renderPlayerSlot((i + 1) as 1 | 2 | 3 | 4)}</div>
+        ))}
       </div>
 
       {/* Center Table Info */}
       <div className="mt-4 text-center">
         <div className="inline-flex items-center space-x-2 px-4 py-2 bg-slate-100 rounded-full">
           <span className="text-sm text-slate-600">
-            {participants.length}/4 players connected
+            {participants.length}/{Math.max(participants.length, 4)} players connected
           </span>
           <span className="text-slate-400">•</span>
           <span className="text-sm text-slate-600">

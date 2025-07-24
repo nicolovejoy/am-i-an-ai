@@ -1,6 +1,6 @@
 # RobotOrchestra Current Status
 
-**Last Updated: 2025-07-23**
+**Last Updated: 2025-07-24**
 
 ## Architecture
 
@@ -26,8 +26,11 @@
 
 **Match Templates**:
 
-- `classic_1v3`: 1 human + 3 AI robots (original mode)
-- `duo_2v2`: 2 humans + 2 AI robots (multi-human mode)
+- `testing_1v3`: 1 human + 3 AI robots (original mode) // only visible to admin users
+- `duos_2v2`: 2 humans + 2 AI robots (multi-human mode)
+- `duel_2v1`: 2 humans + 1 AI robot (3 players)
+- `trios_3v3`: 3 humans + 3 AI robots (6 players)
+- `mega_4v4`: 4 humans + 4 AI robots (8 players)
 
 **Match Flow**:
 
@@ -74,6 +77,18 @@ cd infrastructure
 cd infrastructure
 ./scripts/deploy-frontend.sh
 ```
+
+## Recent Updates (2025-07-24)
+
+### N vs M Match Support
+
+- **Extended Identity System**: Now supports up to 8 players (A through H)
+- **New Match Templates**: Added 3, 6, and 8 player configurations
+- **Dynamic Layouts**: Frontend adapts grid layouts based on participant count
+- **Flexible AI Assignment**: Robot personalities cycle for >3 AI players
+- **Backward Compatible**: Existing 4-player matches continue to work
+- **Comprehensive Testing**: Added integration tests for all new templates
+- **Documentation**: Created detailed architecture guide in docs/N_VS_M_ARCHITECTURE.md
 
 ## Recent Updates (2025-07-23)
 

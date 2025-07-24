@@ -97,9 +97,8 @@ export function AdminDebugPanel({ matchId }: AdminDebugPanelProps) {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-bold">Player {participant.identity}</span>
+                        <span className="font-bold">{participant.playerName}</span>
                         {participant.isAI ? ' 🤖' : ' 👤'}
-                        <span className="ml-2">{participant.playerName}</span>
                       </div>
                       {participant.isAI && (
                         <span className="text-orange-600 font-mono">AI</span>
