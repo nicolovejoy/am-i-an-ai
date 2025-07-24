@@ -72,7 +72,8 @@ export class MultiHumanMatchService {
       waitingFor: {
         humans: template.requiredHumans - 1,
         ai: template.requiredAI
-      }
+      },
+      responseTimeLimit: template.responseTimeLimit || 30, // Default 30 seconds
     };
 
     // If only 1 human required, start immediately

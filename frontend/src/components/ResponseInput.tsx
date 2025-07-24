@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { FiSend, FiEdit3 } from 'react-icons/fi';
 import { Card, Button } from './ui';
 import { useSubmitResponse } from '@/store/server-state/match.mutations';
-import { useMyIdentity, useCurrentRound } from '@/store/server-state/match.queries';
+import { useMyIdentity, useCurrentRound, useMatch } from '@/store/server-state/match.queries';
 import { useUIStore } from '@/store/ui-state/ui.store';
 import { useGrammarCorrection } from '@/hooks/useGrammarCorrection';
 import CorrectionPreview from './CorrectionPreview';
+import CountdownTimer from './CountdownTimer';
 
 export default function ResponseInputV2() {
   const [response, setResponse] = useState('');
@@ -19,6 +20,7 @@ export default function ResponseInputV2() {
   // Server state
   const myIdentity = useMyIdentity();
   const currentRound = useCurrentRound();
+  const { data: match } = useMatch(sessionStorage.getItem('currentMatchId'));
   const submitResponse = useSubmitResponse();
   const grammarCorrection = useGrammarCorrection();
   
@@ -28,6 +30,9 @@ export default function ResponseInputV2() {
   
   // Get match ID from session
   const matchId = sessionStorage.getItem('currentMatchId');
+  
+  // Timer configuration
+  const timeLimit = match?.responseTimeLimit || 30; // Default 30 seconds
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -35,16 +40,19 @@ export default function ResponseInputV2() {
     }
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     const trimmedResponse = response.trim();
-    if (!trimmedResponse || !matchId || !myIdentity || !currentRound) return;
+    if (!matchId || !myIdentity || !currentRound) return;
+    
+    // Submit even if empty (when timer expires)
+    const finalResponse = trimmedResponse || '(No response)';
     
     // Submit the response
     submitResponse.mutate(
       {
         matchId,
         identity: myIdentity,
-        response: trimmedResponse,
+        response: finalResponse,
         round: currentRound.roundNumber,
       },
       {
@@ -58,7 +66,7 @@ export default function ResponseInputV2() {
         },
       }
     );
-  };
+  }, [response, matchId, myIdentity, currentRound, submitResponse, setLocalTyping]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -114,6 +122,13 @@ export default function ResponseInputV2() {
             <span className="text-sm text-slate-500">Submitting...</span>
           )}
         </div>
+        
+        {/* Countdown Timer */}
+        <CountdownTimer
+          duration={timeLimit}
+          onExpire={handleSubmit}
+          isActive={!isSubmitting}
+        />
 
         <div className="space-y-3">
           <textarea

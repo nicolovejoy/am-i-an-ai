@@ -27,11 +27,11 @@
 ### TODO List: From Max so prioritize these:
 
 - consider a new title (Max and Owen to provide)
-- Remove emoji in the title (robot emoji)
+- ✅ Remove emoji in the title (robot emoji) - DONE
 - adding some color or designs to the screen will help.
-- Don't mention "Player A B C" keep it completely anonymous.
-- Let the user know immediately for each round if they picked the correct answer, and give the user a point at that point. rewards at each step keep the user engaged. add a scoreboard to the match page. consider rebuilding the match page so as an accordion where each round can expand to fill most of the page but you stay on the main match page.
-- add a 30 second countdown timer for each response. make that value (30s) part of the match template.
+- ✅ Don't mention "Player A B C" keep it completely anonymous - DONE
+- ✅ Let the user know immediately for each round if they picked the correct answer, and give the user a point at that point. rewards at each step keep the user engaged. add a scoreboard to the match page. consider rebuilding the match page so as an accordion where each round can expand to fill most of the page but you stay on the main match page - DONE
+- ✅ add a 30 second countdown timer for each response. make that value (30s) part of the match template - DONE
 
 ### TODO List: not necessarily in any order:
 

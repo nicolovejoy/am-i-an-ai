@@ -87,7 +87,9 @@ const MatchBaseSchema = z.object({
     humans: z.number(),
     ai: z.number()
   }).optional(),
-  inviteUrl: z.string().optional()
+  inviteUrl: z.string().optional(),
+  // Countdown timer configuration
+  responseTimeLimit: z.number().int().positive().optional(), // seconds
 });
 
 // Main Match schema with refinements

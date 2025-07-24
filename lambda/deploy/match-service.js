@@ -451,6 +451,7 @@ async function createMatch(event) {
         ],
         createdAt: now,
         updatedAt: now,
+        responseTimeLimit: 30, // Default 30 seconds
     };
     // Store match in DynamoDB
     try {

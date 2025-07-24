@@ -2,6 +2,30 @@
 
 **Last Updated: 2025-07-24**
 
+## 🚀 Recently Completed
+
+### Scoring & Feedback System (Jan 24, 2025)
+- ✅ Immediate vote feedback with animations (correct/incorrect)
+- ✅ 100-point scoring system for correct human identification
+- ✅ Live scoreboard showing all players and rankings
+- ✅ Cumulative score tracking across all rounds
+- ✅ Score animations when points are earned
+
+### UI Refactoring (Jan 24, 2025)
+- ✅ Accordion-based round interface (expand/collapse)
+- ✅ Compact fixed scoreboard stays at top
+- ✅ Fixed scrolling issues with proper height constraints
+- ✅ Current round auto-expands with blue highlight
+- ✅ Removed "Player A/B/C" references for anonymity
+- ✅ Smaller prompt display without emoji
+
+### Countdown Timer (Jan 24, 2025)
+- ✅ 30-second countdown timer for responses
+- ✅ Configurable timer per match template (30s default, 60s for admin)
+- ✅ Auto-submit when timer expires
+- ✅ Visual countdown with color-coded warnings
+- ✅ Progress bar and pulsing animations when time is low
+
 ## Architecture
 
 - Frontend: React/TypeScript with Vite

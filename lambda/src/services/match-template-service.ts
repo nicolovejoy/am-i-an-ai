@@ -9,6 +9,7 @@ export interface MatchTemplate {
   totalParticipants: number;
   isPublic: boolean;
   isAdminOnly?: boolean;
+  responseTimeLimit?: number; // seconds
 }
 
 export class MatchTemplateService {
@@ -21,6 +22,7 @@ export class MatchTemplateService {
       requiredAI: 3,
       totalParticipants: 4,
       isPublic: true,
+      responseTimeLimit: 30,
     }],
     ['duo_2v2', {
       type: 'duo_2v2',
@@ -30,6 +32,7 @@ export class MatchTemplateService {
       requiredAI: 2,
       totalParticipants: 4,
       isPublic: true,
+      responseTimeLimit: 30,
     }],
     ['admin_custom', {
       type: 'admin_custom',
@@ -40,6 +43,7 @@ export class MatchTemplateService {
       totalParticipants: 4,
       isPublic: false,
       isAdminOnly: true,
+      responseTimeLimit: 60, // Longer for testing
     }],
     ['trio_3v3', {
       type: 'trio_3v3',
@@ -49,6 +53,7 @@ export class MatchTemplateService {
       requiredAI: 3,
       totalParticipants: 6,
       isPublic: true,
+      responseTimeLimit: 30,
     }],
     ['solo_1v5', {
       type: 'solo_1v5',
@@ -58,6 +63,7 @@ export class MatchTemplateService {
       requiredAI: 5,
       totalParticipants: 6,
       isPublic: true,
+      responseTimeLimit: 30,
     }],
     ['duel_2v1', {
       type: 'duel_2v1',
@@ -67,6 +73,7 @@ export class MatchTemplateService {
       requiredAI: 1,
       totalParticipants: 3,
       isPublic: true,
+      responseTimeLimit: 30,
     }],
     ['mega_4v4', {
       type: 'mega_4v4',
@@ -76,6 +83,7 @@ export class MatchTemplateService {
       requiredAI: 4,
       totalParticipants: 8,
       isPublic: true,
+      responseTimeLimit: 30,
     }],
   ]);
 

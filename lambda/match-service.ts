@@ -254,6 +254,7 @@ interface Match {
   rounds: Round[];
   createdAt: string;
   updatedAt: string;
+  responseTimeLimit?: number;
 }
 
 interface Participant {
@@ -573,6 +574,7 @@ async function createMatch(
     ],
     createdAt: now,
     updatedAt: now,
+    responseTimeLimit: 30, // Default 30 seconds
   };
 
   // Store match in DynamoDB

@@ -72,12 +72,14 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
   };
   
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
-      <Card className="max-w-3xl w-full">
+    <div className="h-screen overflow-hidden flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-3xl mx-auto">
+          <Card>
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-2">Match Complete! 🎭</h2>
+          <h2 className="text-3xl font-bold mb-2">Match Complete</h2>
           <p className="text-lg text-slate-600">
-            After 5 rounds of creative collaboration, here are the results:
+            Final results:
           </p>
         </div>
         
@@ -218,7 +220,9 @@ export default function MatchComplete({ match, myIdentity }: MatchCompleteProps)
             View Match History
           </Button>
         </div>
-      </Card>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
