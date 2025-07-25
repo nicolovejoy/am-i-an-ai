@@ -22,7 +22,7 @@ export class MatchTemplateService {
       requiredAI: 3,
       totalParticipants: 4,
       isPublic: true,
-      responseTimeLimit: 30,
+      responseTimeLimit: 45,
     }],
     ['duo_2v2', {
       type: 'duo_2v2',
@@ -32,7 +32,7 @@ export class MatchTemplateService {
       requiredAI: 2,
       totalParticipants: 4,
       isPublic: true,
-      responseTimeLimit: 30,
+      responseTimeLimit: 45,
     }],
     ['admin_custom', {
       type: 'admin_custom',
@@ -53,7 +53,7 @@ export class MatchTemplateService {
       requiredAI: 3,
       totalParticipants: 6,
       isPublic: true,
-      responseTimeLimit: 30,
+      responseTimeLimit: 45,
     }],
     ['solo_1v5', {
       type: 'solo_1v5',
@@ -63,7 +63,7 @@ export class MatchTemplateService {
       requiredAI: 5,
       totalParticipants: 6,
       isPublic: true,
-      responseTimeLimit: 30,
+      responseTimeLimit: 45,
     }],
     ['duel_2v1', {
       type: 'duel_2v1',
@@ -73,7 +73,7 @@ export class MatchTemplateService {
       requiredAI: 1,
       totalParticipants: 3,
       isPublic: true,
-      responseTimeLimit: 30,
+      responseTimeLimit: 45,
     }],
     ['mega_4v4', {
       type: 'mega_4v4',
@@ -83,7 +83,7 @@ export class MatchTemplateService {
       requiredAI: 4,
       totalParticipants: 8,
       isPublic: true,
-      responseTimeLimit: 30,
+      responseTimeLimit: 45,
     }],
   ]);
 

@@ -5,19 +5,23 @@ interface CountdownTimerProps {
   duration: number; // seconds
   onExpire: () => void;
   isActive: boolean;
+  initialTime?: number; // Optional: start from a specific time instead of duration
+  onTimeUpdate?: (timeRemaining: number) => void; // Optional: callback to track time
 }
 
-export default function CountdownTimer({ duration, onExpire, isActive }: CountdownTimerProps) {
-  const [timeRemaining, setTimeRemaining] = useState(duration);
+export default function CountdownTimer({ duration, onExpire, isActive, initialTime, onTimeUpdate }: CountdownTimerProps) {
+  const [timeRemaining, setTimeRemaining] = useState(initialTime ?? duration);
   const [hasExpired, setHasExpired] = useState(false);
+  const [hasBeenActivated, setHasBeenActivated] = useState(false);
 
-  // Reset timer when duration changes or when activated
+  // Initialize timer when first activated or when initialTime changes
   useEffect(() => {
-    if (isActive) {
-      setTimeRemaining(duration);
+    if (isActive && (!hasBeenActivated || initialTime !== undefined)) {
+      setTimeRemaining(initialTime ?? duration);
       setHasExpired(false);
+      setHasBeenActivated(true);
     }
-  }, [duration, isActive]);
+  }, [duration, isActive, initialTime, hasBeenActivated]);
 
   // Countdown logic
   useEffect(() => {
@@ -25,16 +29,21 @@ export default function CountdownTimer({ duration, onExpire, isActive }: Countdo
 
     const interval = setInterval(() => {
       setTimeRemaining(prev => {
-        if (prev <= 1) {
+        const newTime = prev - 1;
+        if (newTime <= 0) {
           setHasExpired(true);
           return 0;
         }
-        return prev - 1;
+        // Call the callback if provided
+        if (onTimeUpdate) {
+          onTimeUpdate(newTime);
+        }
+        return newTime;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, hasExpired, timeRemaining]);
+  }, [isActive, hasExpired, timeRemaining, onTimeUpdate]);
 
   // Handle expiration
   useEffect(() => {

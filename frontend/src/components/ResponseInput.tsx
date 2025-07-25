@@ -15,6 +15,7 @@ export default function ResponseInputV2() {
     corrected: string;
     changes: Array<{ original: string; corrected: string; type: string }>;
   } | null>(null);
+  const [savedTimeRemaining, setSavedTimeRemaining] = useState<number | undefined>(undefined);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Server state
@@ -32,7 +33,7 @@ export default function ResponseInputV2() {
   const matchId = sessionStorage.getItem('currentMatchId');
   
   // Timer configuration
-  const timeLimit = match?.responseTimeLimit || 30; // Default 30 seconds
+  const timeLimit = match?.responseTimeLimit || 45; // Default 45 seconds
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -98,10 +99,12 @@ export default function ResponseInputV2() {
       setResponse(correctionResult.corrected);
       textareaRef.current?.focus();
     }
+    // Don't clear savedTimeRemaining here - let timer continue from where it was
   };
   
   const rejectCorrection = () => {
     textareaRef.current?.focus();
+    // Don't clear savedTimeRemaining here - let timer continue from where it was
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -127,7 +130,14 @@ export default function ResponseInputV2() {
         <CountdownTimer
           duration={timeLimit}
           onExpire={handleSubmit}
-          isActive={!isSubmitting}
+          isActive={!isSubmitting && !showPreview}
+          initialTime={savedTimeRemaining}
+          onTimeUpdate={(time) => {
+            // Save the current time when preview is about to open
+            if (!showPreview) {
+              setSavedTimeRemaining(time);
+            }
+          }}
         />
 
         <div className="space-y-3">
@@ -139,7 +149,7 @@ export default function ResponseInputV2() {
             placeholder="Write a short response... Be authentic!"
             className="w-full h-32 px-4 py-3 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder-slate-500 disabled:opacity-50"
             maxLength={150}
-            disabled={isSubmitting}
+            disabled={isSubmitting || grammarCorrection.isPending}
           />
           
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

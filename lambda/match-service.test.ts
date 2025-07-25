@@ -121,19 +121,19 @@ describe('Match Service Lambda', () => {
           {
             identity: 'B',
             isAI: true,
-            playerName: 'Doc (Robot B)',
+            playerName: 'Sundown',
             isConnected: true,
           },
           {
             identity: 'C',
             isAI: true,
-            playerName: 'Happy (Robot C)',
+            playerName: 'Bandit',
             isConnected: true,
           },
           {
             identity: 'D',
             isAI: true,
-            playerName: 'Dopey (Robot D)',
+            playerName: 'Maverick',
             isConnected: true,
           },
         ],

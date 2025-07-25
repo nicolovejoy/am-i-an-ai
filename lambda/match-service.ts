@@ -546,19 +546,19 @@ async function createMatch(
       {
         identity: "B",
         isAI: true,
-        playerName: "Doc (Robot B)",
+        playerName: "Sundown",
         isConnected: true,
       },
       {
         identity: "C",
         isAI: true,
-        playerName: "Happy (Robot C)",
+        playerName: "Bandit",
         isConnected: true,
       },
       {
         identity: "D",
         isAI: true,
-        playerName: "Dopey (Robot D)",
+        playerName: "Maverick",
         isConnected: true,
       },
     ],
@@ -574,7 +574,7 @@ async function createMatch(
     ],
     createdAt: now,
     updatedAt: now,
-    responseTimeLimit: 30, // Default 30 seconds
+    responseTimeLimit: 45, // Default 45 seconds
   };
 
   // Store match in DynamoDB

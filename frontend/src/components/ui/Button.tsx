@@ -1,21 +1,29 @@
 import type { ReactNode, ButtonHTMLAttributes } from 'react';
+import { forwardRef, useCallback } from 'react';
+import { useRipple } from '@/hooks/useRipple';
+import '@/styles/button-animations.css';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
+  interactive?: boolean;
+  rippleColor?: string;
 }
 
-export function Button({ 
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({ 
   children, 
   variant = 'primary', 
   size = 'md', 
   fullWidth = false,
+  interactive = true,
+  rippleColor,
   className = '',
   disabled,
+  onClick,
   ...props 
-}: ButtonProps) {
+}, ref) => {
   const baseClasses = 'font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variantClasses = {
@@ -32,14 +40,57 @@ export function Button({
   };
 
   const widthClass = fullWidth ? 'w-full' : '';
+  
+  // Get ripple color based on variant if not provided
+  const getRippleColor = () => {
+    if (rippleColor) return rippleColor;
+    switch (variant) {
+      case 'primary': return 'rgba(255, 255, 255, 0.6)';
+      case 'danger': return 'rgba(255, 255, 255, 0.6)';
+      case 'secondary': return 'rgba(100, 116, 139, 0.4)';
+      case 'ghost': return 'rgba(100, 116, 139, 0.3)';
+      default: return 'rgba(255, 255, 255, 0.6)';
+    }
+  };
+
+  const { containerRef, createRipple } = useRipple({ 
+    color: getRippleColor(),
+    duration: 600 
+  });
+
+  const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    if (interactive && !disabled) {
+      createRipple(e);
+      // Add haptic feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate(5);
+      }
+    }
+    onClick?.(e);
+  }, [interactive, disabled, createRipple, onClick]);
+
+  const interactiveClass = interactive ? 'interactive-button' : '';
 
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${className}`}
+      ref={(node) => {
+        if (typeof ref === 'function') {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+        if (node) {
+          (containerRef as React.MutableRefObject<HTMLButtonElement>).current = node;
+        }
+      }}
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${interactiveClass} ${className}`}
       disabled={disabled}
+      onClick={handleClick}
       {...props}
     >
       {children}
     </button>
   );
-}
+});
+
+Button.displayName = 'Button';

@@ -29,7 +29,9 @@ class AITaskProcessor {
     async generatePrompt(req) {
         const inputs = req.inputs;
         const { round, previousPrompts = [], responses = [], theme } = inputs;
-        const systemPrompt = `You are creating prompts for a "Human or Robot" game where players try to identify the human among AI players. Create prompts that are thought-provoking, creative, and elicit responses that are interesting but don't obviously reveal whether the responder is human or AI.`;
+        const systemPrompt = `You are creating prompts for a "Human or Robot" game where players try to identify the human among AI players. Create prompts that are thought-provoking, creative, and elicit responses that are interesting but don't obviously reveal whether the responder is human or AI.
+
+Respond directly without conversational fluff. No opening acknowledgments, compliments, or phrases like 'great question,' 'I'd be happy to,' or 'what an interesting.' Start immediately with the technical answer.`;
         let userPrompt;
         if (round === 1) {
             userPrompt = `Generate an engaging opening prompt for the game that:
@@ -74,11 +76,17 @@ Return only the prompt question, no explanation.`;
         const inputs = req.inputs;
         const { personality, prompt, context } = inputs;
         const personalities = {
-            littleSister: "You are a playful younger sister who sees the world with fresh eyes and innocent mischief. You're energetic and sometimes a bit bratty, but always endearing. You notice things others miss and aren't afraid to point them out. Use standard punctuation only - periods and commas. Avoid excessive exclamation marks or cutesy punctuation.",
-            wiseGrandpa: "You are a wise grandfather with decades of life experience. You often relate things to stories from the past and have a warm, patient perspective. You give advice through gentle anecdotes rather than direct commands. Use standard punctuation only - periods and commas. Avoid ellipses or old-fashioned punctuation patterns.",
-            practicalMom: "You are a practical mother who keeps things running smoothly. You're caring but no-nonsense, always thinking about what needs to be done. You notice when things are out of place and have a solution for everything. Use standard punctuation only - periods and commas. Avoid parenthetical asides or organizational punctuation like bullet points."
+            sundown: `You are Sundown, a confident and aggressive competitor. You play to win and aren't afraid to take risks. You see challenges as opportunities to prove yourself and approach everything with determination. You speak directly and with conviction. Use standard punctuation only - periods and commas.
+
+Respond directly without conversational fluff. No opening acknowledgments, compliments, or phrases like 'great question,' 'I'd be happy to,' or 'what an interesting.' Start immediately with your answer.`,
+            bandit: `You are Bandit, sneaky and unpredictable. You enjoy keeping others guessing and often approach things from unexpected angles. You're clever and quick-thinking, always looking for the unconventional solution. Your responses are playful yet strategic. Use standard punctuation only - periods and commas.
+
+Respond directly without conversational fluff. No opening acknowledgments, compliments, or phrases like 'great question,' 'I'd be happy to,' or 'what an interesting.' Start immediately with your answer.`,
+            maverick: `You are Maverick, bold and daring. You push boundaries and aren't afraid to go against the grain. You have a rebellious streak but it comes from confidence, not recklessness. You speak with flair and aren't afraid to be different. Use standard punctuation only - periods and commas.
+
+Respond directly without conversational fluff. No opening acknowledgments, compliments, or phrases like 'great question,' 'I'd be happy to,' or 'what an interesting.' Start immediately with your answer.`
         };
-        const systemPrompt = personalities[personality] || personalities.littleSister;
+        const systemPrompt = personalities[personality] || personalities.sundown;
         let styleGuidance = '';
         if (context?.humanResponses) {
             const { current, previous } = context.humanResponses;
@@ -127,7 +135,9 @@ Important: Your response should reflect your personality while sounding like som
             highlights: "Identify the most interesting, creative, or surprising responses from the match. What made them stand out?",
             general: "Provide an overall analysis of how the match played out, including interesting dynamics between responses."
         };
-        const systemPrompt = "You are analyzing a completed 'Human or Robot' game match to provide insights.";
+        const systemPrompt = `You are analyzing a completed 'Human or Robot' game match to provide insights.
+
+Respond directly without conversational fluff. No opening acknowledgments, compliments, or phrases like 'great question,' 'I'd be happy to,' or 'what an interesting.' Start immediately with the technical answer.`;
         const matchSummary = {
             rounds: match.rounds?.map((r) => ({
                 prompt: r.prompt,
@@ -157,7 +167,9 @@ Provide a concise but insightful analysis.`;
             detailed: "Provide a comprehensive summary with key points and important details.",
             highlights: "List the key points as short bullet points (use • for bullets)."
         };
-        const systemPrompt = "You are a skilled summarizer who captures essence without losing important details.";
+        const systemPrompt = `You are a skilled summarizer who captures essence without losing important details.
+
+Respond directly without conversational fluff. No opening acknowledgments, compliments, or phrases like 'great question,' 'I'd be happy to,' or 'what an interesting.' Start immediately with the technical answer.`;
         const userPrompt = `${styleInstructions[style] || styleInstructions.brief}\n\nText to summarize: ${text}`;
         const response = await this.invokeModel(req.model, systemPrompt, userPrompt, {
             ...req.options,
@@ -173,7 +185,9 @@ Provide a concise but insightful analysis.`;
     async correctGrammar(req) {
         const inputs = req.inputs;
         const { text, preserveStyle = true } = inputs;
-        const systemPrompt = `You are a grammar and spelling correction assistant. Fix errors while preserving the writer's voice and style. Keep the same tone, formality level, and personality. Only fix clear errors, don't rewrite for style unless it's grammatically incorrect.`;
+        const systemPrompt = `You are a grammar and spelling correction assistant. Fix errors while preserving the writer's voice and style. Keep the same tone, formality level, and personality. Only fix clear errors, don't rewrite for style unless it's grammatically incorrect.
+
+Respond directly without conversational fluff. No opening acknowledgments, compliments, or phrases like 'great question,' 'I'd be happy to,' or 'what an interesting.' Start immediately with the technical answer.`;
         const userPrompt = `Correct the grammar and spelling in this text: "${text}"
     
 Return your response as valid JSON with this exact structure:

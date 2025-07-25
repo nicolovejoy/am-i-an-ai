@@ -1,0 +1,152 @@
+/* Ripple animations */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes glowRipple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Button press animations */
+@keyframes buttonPress {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Glow pulse animation */
+@keyframes glowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* Premium button styles */
+.interactive-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.interactive-button:active {
+  animation: buttonPress 0.2s ease-out;
+}
+
+.interactive-button.glow {
+  animation: glowPulse 1.5s infinite;
+}
+
+/* Hover effects */
+.interactive-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+}
+
+.interactive-button:hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: shimmer 0.6s ease-out;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Gen Z gradient styles */
+.interactive-button.gradient-shift {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Neon glow effect */
+.interactive-button.neon {
+  color: #fff;
+  text-shadow: 0 0 10px currentColor;
+  border: 2px solid currentColor;
+  box-shadow: 
+    0 0 20px currentColor,
+    inset 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+/* Magnetic effect on hover */
+.interactive-button.magnetic {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Color themes */
+.interactive-button.theme-purple {
+  --ripple-color: rgba(147, 51, 234, 0.6);
+  --glow-color: rgba(147, 51, 234, 0.3);
+}
+
+.interactive-button.theme-pink {
+  --ripple-color: rgba(236, 72, 153, 0.6);
+  --glow-color: rgba(236, 72, 153, 0.3);
+}
+
+.interactive-button.theme-blue {
+  --ripple-color: rgba(59, 130, 246, 0.6);
+  --glow-color: rgba(59, 130, 246, 0.3);
+}
+
+.interactive-button.theme-green {
+  --ripple-color: rgba(34, 197, 94, 0.6);
+  --glow-color: rgba(34, 197, 94, 0.3);
+}

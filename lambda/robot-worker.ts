@@ -59,10 +59,11 @@ const robotPersonalities = {
 };
 
 // Available AI personalities (cycles through these for >3 AI players)
+// Using Rocket League bot names and personalities
 const availablePersonalities = [
-  "littleSister", // playful and mischievous
-  "wiseGrandpa", // experienced storyteller
-  "practicalMom", // organized and caring
+  "sundown", // confident and aggressive
+  "bandit", // sneaky and unpredictable  
+  "maverick", // bold and daring
 ];
 
 // Get personality for a robot based on its identity
