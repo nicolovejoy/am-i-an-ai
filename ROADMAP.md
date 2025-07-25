@@ -16,7 +16,7 @@
 ### Phase 3: Enhanced Gameplay (Jan 2025)
 
 - Reduced character limit to 150 for concise responses
-- AI personalities replaced with family archetypes (Little Sister, Wise Grandpa, Practical Mom)
+- AI personalities: competitive gaming archetypes (Sundown, Bandit, Maverick)
 - AI style mimicry - each AI adopts a human's writing style while maintaining personality
 - AI response uniqueness - prevents repetition across rounds
 - Grammar/spelling correction with preview for human players

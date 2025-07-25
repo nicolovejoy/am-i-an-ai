@@ -1,8 +1,14 @@
 # RobotOrchestra Current Status
 
-**Last Updated: 2025-07-24**
+**Last Updated: 2025-07-25**
 
 ## 🚀 Recently Completed
+
+### AI Response Improvements (Jan 25, 2025)
+- ✅ Added direct response instruction to all AI API calls
+- ✅ AI responses now more concise without conversational fluff
+- ✅ Updated AI personalities from family archetypes to gaming personalities
+- ✅ Enhanced UI with interactive button effects and visual improvements
 
 ### Scoring & Feedback System (Jan 24, 2025)
 - ✅ Immediate vote feedback with animations (correct/incorrect)
@@ -45,7 +51,7 @@
 - `isAdmin`: boolean (humans only)
 - `cognitoId`: string (humans only)
 - `email`: string (humans only)
-- `personality`: string (AI only - philosopher, scientist, comedian, artist, engineer)
+- `personality`: string (AI only - sundown, bandit, maverick)
 - `modelConfig`: { provider: "bedrock", model: "claude-3-haiku" | "claude-3-sonnet" }
 
 **Match Templates**:
@@ -70,7 +76,7 @@
 ### User System
 
 - Persistent users table (human and AI)
-- 5 AI personalities with unique traits
+- 3 AI personalities with unique traits (sundown, bandit, maverick)
 - User service for CRUD operations
 
 ### Multi-Human Matches
